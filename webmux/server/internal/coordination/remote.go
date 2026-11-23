@@ -199,6 +199,11 @@ func (s *Service) Exchange(node string, scope SenderScope, inputs []MemberInput,
 		if err != nil {
 			return err
 		}
+		if found {
+			if err := s.admit(scope.ReceiverOwner, target.Project, "message"); err != nil {
+				return err
+			}
+		}
 		accepted := found && target.Ref == w.To && target.Present && target.Active && target.Revoked == nil && projectID(target) == w.Project
 		if accepted && w.Overlap != nil {
 			claim, exists, e := get[Claim](bucket(tx, "claims"), w.Overlap.Recipient.ID)
@@ -329,6 +334,11 @@ func (s *Service) BeginRemoteAttempt(node, id string, inputs []MemberInput) (boo
 		actor, exists, err := get[Member](bucket(tx, "members"), record.Envelope.From.Key())
 		if err != nil {
 			return err
+		}
+		if exists {
+			if err := s.admit(actor.Ref.Owner, actor.Project, "message"); err != nil {
+				return err
+			}
 		}
 		if !exists || actor.Revoked != nil || !actor.Present || projectID(actor) != record.Envelope.Project {
 			record.Terminal = true

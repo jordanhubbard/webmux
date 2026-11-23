@@ -25,11 +25,13 @@ var buckets = append(append([]string{}, legacyBuckets...), "remote_outbox", "rem
 // transitions use one serializable transaction; no network/provider work occurs
 // inside it. The database lock also refuses simultaneous processes using a home.
 type Service struct {
-	home   string
-	mu     sync.Mutex
-	db     *bolt.DB
-	closed bool
-	Now    func() time.Time
+	// AdmissionGate is immutable after startup and must perform no I/O.
+	AdmissionGate func(owner string, project *Binding, action string) error
+	home          string
+	mu            sync.Mutex
+	db            *bolt.DB
+	closed        bool
+	Now           func() time.Time
 }
 
 func New(home string) *Service { return &Service{home: home, Now: time.Now} }
@@ -296,4 +298,13 @@ func (s *Service) MarkProvisioned(node string, ref Ref) error {
 		}
 		return nil
 	})
+}
+
+// Gate all authority paths, including exact historical retries, before they can
+// return a current grant. Read-only message history remains separately readable.
+func (s *Service) admit(owner string, project *Binding, action string) error {
+	if s.AdmissionGate != nil {
+		return s.AdmissionGate(owner, project, action)
+	}
+	return nil
 }

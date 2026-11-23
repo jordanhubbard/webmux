@@ -283,7 +283,8 @@ func (s *Server) provisionCoordination(node string, snapshots []session.Session,
 	}
 	access := coordinationclient.Access{Contract: plane.Contract, Endpoint: s.sessionCoord.endpoint, Capability: token, Subject: ref, Instructions: []string{
 		"This interface supports local actions and explicitly authorized remote project context, messages, overlap notices and heavy-worker reservations. Respect each peer's permissions and report incomplete or unavailable context. Qualified native aliases attach MCP guidance; other launch paths require separate acceptance.",
-		"Use the WebMux coordinate view command to discover verified project peers and read the coordination inbox.",
+		"Read this session with webmux_mac_project_view first. MAC-bound projects use MAC execution authority; this read grants no claims or leases. Standalone history is retained for reconciliation. A refusal never permits an authority switch.",
+		"For independently configured standalone projects, use the WebMux coordinate view command to discover verified project peers and read the coordination inbox.",
 		"Use coordinate act with a JSON request on stdin. Preserve request_id across uncertain retries; use a fresh ID for new work.",
 		"Claim file, directory, branch or task ownership before overlapping work. Claims are advisory and do not prevent edits.",
 		"Inbox states are admitted, delivered, acknowledged and completed. Explicitly record receipts; viewing an inbox does not acknowledge a handoff.",
@@ -449,6 +450,8 @@ func (s *Server) coordinationError(w http.ResponseWriter, err error) {
 		writeError(w, 401, "Coordination session capability is invalid or inactive")
 	case errors.Is(err, plane.ErrInvalid):
 		writeError(w, 400, "Invalid coordination request or reused request ID")
+	case errors.Is(err, plane.ErrExternalAuthority):
+		writeError(w, 409, "This project uses MAC execution authority; standalone admission is unavailable")
 	case errors.Is(err, plane.ErrDisabled):
 		writeError(w, 503, "Session coordination is disabled by server policy")
 	default:
@@ -539,6 +542,7 @@ func (s *Server) setSessionCoordinationPolicy(w http.ResponseWriter, r *http.Req
 func (s *Server) CoordinationAgentHandler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /view", s.coordinationAgent)
+	mux.HandleFunc("GET /project", s.coordinationAgent)
 	mux.HandleFunc("POST /act", s.coordinationAgent)
 	return newLimiter(1200, globalWindow).wrap(mux)
 }
@@ -568,6 +572,10 @@ func (s *Server) coordinationAgent(w http.ResponseWriter, r *http.Request) {
 			err = plane.ErrUnauthorized
 		}
 		s.coordinationError(w, err)
+		return
+	}
+	if r.Method == "GET" && r.URL.Path == "/project" {
+		s.serveMACProject(w, r, ref.Owner, ref.Session, &ref)
 		return
 	}
 	snapshots, err := s.coordinationSnapshots()
@@ -625,6 +633,14 @@ func (s *Server) coordinationAgent(w http.ResponseWriter, r *http.Request) {
 	err = s.sessions.WithCoordinationSnapshot(func(all []session.Session) error {
 		inputs := s.coordinationInputs(node, all)
 		if r.Method == "GET" {
+			for _, input := range inputs {
+				if input.Ref == ref {
+					if err := s.standaloneAdmission(ref.Owner, input.Project, "view"); err != nil {
+						return err
+					}
+					break
+				}
+			}
 			view, e := s.sessionCoord.service.AgentView(node, token, inputs, after)
 			response = view
 			return e

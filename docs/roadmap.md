@@ -134,6 +134,17 @@ review/publication → [#678](https://github.com/jordanhubbard/webmux/issues/678
 three-host acceptance. These issues remain open; this sequence does not dispatch
 parallel fleet work.
 
+The [MAC observation checkpoint](mac-project-view.md) adds account/repository
+scoping, shared browser/MCP reads, retained session incarnations and explicit
+committed source-roadmap snapshots. Native reads through both consumers have
+been qualified against a private, explicitly selected fleet-root test context.
+That context is not live WebMux project enrollment. Positive native worker/session
+links, canonical local/remote machine classification, source-item/task mappings,
+authoritative conflict/order outcomes and three-host participation remain
+unverified. Task inventory and source text grant no execution or publication
+authority. The corresponding [source-bound receipts](validation/mac-project-view-2026-11-22/README.md)
+retain controlled tests separately from native evidence.
+
 The [private SSH channel checkpoint](validation/coordination-ssh-channel-2026-11-22/README.md)
 adds automatic scoped startup through an authenticated private socket forward.
 Native ordinary SSH shell/CLI startup, first-use trust, same-provider reconnect,

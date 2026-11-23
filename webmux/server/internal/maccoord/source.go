@@ -128,7 +128,7 @@ func sourceGit(ctx context.Context, directory string, args ...string) ([]byte, e
 		}
 	}
 	env = append(env, "GIT_CONFIG_NOSYSTEM=1", "GIT_CONFIG_GLOBAL="+null, "GIT_TERMINAL_PROMPT=0", "GIT_OPTIONAL_LOCKS=0")
-	fixed := []string{"--no-optional-locks", "-c", "core.fsmonitor=false", "-c", "core.untrackedCache=false", "-C", directory}
+	fixed := []string{"--no-optional-locks", "--no-replace-objects", "-c", "core.fsmonitor=false", "-c", "core.untrackedCache=false", "-C", directory}
 	command := exec.CommandContext(ctx, "git", append(fixed, args...)...)
 	command.Env, command.Stderr, command.WaitDelay = env, io.Discard, 200*time.Millisecond
 	var output sourceOutput

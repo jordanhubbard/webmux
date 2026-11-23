@@ -23,6 +23,7 @@ import (
 
 const BindingsSchema = "webmux.mac.project-bindings.v1"
 const ObserveCapability = "project.observe.v1"
+const RoadmapObserveCapability = "project.source-roadmap.observe.v1"
 
 var (
 	ErrInvalid     = errors.New("invalid MAC observation contract")
@@ -49,6 +50,7 @@ type ProjectBinding struct {
 	AuthorityID  string   `json:"authority_id"`
 	ProjectKey   string   `json:"project_key"`
 	Capabilities []string `json:"capabilities"`
+	RoadmapPath  string   `json:"roadmap_path,omitempty"`
 }
 
 type bindingDocument struct {
@@ -152,14 +154,25 @@ func ParseBindings(data []byte) (*Bindings, error) {
 		}
 		// v1 deliberately has no admission, dispatch, lease or publication
 		// capability. An operator cannot enable unsupported operations by name.
-		if len(project.Capabilities) != 1 || project.Capabilities[0] != ObserveCapability {
+		caps := map[string]bool{}
+		for _, capability := range project.Capabilities {
+			if caps[capability] || (capability != ObserveCapability && capability != RoadmapObserveCapability) {
+				return nil, ErrUnsupported
+			}
+			caps[capability] = true
+		}
+		if !caps[ObserveCapability] {
 			return nil, ErrUnsupported
+		}
+		if caps[RoadmapObserveCapability] != (project.RoadmapPath != "") || (project.RoadmapPath != "" && !validRoadmapPath(project.RoadmapPath)) {
+			return nil, ErrInvalid
 		}
 		key := bindingKey{project.Owner, project.RepositoryID}
 		if _, duplicate := out.projects[key]; duplicate {
 			return nil, ErrInvalid
 		}
 		project.Capabilities = append([]string(nil), project.Capabilities...)
+		sort.Strings(project.Capabilities)
 		document.Bindings[i] = project
 		out.projects[key] = project
 	}
@@ -224,7 +237,7 @@ func exactBindingFields(data []byte) bool {
 		fields []string
 	}{
 		{"authorities", []string{"id", "origin"}},
-		{"bindings", []string{"owner", "repository_id", "repository", "authority_id", "project_key", "capabilities"}},
+		{"bindings", []string{"owner", "repository_id", "repository", "authority_id", "project_key", "capabilities", "roadmap_path"}},
 	} {
 		raw := document[section.name]
 		if len(raw) == 0 {
@@ -235,8 +248,15 @@ func exactBindingFields(data []byte) bool {
 			return false
 		}
 		for _, row := range rows {
-			if _, ok := object(row, section.fields...); !ok {
+			fields, ok := object(row, section.fields...)
+			if !ok {
 				return false
+			}
+			if raw, exists := fields["roadmap_path"]; exists {
+				var value *string
+				if json.Unmarshal(raw, &value) != nil || value == nil || !validRoadmapPath(*value) {
+					return false
+				}
 			}
 		}
 	}

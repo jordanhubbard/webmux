@@ -1,0 +1,59 @@
+{
+  "schema": "webmux.roadmap-disposition-reconciliation.v1",
+  "observed_at": "2026-11-23T09:11:09.446253+00:00",
+  "source_revision_before_receipt_commit": "640cfdceca730d80b6fbfe71a4cbcb90683013b8",
+  "roadmap_sha256": "ac1e96a9e727fc3c09cd59d252d7ea9d54f062641204eb23894fcc7e8f374819",
+  "tracker_observations": {
+    "318": {
+      "state": "closed",
+      "state_reason": "completed",
+      "closed_at": "2026-11-20T17:32:13Z",
+      "closure_timeline_at": "2026-11-20T17:32:14Z",
+      "closure_commit_id": null,
+      "acceptance_inferred_from_closure": false
+    },
+    "630": {
+      "state": "closed",
+      "state_reason": "completed",
+      "closed_at": "2026-11-22T13:10:20Z",
+      "unchecked_coordination_scope_retained_under": 664
+    },
+    "664": {
+      "state": "open",
+      "ordered_prerequisites": [
+        673,
+        674,
+        675,
+        676,
+        677,
+        678
+      ]
+    },
+    "active_scoped_recovery_followups": [
+      438,
+      523,
+      538,
+      603
+    ]
+  },
+  "checks": {
+    "relative_roadmap_file_links": {
+      "checked": 101,
+      "missing": 0,
+      "external_url_and_anchor_validation_claimed": false
+    },
+    "quality_scope": "Documentation and disposition only; no new native acceptance claim"
+  },
+  "preserved": [
+    "Original recovery requirements, priority directive and platform/policy/lifecycle limits",
+    "All roadmap checkboxes unchanged",
+    "Historical native receipts and exact observed revisions unchanged",
+    "MAC convergence identity/read/participation/admission/publication/three-host order",
+    "No new MAC worker, task dispatch, enrollment or authority grant"
+  ],
+  "source_owner_coordination": {
+    "status": "request queued; consumption and owner response unverified",
+    "MAC_source_changed": false
+  },
+  "nas_access": false
+}

@@ -24,6 +24,7 @@ import (
 	"github.com/jordanhubbard/webmux/server/internal/coordination"
 	"github.com/jordanhubbard/webmux/server/internal/desktop"
 	"github.com/jordanhubbard/webmux/server/internal/discovery"
+	"github.com/jordanhubbard/webmux/server/internal/maccoord"
 	"github.com/jordanhubbard/webmux/server/internal/macsetup"
 	"github.com/jordanhubbard/webmux/server/internal/netguard"
 	"github.com/jordanhubbard/webmux/server/internal/session"
@@ -33,6 +34,7 @@ import (
 )
 
 type Server struct {
+	macObserver        *maccoord.Runtime
 	sessionCoord       sessionCoordination
 	nodePeersCancel    context.CancelFunc
 	nodePeersDone      chan struct{}
@@ -107,7 +109,10 @@ func New(store *storage.Store, options Options) (*Server, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Server{sessionCoord: sessionCoordination{service: coordination.New(store.Home), bindings: map[string]coordinationProjectObservation{}}, usbLeases: usbforward.LeaseManager{Store: store}, restart: options.Restart, store: store, auth: service, name: options.Name, secure: options.SecureMode, webDir: options.WebDir, webFS: options.WebFS, passwordSlots: make(chan struct{}, 2), logger: logger, sessions: sessions, vnc: vnc, rdp: rdp, targets: netguard.New(os.Getenv("WEBMUX_ALLOW_LOCAL_TARGETS") == "1"), uploads: upload.New(store), ai: ai.New(nil, nil), clientSockets: make(map[string]*clientConnection), clientFacts: make(map[string]clientSnapshot)}, nil
+	result := &Server{sessionCoord: sessionCoordination{service: coordination.New(store.Home), bindings: map[string]coordinationProjectObservation{}}, usbLeases: usbforward.LeaseManager{Store: store}, restart: options.Restart, store: store, auth: service, name: options.Name, secure: options.SecureMode, webDir: options.WebDir, webFS: options.WebFS, passwordSlots: make(chan struct{}, 2), logger: logger, sessions: sessions, vnc: vnc, rdp: rdp, targets: netguard.New(os.Getenv("WEBMUX_ALLOW_LOCAL_TARGETS") == "1"), uploads: upload.New(store), ai: ai.New(nil, nil), clientSockets: make(map[string]*clientConnection), clientFacts: make(map[string]clientSnapshot)}
+	result.macObserver = maccoord.OpenRuntime(store.ConfigPath("mac-observation.json"), nil)
+	result.sessionCoord.service.AdmissionGate = result.standaloneAdmission
+	return result, nil
 }
 
 func (s *Server) RestoreSessions() error {
@@ -162,6 +167,7 @@ func (s *Server) Close() error {
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	s.registerFederation(mux)
+	mux.Handle("GET /api/session-coordination/projects/{id}", s.protected(false, s.getMACProject))
 	mux.Handle("GET /api/session-coordination", s.protected(false, s.getSessionCoordination))
 	mux.Handle("GET /api/session-coordination/policy", s.protected(false, s.getSessionCoordinationPolicy))
 	mux.Handle("PUT /api/session-coordination/policy", s.protected(false, s.setSessionCoordinationPolicy))

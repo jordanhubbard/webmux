@@ -25,6 +25,8 @@ type TaskObservation struct {
 	AuthorityID          string     `json:"authority_id"`
 	ProjectKey           string     `json:"project_key"`
 	TaskID               string     `json:"task_id"`
+	Title                string     `json:"title"`
+	Priority             int        `json:"priority"`
 	State                string     `json:"state"`
 	OwnerWorkerID        *string    `json:"owner_worker_id"`
 	AttemptCount         int        `json:"attempt_count"`
@@ -87,13 +89,16 @@ func projectTask(body []byte, selected Selection, taskID string) (TaskObservatio
 	if json.Unmarshal(envelope["task"], &task) != nil || task == nil {
 		return TaskObservation{}, ErrInvalid
 	}
-	var id, project, state, updatedAt, authorityTime string
+	var id, project, state, title, updatedAt, authorityTime string
+	var priority int
 	var attempt int
 	if json.Unmarshal(task["id"], &id) != nil || json.Unmarshal(task["project"], &project) != nil ||
 		id != taskID || project != selected.Project.ProjectKey {
 		return TaskObservation{}, ErrUnmapped
 	}
-	if json.Unmarshal(task["state"], &state) != nil || !validText(state, 128) ||
+	if json.Unmarshal(task["title"], &title) != nil || !validText(title, 4096) ||
+		bytes.Equal(bytes.TrimSpace(task["priority"]), []byte("null")) || json.Unmarshal(task["priority"], &priority) != nil ||
+		json.Unmarshal(task["state"], &state) != nil || !validText(state, 128) ||
 		bytes.Equal(bytes.TrimSpace(task["attempt_count"]), []byte("null")) || json.Unmarshal(task["attempt_count"], &attempt) != nil || attempt < 0 ||
 		json.Unmarshal(task["updated_at"], &updatedAt) != nil ||
 		json.Unmarshal(envelope["server_time"], &authorityTime) != nil {
@@ -148,7 +153,7 @@ func projectTask(body []byte, selected Selection, taskID string) (TaskObservatio
 	}
 	return TaskObservation{
 		Schema: TaskIdentitySchema, BindingRevision: selected.Revision, AuthorityID: selected.Authority.ID,
-		ProjectKey: project, TaskID: id, State: state, OwnerWorkerID: worker, AttemptCount: attempt,
+		ProjectKey: project, TaskID: id, Title: title, Priority: priority, State: state, OwnerWorkerID: worker, AttemptCount: attempt,
 		LeaseID: lease, LeasedUntil: expires, LeaseObservation: leaseState,
 		SessionLinkState: "unlinked", MachineIdentityState: "unavailable", SourceLinkState: "unlinked",
 		AuthorityTime: clock, UpdatedAt: updated, ObservedAt: time.Now().UTC(),

@@ -1,0 +1,9 @@
+.mac-project-content { padding: 16px; overflow-wrap: anywhere; }
+.mac-project-content h3 { margin-top: 1.3em; }
+.mac-project-table { overflow-x: auto; }
+.mac-project-table table { width: 100%; border-collapse: collapse; font-size: .9em; }
+.mac-project-table th, .mac-project-table td { text-align: left; vertical-align: top; padding: 8px; border-bottom: 1px solid var(--border-color, #555); }
+.mac-project-content li { margin-block: 6px; }
+.mac-project-content button { font: inherit; color: inherit; background: #28243f; border: 1px solid #655b8a; border-radius: 4px; padding: 6px 10px; cursor: pointer; }
+.mac-project-content button:focus-visible { outline: 2px solid #b5a4ff; outline-offset: 2px; }
+.mac-project-roadmap { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 28em; overflow: auto; padding: 10px; background: #11101c; font: inherit; }

@@ -1,0 +1,158 @@
+{
+  "schema": "webmux.mac.source-roadmap-qualification.v1",
+  "observed_at": "2026-11-23T08:28:51.566050+00:00",
+  "adapter_source_revision_before_receipt_commit": "48dcf910061190c6cda2f800bc85448970d392fd",
+  "source_sha256": {
+    "tests/e2e/browser-pane-layout.spec.ts": "500fbe1d1005cb33737dc387d734fa7cea06b3e20fe6dc1d2e02765e5d329a39",
+    "tests/e2e/mac-project-view.spec.ts": "e34df9cf585d7294c312b3fe9b3b9f08e60c621a4109a347ae8368ad0cc17003",
+    "tests/frontend/MACProjectDialog.test.tsx": "2cf43531589f243b7814f1420c54d2d88fd3355f9a8edb981f3da9b1d9b406b2",
+    "webmux/frontend/src/components/MACProjectDialog.css": "e19a85ae17c15dc3141a980a0a368904856cc8c2eaffff3d84742738edf13a6d",
+    "webmux/frontend/src/components/MACProjectDialog.tsx": "909a2582c04f2b1bac78ddbcd5ef20dbfaaa8eb492b7748ffee586c789d62ad3",
+    "webmux/frontend/src/utils/api.ts": "d7857f06daeb164787b5139edc02f8324b35766800a08e01b4e2f59901b3c274",
+    "webmux/server/internal/coordinationmcp/server.go": "99ce696b924941d19ecf0e41e70f74d6d3356f8e26bef9d50d99c8ef010d4e2c",
+    "webmux/server/internal/httpapi/mac_project.go": "dfadc23a708bd5834be8aaec1bb29866b71e70131b2a3a3e3e15b12f54fb41ab",
+    "webmux/server/internal/httpapi/mac_project_test.go": "ce6c6e30938085c09cdcd003e88635fadf300af1779fbe038402778b9736c695",
+    "webmux/server/internal/maccoord/bindings.go": "4bdeba139d65d5ce91322480dae2b9a582597b4d0dee2091cadb37442dc46df5",
+    "webmux/server/internal/maccoord/bindings_test.go": "44e7651110fb32dc8e7960dbfea2b96f376f10618888a968e767a5e83da4e092",
+    "webmux/server/internal/maccoord/project.go": "66b0ef040b42ce1860746a92b1e35f367b388c4fc36e4ba110dea0f9d3c8f3a1",
+    "webmux/server/internal/maccoord/roadmap.go": "e540b86d76b7c4fffb711e96f8bb4068402ef7add00e55a52315ba4df2bf9546",
+    "webmux/server/internal/maccoord/roadmap_test.go": "b47032d0c6d32444572306affdda53c1255a01857f0fff6bc026757ab9360777",
+    "webmux/server/internal/maccoord/runtime.go": "640734e5d290c13b8fb8dc861705a5d86b2d79fb219107c1b9cba098aafc4ebc",
+    "webmux/server/internal/maccoord/source.go": "033e7cee041b0c4b64f19391295fb768ad1946f2c22bcd6dbe2283fa0b66f53c"
+  },
+  "scope": "Explicit roadmap-content read capability and exact committed source snapshot shared by browser and MCP; not live project registration, requirement/task linkage or admission",
+  "checks": [
+    {
+      "command": "go test -race ./internal/maccoord -count=1 -timeout=90s",
+      "exit_code": 0,
+      "elapsed_seconds": 29.254,
+      "scope": "Full source/roadmap/binding/runtime package after the read-client refactor"
+    },
+    {
+      "command": "go test -race ./internal/httpapi -count=1 -timeout=10m",
+      "exit_code": 0,
+      "elapsed_seconds": 255.937,
+      "scope": "Full HTTP package after final post-source upstream authorization and mid-read revocation control"
+    },
+    {
+      "command": "go test -race ./internal/coordinationmcp -count=1 -timeout=90s",
+      "exit_code": 0,
+      "elapsed_seconds": 2.257
+    },
+    {
+      "command": "go vet ./internal/maccoord ./internal/httpapi ./internal/coordinationmcp",
+      "exit_code": 0
+    },
+    {
+      "command": "go test ./internal/maccoord -run '^$' -fuzz '^FuzzParseBindings$' -fuzztime=5s -parallel=2",
+      "exit_code": 0,
+      "executions": 11596,
+      "seeds_include_explicit_roadmap_capability": true
+    },
+    {
+      "command": "GOOS=windows GOARCH=amd64 go test -c ./internal/maccoord; GOOS=windows GOARCH=amd64 go test -c ./internal/httpapi",
+      "exit_code": 0,
+      "scope": "Cross-compilation only"
+    },
+    {
+      "command": "npm run typecheck",
+      "exit_code": 0
+    },
+    {
+      "command": "npm test -- MACProjectDialog RecoveryDialog",
+      "exit_code": 0,
+      "tests_passed": 24
+    },
+    {
+      "command": "npm run build",
+      "exit_code": 0
+    },
+    {
+      "command": "npm run test:e2e -- mac-project-view.spec.ts",
+      "exit_code": 0,
+      "tests_passed": 1,
+      "elapsed_seconds": 6.6,
+      "scope": "Actual Go/Chrome/provider with controlled project DTO including inert roadmap text, dirty warning and refusal cleanup"
+    },
+    {
+      "command": "npm run test:contract",
+      "exit_code": 0,
+      "scope": "Production CLI/MCP/server and restart contracts"
+    }
+  ],
+  "native_source_snapshot": {
+    "scope": "Local native Git source component only; no MAC network, product enrollment or task linkage",
+    "source_commit": "d3dbf4f52d578eaf5fc9c661b119c479fb5199bd",
+    "blob": "096db2c649b95462ae7900dc52e905b98ae72b36",
+    "text_sha256": "df0acd046e6a86c4c9b7dee4d5877f464a2f95ae1d8cf0db85adf993fd310859",
+    "text_bytes": 53289,
+    "working_copy_dirty": false,
+    "task_link_state": "unlinked",
+    "package_elapsed_seconds": 2.857,
+    "exit_code": 0,
+    "raw_snapshot_private": true,
+    "raw_receipt_sha256": "0a1ede3df65c5047b926ef4b7f389b0635648914724bbcdaf5b36fe2bb2d91f5"
+  },
+  "native_MAC_post_source_authorization": {
+    "scope": "Existing pinned MAC publisher and dedicated original read-only enrollment; disposable local WebMux sessions and private fleet test context, not product project enrollment",
+    "exit_code": 0,
+    "package_elapsed_seconds": 15.142,
+    "chrome_completed": true,
+    "route_interception": false,
+    "shared_task_identities": 8,
+    "competing_standalone_work_refused": true,
+    "policy_change_refused_both": true,
+    "provider_incarnations_preserved": true,
+    "roadmap_capability_enabled_in_this_native_fleet_test": false,
+    "private_receipt_sha256": "7512ed417b93080cf5c8dfce51aafed7d07bf88c8f88ecb3b5a178fb68675e57"
+  },
+  "controlled_refusals": [
+    "No file-content capability inferred from project metadata observation",
+    "Unsafe, null, case-aliased or ungranted roadmap path rejected",
+    "Foreign account/source revision/repository scope refused",
+    "Committed bytes survive a changed working copy and working-copy symlink",
+    "Committed symlink, non-text, invalid UTF-8, missing and oversized blobs unavailable",
+    "Local Git replacement refs cannot substitute accepted blob content",
+    "Real locally accessible remote path never inspected locally",
+    "Source commit/ref drift refuses a prior source observation",
+    "Real MCP and browser route return the same snapshot",
+    "Upstream revocation after task collection discards source/roadmap/task observations together",
+    "Roadmap text is inert; failed refresh removes it"
+  ],
+  "deliberate_mutation_control": {
+    "change": "Remove --no-replace-objects from a Go source overlay only",
+    "test": "TestRoadmapIgnoresLocalObjectReplacement",
+    "expected_exit_code": 1,
+    "observed_exit_code": 1,
+    "failure": "local replacement ref changed the bytes attributed to the accepted source blob",
+    "real_source_modified": false
+  },
+  "native_project_inventory": {
+    "scope": "Fixed authenticated read-only registry and exact lowercase webmux task summaries; no broad project enumeration",
+    "repository_registry_rows": 10,
+    "webmux_registry_matches": 0,
+    "exact_webmux_task_summary_rows": 0,
+    "absence_interpretation": "Missing observed linkage only; does not establish global absence of a project record",
+    "raw_receipt_private": true,
+    "raw_receipt_sha256": "10603dc2eda35e2ec09cd4a704e97a762ae90507390c54b35c583a4f78c2243b"
+  },
+  "limitations": [
+    "No live WebMux MAC project enrollment or installed policy activation",
+    "No requirement-to-task/source-priority linkage, verified issue state or admission grant",
+    "Source commit is a sampled branch snapshot; it is not automatically the accepted project policy",
+    "No positive native worker/machine/session join or three-host participant acceptance",
+    "No native Windows runtime proof from cross-compilation"
+  ],
+  "integration_prerequisite": "PR684 fixes the independent native Windows browser-layout route teardown failure; its fix is integrated in the MAC branches for fresh CI. The shared-view PR now targets main so standard CI runs.",
+  "MAC_mutations": false,
+  "installed_profile_config_service_changes": false,
+  "NAS_access": false,
+  "reclaimed_bytes": 0,
+  "fixture_follow_up": {
+    "scope": "Neutral absolute-path refusal fixture after a Generic Password false positive; no credential exists in the reported source line, no detector suppression or credential rotation",
+    "source_file": "webmux/server/internal/maccoord/roadmap_test.go",
+    "source_sha256": "d599c4efd51d0d1e5e475905d2442d513cd20af7b6527737440b0772b14c20ff",
+    "command": "go test ./internal/maccoord -run '^TestRoadmapBindingRequiresExplicitSafePathAndCapability$' -count=1 -timeout=30s",
+    "exit_code": 0
+  }
+}

@@ -139,7 +139,7 @@ func Request(ctx context.Context, access Access, method, path string, body io.Re
 		return err
 	}
 	route, err := url.Parse(path)
-	if err != nil || route.IsAbs() || route.Host != "" || route.Fragment != "" || route.RawPath != "" || (route.Path != "/view" && route.Path != "/act") {
+	if err != nil || route.IsAbs() || route.Host != "" || route.Fragment != "" || route.RawPath != "" || (route.Path != "/view" && route.Path != "/act" && route.Path != "/project") {
 		return errors.New("unknown coordination operation")
 	}
 	query, err := url.ParseQuery(route.RawQuery)
@@ -147,17 +147,21 @@ func Request(ctx context.Context, access Access, method, path string, body io.Re
 		return errors.New("invalid coordination cursor")
 	}
 	for key, values := range query {
-		if route.Path != "/view" || key != "after" || len(values) != 1 {
+		if len(values) != 1 || !((route.Path == "/view" && key == "after") || (route.Path == "/project" && key == "offset")) {
 			return errors.New("unknown coordination query")
 		}
-		if _, err := strconv.ParseUint(values[0], 10, 64); err != nil {
+		value, err := strconv.ParseUint(values[0], 10, 64)
+		if err != nil || (route.Path == "/project" && value > 200) {
 			return errors.New("invalid coordination cursor")
 		}
 	}
-	if (route.Path == "/view" && method != "GET") || (route.Path == "/act" && method != "POST") {
+	if ((route.Path == "/view" || route.Path == "/project") && method != "GET") || (route.Path == "/act" && method != "POST") {
 		return errors.New("invalid coordination method")
 	}
 	timeout := 5 * time.Second
+	if route.Path == "/project" {
+		timeout = 30 * time.Second // Bounded project collection plus local Git metadata.
+	}
 	if route.Path == "/act" {
 		if body == nil {
 			return errors.New("coordination operation requires a JSON body")
@@ -201,6 +205,9 @@ func Request(ctx context.Context, access Access, method, path string, body io.Re
 	data, err := io.ReadAll(io.LimitReader(response.Body, (8<<20)+1))
 	if err != nil || len(data) > 8<<20 {
 		return errors.New("invalid coordination response")
+	}
+	if response.StatusCode == http.StatusConflict {
+		return errors.New("this project uses MAC execution authority; read webmux_mac_project_view instead of requesting standalone admission")
 	}
 	if response.StatusCode != 200 {
 		return errors.New("coordination request was refused; check session activity, global policy and project availability")

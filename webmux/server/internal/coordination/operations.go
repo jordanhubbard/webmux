@@ -80,6 +80,10 @@ func (s *Service) ExecuteWithPeers(node, token string, inputs []MemberInput, req
 			admitted = err
 			return nil
 		}
+		if err := s.admit(member.Ref.Owner, member.Project, request.Action); err != nil {
+			admitted = err
+			return nil
+		}
 		key := digest([]byte(member.Ref.Key() + "\n" + request.ID))
 		data, _ := json.Marshal(request)
 		hash := digest(data)

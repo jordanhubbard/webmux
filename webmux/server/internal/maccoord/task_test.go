@@ -16,7 +16,7 @@ func taskWire() map[string]any {
 	return map[string]any{
 		"schema": TaskSchema, "task_id": "task-a", "found": true, "server_time": "2026-11-23T05:00:00Z",
 		"task": map[string]any{
-			"id": "task-a", "project": "alpha", "state": "running", "owner_agent_id": "worker-canonical-a",
+			"id": "task-a", "title": "Visible project task", "priority": 10, "project": "alpha", "state": "running", "owner_agent_id": "worker-canonical-a",
 			"attempt_count": 2, "lease_id": "lease-canonical-a", "leased_until": "2026-11-23T06:00:00Z",
 			"updated_at": "2026-11-23T04:59:00Z", "description": taskCanary,
 		},
@@ -111,6 +111,8 @@ func TestTaskObservationMissingForeignAndMalformedWire(t *testing.T) {
 		{"missing owner", func(e, task map[string]any) { delete(task, "owner_agent_id") }, ErrInvalid},
 		{"missing lease", func(e, task map[string]any) { delete(task, "lease_id") }, ErrInvalid},
 		{"missing expiry", func(e, task map[string]any) { delete(task, "leased_until") }, ErrInvalid},
+		{"missing title", func(e, task map[string]any) { delete(task, "title") }, ErrInvalid},
+		{"null priority", func(e, task map[string]any) { task["priority"] = nil }, ErrInvalid},
 		{"null counter", func(e, task map[string]any) { task["attempt_count"] = nil }, ErrInvalid},
 		{"fractional counter", func(e, task map[string]any) { task["attempt_count"] = 1.5 }, ErrInvalid},
 		{"negative counter", func(e, task map[string]any) { task["attempt_count"] = -1 }, ErrInvalid},

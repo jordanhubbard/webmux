@@ -1,6 +1,7 @@
 import { useState, type RefObject } from 'react';
 import type { TerminalHandle } from './Terminal';
 import { RecoveryDialog } from './RecoveryDialog';
+import { MACProjectDialog } from './MACProjectDialog';
 import './TerminalActions.css';
 
 interface TerminalActionsProps {
@@ -13,6 +14,7 @@ interface TerminalActionsProps {
 /** Explicit controls leave every terminal key combination available to the PTY. */
 export function TerminalActions({ sessionId, terminalRef, transcriptEnabled, connected }: TerminalActionsProps) {
   const [showRecovery, setShowRecovery] = useState(false);
+  const [showProject, setShowProject] = useState(false);
   return (
     <div className="terminal-actions">
       <button type="button" aria-label="Copy terminal selection" title="Copy selected text to your desktop" onClick={() => terminalRef.current?.copySelection()}>Copy</button>
@@ -27,6 +29,10 @@ export function TerminalActions({ sessionId, terminalRef, transcriptEnabled, con
         title={sessionId.startsWith('@') ? 'Open the owning server to recover this session' : 'Review previous commands, native conversations and retained terminal output'}
         onClick={() => setShowRecovery(true)}>Recover</button>
       {showRecovery && <RecoveryDialog sessionId={sessionId} onClose={() => setShowRecovery(false)} />}
+      <button type="button" aria-label="Project activity" disabled={sessionId.startsWith('@')}
+        title={sessionId.startsWith('@') ? 'Open the owning server to view this project' : 'View MAC project tasks, workers and coordination coverage'}
+        onClick={() => setShowProject(true)}>Project</button>
+      {showProject && <MACProjectDialog key={sessionId} sessionId={sessionId} onClose={() => setShowProject(false)} />}
       <button type="button" aria-label="Log session" aria-pressed={transcriptEnabled}
         title={transcriptEnabled ? 'Pause session transcript logging' : 'Start session transcript logging'}
         disabled={!connected} onClick={() => terminalRef.current?.toggleTranscript()}>

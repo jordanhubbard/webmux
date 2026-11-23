@@ -200,6 +200,33 @@ async function createCoordinatedAgent(input: CoordinationCreateRequest): Promise
   }
 }
 
+export interface MACProjectView {
+  schema: 'webmux.mac.session-project-view.v1';
+  subject: { node_id: string; owner: string; session_id: string; incarnation: string };
+  standalone_history_state: string;
+  source_state?: string;
+  source_task_link_state?: string;
+  source?: { schema: 'webmux.mac.source-observation.v1'; worktree: string; ref: string; commit: string; detached: boolean; dirty: boolean; observed_at: string } | null;
+  roadmap_state?: string;
+  roadmap?: { schema: 'webmux.mac.source-roadmap-observation.v1'; path: string; commit: string; blob: string; sha256: string; text: string; working_copy_dirty: boolean; task_link_state: string; observed_at: string } | null;
+  project: {
+    schema: 'webmux.mac.project-observation.v1'; project_key: string; observed_at: string;
+    coverage: string; reported_total: number; next_offset: number | null;
+    conflict_verdict: string; ordering_verdict: string; unavailable_tasks: number;
+    unavailable_workers: number; adapter_omitted_tasks: number; upstream_omitted_tasks: number; withheld_dependencies: number;
+    tasks: { task: { task_id: string; title: string; state: string; priority: number; owner_worker_id: string | null; attempt_count: number; lease_id: string | null; lease_observation: string; leased_until: string | null; authority_time: string; updated_at: string; observed_at: string };
+      worker: { worker_id: string; worker_name: string; machine_id: string; machine_hostname: string; availability: string; worker_status: string; health_status: string; worker_last_seen: string; worker_updated_at: string; worker_deleted_at: string | null; machine_last_seen: string; freshness: string; observed_at: string } | null; worker_state: string }[];
+    dependencies: { from_task_id: string; to_task_id: string; reported_verdict: string; reported_join_policy: string }[];
+  };
+  sessions: { session: { node_id: string; owner: string; session_id: string; incarnation: string }; execution_host: string; transport: string; availability: string; broker_active: boolean; mac_link_state: string; observed_at: string; projected_at: string; revoked_at: string | null; freshness: string }[];
+}
+async function getMACProject(sessionId: string, offset: number, signal?: AbortSignal): Promise<MACProjectView> {
+  const value = await request<MACProjectView>(`/session-coordination/projects/${encodeURIComponent(sessionId)}?offset=${offset}`, { signal, cache: 'no-store' });
+  if (value?.schema !== 'webmux.mac.session-project-view.v1' || value.subject?.session_id !== sessionId || value.project?.schema !== 'webmux.mac.project-observation.v1'
+    || !Array.isArray(value.project.tasks) || !Array.isArray(value.project.dependencies) || !Array.isArray(value.sessions)) throw new Error('Project activity response is unavailable or belongs to another session');
+  return value;
+}
+
 export interface SessionCoordinationPolicy { contract: 'webmux-session-coordination-policy/v1'; enabled: boolean }
 async function getSessionCoordinationPolicy(signal?: AbortSignal): Promise<SessionCoordinationPolicy> {
   const value = await request<Partial<SessionCoordinationPolicy> | null>('/session-coordination/policy', { signal, cache: 'no-store' });
@@ -210,6 +237,7 @@ async function getSessionCoordinationPolicy(signal?: AbortSignal): Promise<Sessi
 }
 
 export const api = {
+  getMACProject,
   getSessionCoordinationPolicy,
   setSessionCoordinationPolicy: (enabled: boolean, signal?: AbortSignal) => request<void>('/session-coordination/policy', { method: 'PUT', signal, body: JSON.stringify({ enabled }) }),
   getUSBForwardings: (signal?: AbortSignal) => request<USBForwardingLease[]>('/usb-forwardings', { signal, cache: 'no-store' }),

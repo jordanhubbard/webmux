@@ -157,7 +157,8 @@ response limits, duplicate-key checks and redacted errors are shared with the
 graph qualifier. There is no arbitrary route, query or mutation proxy.
 
 The output `webmux.mac.task-identity.v1` contains only the selected task's ID,
-project key, state, owner-worker ID, reported attempt counter, lease ID/expiry,
+project key, title, reported numeric priority, state, owner-worker ID, reported
+attempt counter, lease ID/expiry,
 update time and authority/local observation times. The returned task ID and exact
 project key must match; foreign-project and missing tasks both return
 `ErrUnmapped` with no partial metadata. Descriptions, commands, transcripts,
@@ -246,3 +247,16 @@ creating this plan does not dispatch parallel fleet work:
 The current binding primitive does not complete #673, #674 or the overall
 convergence outcome. In particular, it does not yet answer the four product
 questions or reconcile existing participants and execution backends.
+
+## Optional source-roadmap read extension
+
+The shared-reader follow-up (#674/#682) adds the explicit read capability
+`project.source-roadmap.observe.v1` paired with a repository-relative
+`roadmap_path`. `project.observe.v1` remains required. Neither capability admits
+work. Older bindings retain their existing behavior; an older implementation
+rejects the new capability instead of silently exposing file contents. Capabilities
+are unique and canonically sorted, and the path participates in binding revision.
+See [source roadmap snapshots](mac-project-view.md#source-roadmap-snapshots) for the
+immutable-blob, receiving-account, local-execution, privacy and provenance rules.
+This read extension does not register the live project or map requirements to MAC
+tasks. The earlier receipts above remain historical component evidence.
