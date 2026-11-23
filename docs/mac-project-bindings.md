@@ -157,7 +157,8 @@ response limits, duplicate-key checks and redacted errors are shared with the
 graph qualifier. There is no arbitrary route, query or mutation proxy.
 
 The output `webmux.mac.task-identity.v1` contains only the selected task's ID,
-project key, state, owner-worker ID, reported attempt counter, lease ID/expiry,
+project key, title, reported numeric priority, state, owner-worker ID, reported
+attempt counter, lease ID/expiry,
 update time and authority/local observation times. The returned task ID and exact
 project key must match; foreign-project and missing tasks both return
 `ErrUnmapped` with no partial metadata. Descriptions, commands, transcripts,

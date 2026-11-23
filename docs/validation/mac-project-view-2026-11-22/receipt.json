@@ -1,0 +1,85 @@
+{
+  "schema": "webmux.mac.project-view-qualification.v1",
+  "observed_at": "2026-11-23T06:52:16.621837+00:00",
+  "scope": "Scoped bounded project collection component for #674; human/API/MCP consumers and runtime configuration remain unfinished",
+  "source_sha256": {
+    "webmux/server/internal/maccoord/project.go": "3f5db9307e371905f6c51ed4dfb628646e3a2017e84872b7ffb3580334f05ab2",
+    "webmux/server/internal/maccoord/project_test.go": "88c745a3b43325ecbedfbf5c37e2d7d99486ef0440ddceb1405ecb809f3ce923",
+    "webmux/server/internal/maccoord/task.go": "bfc8e504c6c90da1f1579d0aab0dd5a5a1ee04c25d215168449d11b0441a7b12",
+    "webmux/server/internal/maccoord/task_test.go": "1d4402d7480a97cee85eea4978ae36da940fed1a2257bcf21b87be4376fa9530",
+    "webmux/server/internal/maccoord/native_read_access_darwin_test.go": "15fb1bd6b8a9bd39d1c8c3b4c172e6dced2f39626ca99947c2dde2e4fe3468df"
+  },
+  "checks": [
+    {
+      "command": "go test -race ./internal/maccoord -count=1 -timeout=60s",
+      "exit_code": 0,
+      "elapsed_seconds": 8.962
+    },
+    {
+      "command": "go vet ./internal/maccoord",
+      "exit_code": 0
+    },
+    {
+      "command": "GOOS=windows GOARCH=amd64 go test -c ./internal/maccoord",
+      "exit_code": 0,
+      "classification": "cross-compilation only"
+    }
+  ],
+  "controlled_cases": [
+    "foreign receiving account refused before network",
+    "invalid page/route identifiers refused before task reads",
+    "every returned task independently verified against selected project",
+    "titles and numeric priority come from the scoped task response, not graph metadata",
+    "foreign, outside-page and duplicate dependency edges withheld without their identifiers/content",
+    "empty observations, task failures and degraded/missing graphs kept distinct",
+    "credential refusal after task collection discards the entire observation",
+    "fresh numeric pages bounded to at most eight task candidates, four concurrent pipelines",
+    "unsupported/duplicate/malformed graph data refused",
+    "reported dependencies never become conflict or strict-roadmap admission verdicts"
+  ],
+  "deliberate_mutation_controls": [
+    {
+      "name": "missing-edge-endpoint-scope",
+      "expected_test_failure": "TestProjectProjectionWithholdsForeignRowsAndRelatedDetails",
+      "exit_code": 1,
+      "log_sha256": "0772c86176dd1ee07521fb780b24378ea886f4b0f5fde866ed4f3b2d750386f6"
+    },
+    {
+      "name": "missing-final-read-authentication",
+      "expected_test_failure": "TestProjectProjectionDistinguishesEmptyUnavailableAndRevoked/revoked_after_task",
+      "exit_code": 1,
+      "log_sha256": "34d63ad14f870e5236e6ad060cc1384eb9baf450a7f1cafbd766e0b5ebc96f87"
+    }
+  ],
+  "mutation_classification": "Deliberate Go overlays, not historical bugs or native fleet failures; real source unchanged",
+  "native": {
+    "observed_at": "2026-11-23T06:48:38.811374Z",
+    "publisher_fingerprint": "dd3e7375c27b124a12430167e8e0c5b8886cd5d372b833fbfa078fde934308c0",
+    "same_previously_qualified_publisher": true,
+    "selection": "Private explicit user-supplied fleet-root context; not a WebMux product binding",
+    "rows_observed": 2,
+    "page_limit": 2,
+    "coverage": "incomplete",
+    "project_existence": "unverified",
+    "conflict_verdict": "unknown",
+    "ordering_verdict": "unknown",
+    "principal_identity": "unverified",
+    "other_operations": "unqualified",
+    "missing_and_invalid_credentials_refused": true,
+    "projection_sha256": "d4ec01035ab59d69695030fd48ab77007b955f4d57ee1459532b187939ff3cc3",
+    "raw_task_project_and_counts_private": true,
+    "exit_code": 0,
+    "package_elapsed_seconds": 0.652
+  },
+  "limitations": [
+    "No product configuration loader, HTTP endpoint, browser view or MCP consumer is enabled by this component",
+    "Native fleet-root test selection does not enroll or identify a live WebMux project",
+    "Numeric pages are fresh observations and can miss/repeat rows as upstream data changes",
+    "No atomic snapshot, current participation, complete inventory, conflict exclusion or roadmap ordering proof",
+    "Operator/caller must qualify transport and recheck current binding revision before releasing cached/in-flight data",
+    "Source/roadmap and WebMux session links remain unlinked; freshness and non-read operations unqualified"
+  ],
+  "MAC_worker_task_or_policy_changes": false,
+  "credential_profile_or_service_changes": false,
+  "NAS_access": false
+}

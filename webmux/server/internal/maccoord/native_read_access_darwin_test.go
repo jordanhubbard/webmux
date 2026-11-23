@@ -210,27 +210,37 @@ func TestNativeLocalMACReadAccess(t *testing.T) {
 	if response.StatusCode != http.StatusForbidden {
 		t.Fatal("native client did not refuse generic write scope")
 	}
+	var project *ProjectObservation
+	if taskID != "" && !refusal && os.Getenv("WEBMUX_MAC_NATIVE_PROJECT_VIEW") == "1" {
+		observation, err := bindings.ObserveProject(t.Context(), "native-qualification", repo, manifest.Credential.Token, nil, 0, 2)
+		if err != nil || observation.Schema != ProjectSchema || observation.ProjectExistence != "unverified" ||
+			observation.ConflictVerdict != "unknown" || observation.OrderingVerdict != "unknown" || len(observation.Tasks) > 2 {
+			t.Fatal("native bounded project observation failed:", err)
+		}
+		project = &observation
+	}
 	if publisher() != before {
 		t.Fatal("native publisher changed during qualification")
 	}
 	receipt := struct {
-		Schema               string             `json:"schema"`
-		ClientID             string             `json:"client_id"`
-		ObservedAt           time.Time          `json:"observed_at"`
-		CredentialExpiresAt  time.Time          `json:"credential_expires_at"`
-		PublisherFingerprint string             `json:"publisher_fingerprint"`
-		RepositoryID         string             `json:"repository_id"`
-		Read                 ReadEvidence       `json:"read"`
-		ExpectedRefusal      bool               `json:"expected_refusal"`
-		WriteRefused         bool               `json:"write_refused"`
-		Task                 *TaskObservation   `json:"task,omitempty"`
-		ForeignTaskRefused   bool               `json:"foreign_task_refused,omitempty"`
-		MissingTaskRefused   bool               `json:"missing_task_refused,omitempty"`
-		Worker               *WorkerObservation `json:"worker,omitempty"`
-		UnownedWorkerRefused bool               `json:"unowned_worker_refused,omitempty"`
-		Scope                string             `json:"scope"`
+		Schema               string              `json:"schema"`
+		ClientID             string              `json:"client_id"`
+		ObservedAt           time.Time           `json:"observed_at"`
+		CredentialExpiresAt  time.Time           `json:"credential_expires_at"`
+		PublisherFingerprint string              `json:"publisher_fingerprint"`
+		RepositoryID         string              `json:"repository_id"`
+		Read                 ReadEvidence        `json:"read"`
+		ExpectedRefusal      bool                `json:"expected_refusal"`
+		WriteRefused         bool                `json:"write_refused"`
+		Task                 *TaskObservation    `json:"task,omitempty"`
+		ForeignTaskRefused   bool                `json:"foreign_task_refused,omitempty"`
+		MissingTaskRefused   bool                `json:"missing_task_refused,omitempty"`
+		Worker               *WorkerObservation  `json:"worker,omitempty"`
+		UnownedWorkerRefused bool                `json:"unowned_worker_refused,omitempty"`
+		Project              *ProjectObservation `json:"project,omitempty"`
+		Scope                string              `json:"scope"`
 	}{"webmux.mac.native-read-qualification.v1", manifest.ClientID, time.Now().UTC(), expires, before,
-		repo.ID, evidence, refusal, true, task, foreignTaskRefused, missingTaskRefused, worker, unownedWorkerRefused,
+		repo.ID, evidence, refusal, true, task, foreignTaskRefused, missingTaskRefused, worker, unownedWorkerRefused, project,
 		"Native read/scope and optional user-supplied fleet-task observations only; test binding is not WebMux project/session enrollment or admission"}
 	encoded, err := json.MarshalIndent(receipt, "", "  ")
 	if err != nil {
