@@ -77,7 +77,7 @@ func (b *Broker) Recovery(owner, id string) (RecoveryView, error) {
 	b.mu.Unlock()
 	view := RecoveryView{SessionID: id, Hostname: s.Hostname, Transport: s.Transport, LifecycleOwner: "webmux", State: s.Recovery, ShellReady: ready, Message: "No recorded activity is available. Reconnect or recover this session manually."}
 	view.Live, view.ProjectLabel = live, s.ProjectLabel
-	if restartController != nil && (control == nil || control.Mode == "active") {
+	if restartController != nil && !restarting && (control == nil || control.Mode == "active") {
 		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 		preview := restartController.RecoveryRPC(ctx, recovery.RPCRequest{Operation: "restart-preview"})
 		cancel()
