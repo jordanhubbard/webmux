@@ -120,3 +120,24 @@ execution described above. Required hosted CI and
 packaging remain delivery gates. Complete discovered/enrolled native lifecycle,
 platform, expiry, interface/address-change, spoofing and agent-workflow acceptance
 remain open under #631/#630; this checkpoint checks no roadmap completion box.
+
+## Current-main integration, 2026-11-23
+
+The combined #658/#663/#666 stack was qualified at `fbee9bf` on main
+`7191892`. [The integration receipt](../discovery-ambiguity-2026-11-22/integration-2026-11-23.json)
+binds fresh native macOS/Linux HTTPS and HTTP directional/instance/ambiguity
+controls, standalone and race-build Bonjour registration lifecycle controls, the
+full local server race suite and vet, the production API/session contract, and
+standalone Darwin ARM64/AMD64, Linux ARM64 and Windows ARM64 builds. All pass.
+The original observation bounds and production/qualifier sources are unchanged
+from #666; original failed receipts retain their outcomes. Cross-compilation
+does not establish native platform execution.
+
+The retained owner instruction requires local resources and no new hosted
+qualification jobs, with `[skip ci]` on new commit and merge subjects. It
+supersedes the earlier fresh-hosted-check delivery wording. Existing hosted
+runs remain attributed to their original source; no new hosted packaging or
+whole-current-source platform result is claimed. Raw LAN records remain
+private. Full #631 discovery/enrollment, #664 convergence, remaining native
+platform and release acceptance remain open. No installed service, OS/network
+policy or shared-storage state changed.
