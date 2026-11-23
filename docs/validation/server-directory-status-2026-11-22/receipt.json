@@ -1,0 +1,71 @@
+{
+  "schema": "webmux.server-directory-status-qualification.v1",
+  "observed_at": "2026-11-23T06:21:04.107222+00:00",
+  "issue": 680,
+  "scope": "Accessible directory notice and deterministic concurrent policy-loading browser coverage",
+  "base_revision": "bf63187d691018bedfd0dedd85a77c6ca578ca1f",
+  "source_sha256": {
+    "webmux/frontend/src/components/ServersDialog.tsx": "1f06ad062103c3e446167558565accc1893cefb949dd9d6fa106ebce79b23df5",
+    "tests/e2e/server-federation.spec.ts": "7888000841caedd58b191fa96a20e96306c365e6190ca29f79d77240713c4b95"
+  },
+  "native_Windows_failure": {
+    "head": "cf632ee96b1f2ab01cc15c6147b938cc345d14a1",
+    "job": "https://github.com/jordanhubbard/webmux/actions/runs/45119103283/job/137508538956",
+    "exit_code": 1,
+    "cause": "Generic Manage servers status locator matched independent policy loading and directory working/saved statuses",
+    "log_sha256": "cde48119de9c30ea3b15982206ee14962f4a7056e1bc5a42635900dde1c739a9"
+  },
+  "local_browser": {
+    "platform": "darwin-arm64",
+    "executable": "Installed Google Chrome in an isolated Playwright profile",
+    "version": "158.0.8127.36",
+    "bundled_Playwright_browser_used": false,
+    "Node": "24.22.2"
+  },
+  "regression_control": {
+    "kind": "Real backend policy response held through directory save; original generic status assertion",
+    "exit_code": 1,
+    "cause": "Strict locator collision between Saved and Loading coordination policy",
+    "log_sha256": "e5312276398d44e2f60bc36a2b5d4fbbf25ab654a9cab2373fe79868494153db"
+  },
+  "checks": [
+    {
+      "command": "npm run typecheck",
+      "exit_code": 0
+    },
+    {
+      "command": "npm run build",
+      "exit_code": 0
+    },
+    {
+      "command": "npm run test:e2e -- server-federation.spec.ts coordination-policy.spec.ts",
+      "browser_override": "installed Google Chrome, isolated profile",
+      "fixture_port": 18186,
+      "exit_code": 0,
+      "tests_passed": 2,
+      "elapsed_seconds": 28.8,
+      "log_sha256": "0e76e8dcda342fc4effd914d9a6787b2c2fa7fd37e9120747ab6ee614a6ac4f0"
+    }
+  ],
+  "earlier_unqualified_attempts": [
+    {
+      "result": "No tests found with an anchored grep; corrected selector, no product result",
+      "exit_code": 1
+    },
+    {
+      "result": "Bundled Playwright browser missing; reused installed Chrome with an explicit executable path",
+      "exit_code": 1
+    },
+    {
+      "result": "Initial barrier cleanup raced unroute and response fulfillment; reordered cleanup to settle held responses before removing route",
+      "exit_code": 1,
+      "classification": "Temporary test-harness defect, not product regression evidence"
+    }
+  ],
+  "limitations": [
+    "Local Chrome results do not qualify native Windows recovery; new-head CI still required",
+    "No deployment or installed WebMux service restart",
+    "MAC integration and physical trackpad acceptance remain separate requirements"
+  ],
+  "NAS_access": false
+}
