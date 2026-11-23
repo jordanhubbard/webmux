@@ -1,0 +1,93 @@
+{
+  "schema": "webmux.roadmap.tracker-disposition.v1",
+  "observed_at": "2026-11-23T10:43:52.214188+00:00",
+  "source_main": "0977eb871d91c8b1feba9fb00dc1e683215cf2a2",
+  "tracker_observations": [
+    {
+      "number": 318,
+      "state": "CLOSED",
+      "closedAt": "2026-11-20T17:32:13Z",
+      "url": "https://github.com/jordanhubbard/webmux/issues/318"
+    },
+    {
+      "number": 630,
+      "state": "CLOSED",
+      "closedAt": "2026-11-22T13:10:20Z",
+      "url": "https://github.com/jordanhubbard/webmux/issues/630"
+    },
+    {
+      "number": 438,
+      "state": "OPEN",
+      "closedAt": null,
+      "url": "https://github.com/jordanhubbard/webmux/issues/438"
+    },
+    {
+      "number": 523,
+      "state": "OPEN",
+      "closedAt": null,
+      "url": "https://github.com/jordanhubbard/webmux/issues/523"
+    },
+    {
+      "number": 538,
+      "state": "OPEN",
+      "closedAt": null,
+      "url": "https://github.com/jordanhubbard/webmux/issues/538"
+    },
+    {
+      "number": 603,
+      "state": "OPEN",
+      "closedAt": null,
+      "url": "https://github.com/jordanhubbard/webmux/issues/603"
+    },
+    {
+      "number": 664,
+      "state": "OPEN",
+      "closedAt": null,
+      "url": "https://github.com/jordanhubbard/webmux/issues/664"
+    },
+    {
+      "number": 673,
+      "state": "OPEN",
+      "closedAt": null,
+      "url": "https://github.com/jordanhubbard/webmux/issues/673"
+    },
+    {
+      "number": 674,
+      "state": "OPEN",
+      "closedAt": null,
+      "url": "https://github.com/jordanhubbard/webmux/issues/674"
+    },
+    {
+      "number": 675,
+      "state": "OPEN",
+      "closedAt": null,
+      "url": "https://github.com/jordanhubbard/webmux/issues/675"
+    },
+    {
+      "number": 676,
+      "state": "OPEN",
+      "closedAt": null,
+      "url": "https://github.com/jordanhubbard/webmux/issues/676"
+    },
+    {
+      "number": 677,
+      "state": "OPEN",
+      "closedAt": null,
+      "url": "https://github.com/jordanhubbard/webmux/issues/677"
+    },
+    {
+      "number": 678,
+      "state": "OPEN",
+      "closedAt": null,
+      "url": "https://github.com/jordanhubbard/webmux/issues/678"
+    }
+  ],
+  "roadmap_sha256": "ece1da42fc7867226f649dd64cb6eb5a2cc42711e7f87aa30b8ca4064568ec26",
+  "checkbox_markers_unchanged": true,
+  "checkbox_count": 6,
+  "relative_file_targets_resolved": 99,
+  "scope": "Correct tracker disposition and active follow-up references only; retain original acceptance, recovery priority, historical evidence and full673-678 ordering. No roadmap item completed or reopened.",
+  "runtime_source_changes": false,
+  "MAC_dispatch_or_worker_registration": false,
+  "NAS_access": false
+}
