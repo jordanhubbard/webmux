@@ -123,3 +123,34 @@ go test -v ./internal/maccoord -run '^TestNativeLocalSourceObservation$' -count=
 
 The test skips by default. This is metadata sampling, not a frozen workspace,
 roadmap-source import, session/task/lease mapping or publication qualification.
+
+## Native task identity qualification
+
+The later [task receipt](task-identity.json) covers the fixed, versioned read-only
+task route and the shared authenticated-JSON transport. Controlled tests cover
+separate task/owner/attempt/lease identities, project/account refusal, absent and
+malformed wire fields, null values, unsupported schema, lease states, output-field
+redaction and credential revocation. Existing graph authentication controls still
+pass after the transport extraction. The full package race suite and vet pass;
+Windows AMD64 cross-compilation passes.
+
+The existing dedicated local observer qualified the actual user-supplied fleet
+root task. Its task data stays in the private native receipt; the public receipt
+contains only selected qualification metadata and a projection digest. The task
+was unleased. A foreign project binding and a missing task were refused without
+partial task metadata; generic writes were refused, and the publisher fingerprint
+matched the earlier qualification. No task/worker, credential, active profile,
+service, fleet policy or NAS state was changed.
+
+The lowercase `webmux` graph returned zero nodes. The fleet-root test context is
+separate from a WebMux product project binding; neither observation creates one.
+Active leases, canonical machine joins, WebMux session links, roadmap-source
+joins and human/agent product consumers remain unqualified.
+
+The existing Darwin opt-in authentication test can additionally take
+`WEBMUX_MAC_NATIVE_TASK_SELECTION=/private/path/task-selection.json`. This private
+test input must identify an explicitly selected existing task and project using
+`schema: mac.dashboard.observe.task.v1`, `task_id`, `project_key` and
+`test_only_mapping_eligible: true`. The reader independently verifies the returned
+task/project and refuses the foreign/missing controls. This is test plumbing,
+not a product mapping loader, automatic enrollment or a dispatch mechanism.

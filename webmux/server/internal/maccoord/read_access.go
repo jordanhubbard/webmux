@@ -70,83 +70,15 @@ func (b *Bindings) CheckReadAccess(ctx context.Context, owner string, repository
 	if err != nil {
 		return ReadEvidence{}, err
 	}
-	if ctx == nil || token == "" || len(token) > 16384 || !utf8.ValidString(token) ||
-		strings.ContainsFunc(token, func(r rune) bool { return unicode.IsSpace(r) || unicode.IsControl(r) }) {
+	if ctx == nil || !validReadToken(token) {
 		return ReadEvidence{}, ErrInvalid
 	}
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
-	tlsConfig := &tls.Config{MinVersion: tls.VersionTLS12}
-	if roots != nil {
-		tlsConfig.RootCAs = roots.Clone()
-	}
-	transport := &http.Transport{
-		// No ambient proxy may receive this server-held credential.
-		Proxy:                  nil,
-		DialContext:            (&net.Dialer{Timeout: 5 * time.Second}).DialContext,
-		TLSClientConfig:        tlsConfig,
-		DisableKeepAlives:      true,
-		MaxResponseHeaderBytes: 16 << 10,
-	}
-	defer transport.CloseIdleConnections()
-	client := &http.Client{
-		Transport: transport,
-		CheckRedirect: func(*http.Request, []*http.Request) error {
-			return http.ErrUseLastResponse
-		},
-	}
 	endpoint := selected.Authority.Origin + "/dashboard/observe/projects/" + url.PathEscape(selected.Project.ProjectKey) + "/graph"
-	request := func(credential string) (*http.Response, error) {
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
-		if err != nil {
-			return nil, ErrInvalid
-		}
-		req.Header.Set("Accept", "application/json")
-		req.Header.Set("Cache-Control", "no-store")
-		if credential != "" {
-			req.Header.Set("Authorization", "Bearer "+credential)
-		}
-		response, err := client.Do(req)
-		if err != nil {
-			return nil, &UnavailableError{canceled: errors.Is(ctx.Err(), context.Canceled), timedOut: errors.Is(ctx.Err(), context.DeadlineExceeded)}
-		}
-		return response, nil
-	}
-	random := make([]byte, 32)
-	if _, err := rand.Read(random); err != nil {
-		return ReadEvidence{}, ErrUnavailable
-	}
-	invalid := "webmux-denied-" + hex.EncodeToString(random)
-	for _, credential := range []string{"", invalid} {
-		response, err := request(credential)
-		if err != nil {
-			return ReadEvidence{}, err
-		}
-		response.Body.Close()
-		if response.StatusCode != http.StatusUnauthorized && response.StatusCode != http.StatusForbidden {
-			return ReadEvidence{}, ErrReadAccess
-		}
-	}
-	response, err := request(token)
+	body, err := authenticatedReadJSON(ctx, endpoint, token, roots)
 	if err != nil {
 		return ReadEvidence{}, err
-	}
-	defer response.Body.Close()
-	switch response.StatusCode {
-	case http.StatusOK:
-	case http.StatusUnauthorized, http.StatusForbidden:
-		return ReadEvidence{}, ErrReadAccess
-	case http.StatusNotFound, http.StatusMethodNotAllowed:
-		return ReadEvidence{}, ErrUnsupported
-	default:
-		return ReadEvidence{}, ErrUnavailable
-	}
-	body, err := io.ReadAll(io.LimitReader(response.Body, (1<<20)+1))
-	if err != nil {
-		return ReadEvidence{}, &UnavailableError{canceled: errors.Is(ctx.Err(), context.Canceled), timedOut: errors.Is(ctx.Err(), context.DeadlineExceeded)}
-	}
-	if len(body) > 1<<20 || !utf8.Valid(body) || !uniqueJSON(body) {
-		return ReadEvidence{}, ErrInvalid
 	}
 	// Read exact wire keys instead of encoding/json's case-insensitive struct
 	// matching. Unrelated graph fields are never copied into this evidence.
@@ -169,4 +101,90 @@ func (b *Bindings) CheckReadAccess(ctx context.Context, owner string, repository
 		MissingCredentialsRefused: true, InvalidCredentialsRefused: true, SuppliedCredentialAccepted: true,
 		PrincipalIdentity: "unverified", OtherOperations: "unqualified",
 	}, nil
+}
+
+// Each caller resolves its receiving-account scope and supplies a fixed route.
+// This helper is deliberately private: it is not an arbitrary fleet API proxy.
+func authenticatedReadJSON(ctx context.Context, endpoint, token string, roots *x509.CertPool) ([]byte, error) {
+	tlsConfig := &tls.Config{MinVersion: tls.VersionTLS12}
+	if roots != nil {
+		tlsConfig.RootCAs = roots.Clone()
+	}
+	transport := &http.Transport{
+		// No ambient proxy may receive this server-held credential.
+		Proxy:                  nil,
+		DialContext:            (&net.Dialer{Timeout: 5 * time.Second}).DialContext,
+		TLSClientConfig:        tlsConfig,
+		DisableKeepAlives:      true,
+		MaxResponseHeaderBytes: 16 << 10,
+	}
+	defer transport.CloseIdleConnections()
+	client := &http.Client{
+		Transport: transport,
+		CheckRedirect: func(*http.Request, []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
+	request := func(credential string) (*http.Response, error) {
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+		if err != nil {
+			return nil, ErrInvalid
+		}
+		req.Header.Set("Accept", "application/json")
+		req.Header.Set("Cache-Control", "no-store")
+		if credential != "" {
+			req.Header.Set("Authorization", "Bearer "+credential)
+		}
+		response, err := client.Do(req)
+		if err != nil {
+			return nil, &UnavailableError{canceled: errors.Is(ctx.Err(), context.Canceled), timedOut: errors.Is(ctx.Err(), context.DeadlineExceeded)}
+		}
+		return response, nil
+	}
+	random := make([]byte, 32)
+	if _, err := rand.Read(random); err != nil {
+		return nil, ErrUnavailable
+	}
+	invalid := "webmux-denied-" + hex.EncodeToString(random)
+	for _, credential := range []string{"", invalid} {
+		response, err := request(credential)
+		if err != nil {
+			return nil, err
+		}
+		response.Body.Close()
+		if response.StatusCode != http.StatusUnauthorized && response.StatusCode != http.StatusForbidden {
+			return nil, ErrReadAccess
+		}
+	}
+	response, err := request(token)
+	if err != nil {
+		return nil, err
+	}
+	defer response.Body.Close()
+	switch response.StatusCode {
+	case http.StatusOK:
+	case http.StatusUnauthorized, http.StatusForbidden:
+		return nil, ErrReadAccess
+	case http.StatusNotFound, http.StatusMethodNotAllowed:
+		return nil, ErrUnsupported
+	default:
+		return nil, ErrUnavailable
+	}
+	body, err := io.ReadAll(io.LimitReader(response.Body, (1<<20)+1))
+	if err != nil {
+		return nil, &UnavailableError{canceled: errors.Is(ctx.Err(), context.Canceled), timedOut: errors.Is(ctx.Err(), context.DeadlineExceeded)}
+	}
+	if len(body) > 1<<20 || !utf8.Valid(body) || !uniqueJSON(body) {
+		return nil, ErrInvalid
+	}
+
+	if ctx.Err() != nil {
+		return nil, &UnavailableError{canceled: errors.Is(ctx.Err(), context.Canceled), timedOut: errors.Is(ctx.Err(), context.DeadlineExceeded)}
+	}
+	return body, nil
+}
+
+func validReadToken(token string) bool {
+	return token != "" && len(token) <= 16384 && utf8.ValidString(token) &&
+		!strings.ContainsFunc(token, func(r rune) bool { return unicode.IsSpace(r) || unicode.IsControl(r) })
 }

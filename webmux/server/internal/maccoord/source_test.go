@@ -123,6 +123,9 @@ func TestSourceUsesActualRepositoryAndAccount(t *testing.T) {
 	if _, err := bindings.ObserveSource(t.Context(), "bob", &changed); !errors.Is(err, ErrUnmapped) {
 		t.Fatal("foreign account reached source inspection", err)
 	}
+	if got, err := bindings.ObserveSource(nil, "alice", repo); !errors.Is(err, ErrInvalid) || got.Schema != "" {
+		t.Fatal("missing source context returned metadata", err)
+	}
 	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
 	if got, err := bindings.ObserveSource(ctx, "alice", repo); !errors.Is(err, context.Canceled) || !errors.Is(err, ErrSource) || got.Schema != "" {

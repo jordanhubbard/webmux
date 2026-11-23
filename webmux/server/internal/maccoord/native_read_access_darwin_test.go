@@ -98,6 +98,25 @@ func TestNativeLocalMACReadAccess(t *testing.T) {
 		return hex.EncodeToString(digest[:])
 	}
 	before := publisher()
+	projectKey, taskID := "webmux-auth-qualification", ""
+	if selectionPath := os.Getenv("WEBMUX_MAC_NATIVE_TASK_SELECTION"); selectionPath != "" {
+		info, err := os.Lstat(selectionPath)
+		if err != nil || !info.Mode().IsRegular() || info.Mode().Perm()&0077 != 0 || info.Size() > 64<<10 {
+			t.Fatal("native task selection must be a bounded private regular file")
+		}
+		data, err := os.ReadFile(selectionPath)
+		var selection struct {
+			Schema     string `json:"schema"`
+			TaskID     string `json:"task_id"`
+			ProjectKey string `json:"project_key"`
+			Eligible   bool   `json:"test_only_mapping_eligible"`
+		}
+		if err != nil || !uniqueJSON(data) || json.Unmarshal(data, &selection) != nil ||
+			selection.Schema != TaskSchema || !selection.Eligible || !validText(selection.TaskID, 256) {
+			t.Fatal("explicit native task selection is unqualified")
+		}
+		projectKey, taskID = selection.ProjectKey, selection.TaskID
+	}
 	cwd, err := os.Getwd()
 	if err != nil {
 		t.Fatal("native repository context unavailable")
@@ -111,7 +130,7 @@ func TestNativeLocalMACReadAccess(t *testing.T) {
 		Authorities: []Authority{{ID: "explicit-local-mac-qualification", Origin: origin}},
 		Bindings: []ProjectBinding{{
 			Owner: "native-qualification", RepositoryID: repo.ID, Repository: repo.Repository,
-			AuthorityID: "explicit-local-mac-qualification", ProjectKey: "webmux-auth-qualification",
+			AuthorityID: "explicit-local-mac-qualification", ProjectKey: projectKey,
 			Capabilities: []string{ObserveCapability},
 		}},
 	}
@@ -129,6 +148,35 @@ func TestNativeLocalMACReadAccess(t *testing.T) {
 		}
 	} else if err != nil {
 		t.Fatal("native read access failed:", err)
+	}
+	var task *TaskObservation
+	foreignTaskRefused, missingTaskRefused := false, false
+	if taskID != "" && !refusal {
+		observation, err := bindings.ObserveTask(ctx, "native-qualification", repo, taskID, manifest.Credential.Token, nil)
+		if err != nil || observation.Schema != TaskIdentitySchema || observation.SessionLinkState != "unlinked" ||
+			observation.MachineIdentityState != "unavailable" || observation.SourceLinkState != "unlinked" {
+			t.Fatal("native task identity observation failed:", err)
+		}
+		task = &observation
+		// The same real task must not cross a different receiving-project binding.
+		foreign := document
+		foreign.Bindings = append([]ProjectBinding(nil), document.Bindings...)
+		foreign.Bindings[0].ProjectKey = "webmux-native-foreign-project-01a2018c"
+		if foreign.Bindings[0].ProjectKey == projectKey {
+			t.Fatal("native foreign-project control is not independent")
+		}
+		other, err := ParseBindings(bindingBytes(t, foreign))
+		if err != nil {
+			t.Fatal("native foreign-project binding refused")
+		}
+		if got, err := other.ObserveTask(ctx, "native-qualification", repo, taskID, manifest.Credential.Token, nil); !errors.Is(err, ErrUnmapped) || got.Schema != "" {
+			t.Fatal("native task crossed its project boundary")
+		}
+		foreignTaskRefused = true
+		if got, err := bindings.ObserveTask(ctx, "native-qualification", repo, "webmux-native-absent-task-01a2018c-20261123", manifest.Credential.Token, nil); !errors.Is(err, ErrUnmapped) || got.Schema != "" {
+			t.Fatal("native missing task became an observation")
+		}
+		missingTaskRefused = true
 	}
 	// An intentionally nonexistent route has no business operation to execute.
 	// MAC middleware must refuse its generic write scope before route dispatch.
@@ -152,19 +200,22 @@ func TestNativeLocalMACReadAccess(t *testing.T) {
 		t.Fatal("native publisher changed during qualification")
 	}
 	receipt := struct {
-		Schema               string       `json:"schema"`
-		ClientID             string       `json:"client_id"`
-		ObservedAt           time.Time    `json:"observed_at"`
-		CredentialExpiresAt  time.Time    `json:"credential_expires_at"`
-		PublisherFingerprint string       `json:"publisher_fingerprint"`
-		RepositoryID         string       `json:"repository_id"`
-		Read                 ReadEvidence `json:"read"`
-		ExpectedRefusal      bool         `json:"expected_refusal"`
-		WriteRefused         bool         `json:"write_refused"`
-		Scope                string       `json:"scope"`
+		Schema               string           `json:"schema"`
+		ClientID             string           `json:"client_id"`
+		ObservedAt           time.Time        `json:"observed_at"`
+		CredentialExpiresAt  time.Time        `json:"credential_expires_at"`
+		PublisherFingerprint string           `json:"publisher_fingerprint"`
+		RepositoryID         string           `json:"repository_id"`
+		Read                 ReadEvidence     `json:"read"`
+		ExpectedRefusal      bool             `json:"expected_refusal"`
+		WriteRefused         bool             `json:"write_refused"`
+		Task                 *TaskObservation `json:"task,omitempty"`
+		ForeignTaskRefused   bool             `json:"foreign_task_refused,omitempty"`
+		MissingTaskRefused   bool             `json:"missing_task_refused,omitempty"`
+		Scope                string           `json:"scope"`
 	}{"webmux.mac.native-read-qualification.v1", manifest.ClientID, time.Now().UTC(), expires, before,
-		repo.ID, evidence, refusal, true,
-		"Native read/scope outcomes only; synthetic project key is not project enrollment, worker identity or admission"}
+		repo.ID, evidence, refusal, true, task, foreignTaskRefused, missingTaskRefused,
+		"Native read/scope and optional user-supplied fleet-task observations only; test binding is not WebMux project/session enrollment or admission"}
 	encoded, err := json.MarshalIndent(receipt, "", "  ")
 	if err != nil {
 		t.Fatal("native qualification receipt unavailable")

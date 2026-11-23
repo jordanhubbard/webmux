@@ -50,6 +50,9 @@ func (b *Bindings) ObserveSource(parent context.Context, owner string, repositor
 	if err != nil {
 		return SourceObservation{}, err
 	}
+	if parent == nil {
+		return SourceObservation{}, ErrInvalid
+	}
 	ctx, cancel := context.WithTimeout(parent, 5*time.Second)
 	defer cancel()
 	unavailable := func() (SourceObservation, error) {

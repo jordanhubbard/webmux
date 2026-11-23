@@ -147,6 +147,44 @@ is inferred from this observation. Those require separate authority/source joins
 and validation at admission/publication. No product consumer invokes this helper
 yet. See the [source qualification](validation/mac-bindings-2026-11-22/source-observation.json).
 
+## Task, attempt-counter and lease observation
+
+`ObserveTask` reads only `/dashboard/observe/tasks/{task_id}`, schema
+`mac.dashboard.observe.task.v1`, after resolving the receiving account and exact
+repository mapping. It applies the same missing/invalid/intended-credential
+controls to that fixed route. TLS, redirect/proxy refusal, five-second context,
+response limits, duplicate-key checks and redacted errors are shared with the
+graph qualifier. There is no arbitrary route, query or mutation proxy.
+
+The output `webmux.mac.task-identity.v1` contains only the selected task's ID,
+project key, state, owner-worker ID, reported attempt counter, lease ID/expiry,
+update time and authority/local observation times. The returned task ID and exact
+project key must match; foreign-project and missing tasks both return
+`ErrUnmapped` with no partial metadata. Descriptions, commands, transcripts,
+history, evidence, unrelated task fields and credential data are not returned.
+Exact wire keys are required, including explicit null for absent owner/lease
+fields. Missing or malformed fields cannot become an unleased observation.
+
+MAC's `attempt_count` is retained as a counter, not converted into an invented
+attempt UUID or fence. Lease observation distinguishes `unleased`, `incomplete`,
+`observed_expired` and `observed_unexpired`, comparing expiry with the reported
+MAC server time. This does not validate a claim or authorize execution/publication.
+The owner field can survive completion and does not establish current activity.
+Machine identity remains unavailable; WebMux session and source links remain
+unlinked until independently joined. A machine nickname or matching task title
+never supplies those joins.
+
+The chosen observability route uses read-only queries at the inspected MAC
+revision. Ordinary `GET /tasks/{task_id}` (including its compact view) can rebuild
+missing task-flow records, so it is not used for this observation boundary.
+The [task receipt](validation/mac-bindings-2026-11-22/task-identity.json) records
+controlled checks and real read-only qualification against the user-supplied
+fleet-root task. That task's actual unleased state was preserved, and a different
+project selection plus a missing task were refused. This test-only mapping does
+not enroll a WebMux project or session. The explicit lowercase `webmux` graph
+selection returned zero nodes; no project-existence conclusion follows. No
+product browser, CLI or MCP consumer invokes this reader yet.
+
 ## Ordered implementation
 
 The following are sub-issues of #664 with actual GitHub blocker relationships;
