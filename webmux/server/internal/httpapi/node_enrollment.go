@@ -53,23 +53,26 @@ func (s *Server) enrollNodePeer(w http.ResponseWriter, r *http.Request, owner st
 		writeError(w, 400, "Use HTTPS to verify a node identity. Manual HTTP peers remain available without automatic discovery reconciliation.")
 		return
 	}
-	connection, identity, err := dialNodePeer(r.Context(), peer, secret, s.peerRoots)
+	var candidates []discovery.Candidate
+	if s.nodePolicy.Browse && s.nodes != nil && s.nodes.Err() == nil {
+		candidates = s.nodes.Snapshot(time.Now())
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), 8*time.Second)
+	defer cancel()
+	next, err := s.proveEnrollmentPeer(ctx, peer, secret, candidates)
 	if err != nil {
 		writeError(w, 502, "Node identity verification failed; check HTTPS trust, the incoming grant and the original node identity")
 		return
 	}
-	_ = connection.Close()
 	local, err := discovery.LoadNodePolicy(s.store)
 	if err != nil {
 		s.internalError(w, err)
 		return
 	}
-	if identity.NodeID == local.ID {
+	if next.Identity.NodeID == local.ID {
 		writeError(w, 409, "The peer has this server's node identity; use separate WebMux homes and identities")
 		return
 	}
-	next := peer
-	next.Identity = identity
 	if err := s.commitNodePeer(peer, next, secret); err != nil {
 		writeError(w, 409, err.Error())
 		return
@@ -77,33 +80,112 @@ func (s *Server) enrollNodePeer(w http.ResponseWriter, r *http.Request, owner st
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func candidatePeer(previous serverPeer, c discovery.Candidate, now time.Time) (serverPeer, bool) {
-	if !validNodePin(previous.Identity) || !c.TLS || c.ClaimedID != previous.Identity.NodeID || !now.Before(c.Expires) || c.Port == 0 {
+// DNS-SD observations are connection hints, never enrollment authority. Keep
+// the configured URL/hostname for normal certificate checks and prove the grant
+// and advertised node on that same TLS connection before retaining an address.
+func (s *Server) proveEnrollmentPeer(ctx context.Context, peer serverPeer, secret string, candidates []discovery.Candidate) (serverPeer, error) {
+	connection, identity, err := dialNodePeer(ctx, peer, secret, s.peerRoots)
+	if err == nil {
+		_ = connection.Close()
+		next := peer
+		next.Identity = identity
+		return next, nil
+	}
+	attempted := 0
+	seen := map[string]bool{}
+	for _, candidate := range candidates {
+		if ctx.Err() != nil || attempted >= 4 {
+			break
+		}
+		next, ok := enrollmentCandidatePeer(peer, candidate, time.Now())
+		if !ok || next.DiscoveredAddress == peer.DiscoveredAddress {
+			continue
+		}
+		// A forged claim for an address must not suppress the real node's
+		// distinct claim at that address. Bound distinct proof attempts below.
+		key := next.DiscoveredAddress + "/" + candidate.ClaimedID
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+		attempted++
+		connection, identity, err = dialNodePeer(ctx, next, secret, s.peerRoots)
+		if err != nil {
+			continue
+		}
+		_ = connection.Close()
+		if identity.NodeID != candidate.ClaimedID {
+			err = errors.New("discovered node claim did not match its proof")
+			continue
+		}
+		next.Identity = identity
+		return next, nil
+	}
+	return serverPeer{}, err
+}
+
+func enrollmentCandidatePeer(previous serverPeer, c discovery.Candidate, now time.Time) (serverPeer, bool) {
+	if previous.Identity != (nodeIdentity{}) && !validNodePin(previous.Identity) {
 		return serverPeer{}, false
+	}
+	endpoint, address, ok := candidateEndpoint(c, now)
+	if !ok {
+		return serverPeer{}, false
+	}
+	target, err := url.Parse(previous.URL)
+	if err != nil || target.Scheme != "https" || !strings.EqualFold(strings.TrimSuffix(target.Hostname(), "."), endpoint.Hostname()) {
+		return serverPeer{}, false
+	}
+	port := target.Port()
+	if port == "" {
+		port = "443"
+	}
+	if port != endpoint.Port() || (previous.Identity != (nodeIdentity{}) && previous.Identity.NodeID != c.ClaimedID) {
+		return serverPeer{}, false
+	}
+	next := previous
+	next.DiscoveredAddress = address
+	return next, true
+}
+
+func candidateEndpoint(c discovery.Candidate, now time.Time) (*url.URL, string, bool) {
+	if !c.TLS || !discovery.ValidNodeID(c.ClaimedID) || !now.Before(c.Expires) || c.Port == 0 {
+		return nil, "", false
 	}
 	address, err := netip.ParseAddr(c.Address)
 	if err != nil || address.IsUnspecified() || address.IsMulticast() || address.IsLoopback() || (address.Is6() && address.IsLinkLocalUnicast() && address.Zone() == "") {
-		return serverPeer{}, false
+		return nil, "", false
 	}
 	// The discovery parser already validates DNS names. Repeat the trust-boundary
 	// check here so callers cannot construct an arbitrary proxy destination.
 	host := strings.ToLower(strings.TrimSuffix(c.Host, "."))
 	if len(host) > 253 || !strings.HasSuffix(host, ".local") {
-		return serverPeer{}, false
+		return nil, "", false
 	}
 	for _, label := range strings.Split(host, ".") {
 		if len(label) == 0 || len(label) > 63 || label[0] == '-' || label[len(label)-1] == '-' {
-			return serverPeer{}, false
+			return nil, "", false
 		}
 		for _, r := range label {
 			if !(r >= 'a' && r <= 'z' || r >= '0' && r <= '9' || r == '-') {
-				return serverPeer{}, false
+				return nil, "", false
 			}
 		}
 	}
+	return &url.URL{Scheme: "https", Host: net.JoinHostPort(host, strconv.Itoa(int(c.Port)))}, address.String(), true
+}
+
+func candidatePeer(previous serverPeer, c discovery.Candidate, now time.Time) (serverPeer, bool) {
+	if !validNodePin(previous.Identity) || c.ClaimedID != previous.Identity.NodeID {
+		return serverPeer{}, false
+	}
+	endpoint, address, ok := candidateEndpoint(c, now)
+	if !ok {
+		return serverPeer{}, false
+	}
 	next := previous
-	next.URL = (&url.URL{Scheme: "https", Host: net.JoinHostPort(host, strconv.Itoa(int(c.Port)))}).String()
-	next.DiscoveredAddress = address.String()
+	next.URL = endpoint.String()
+	next.DiscoveredAddress = address
 	return next, true
 }
 
