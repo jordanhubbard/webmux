@@ -1,0 +1,199 @@
+{
+  "version": 1,
+  "date": "2026-11-22",
+  "scope": "Architecture selection: current native provider MCP/catalog interfaces and controlled read refusals, plus retained source-bound lifecycle/coordination evidence; not full managed/discovered workflow acceptance",
+  "architecture_issue": 656,
+  "parent_webmux_revision": "3cacedc6a62f3991b24fd52520c6b5ba486222c1",
+  "native_host": "macOS ARM64",
+  "provider_comparison": {
+    "passed": true,
+    "rig": {
+      "exit_code": 0,
+      "server_info": {
+        "name": "openrig",
+        "version": "0.6.14 (9d0200f3)"
+      },
+      "protocol_version": "2025-11-25",
+      "sent_methods": [
+        "initialize",
+        "notifications/initialized",
+        "tools/list",
+        "tools/call"
+      ],
+      "controlled_read": "rig_status",
+      "controlled_refusal": true,
+      "metadata_backend_requests": 0,
+      "tool_names": [
+        "rig_add",
+        "rig_agent_validate",
+        "rig_bind",
+        "rig_bundle_inspect",
+        "rig_capture",
+        "rig_chatroom_send",
+        "rig_chatroom_watch",
+        "rig_discover",
+        "rig_down",
+        "rig_ps",
+        "rig_queue_claim",
+        "rig_queue_create",
+        "rig_queue_list",
+        "rig_queue_show",
+        "rig_queue_update",
+        "rig_restore",
+        "rig_rig_nodes",
+        "rig_rig_validate",
+        "rig_send",
+        "rig_snapshot_create",
+        "rig_snapshot_list",
+        "rig_status",
+        "rig_up"
+      ]
+    },
+    "agent_deck_recall": {
+      "exit_code": 0,
+      "server_info": {
+        "name": "agent-deck-recall",
+        "version": "1.16.34"
+      },
+      "protocol_version": "2025-06-18",
+      "sent_methods": [
+        "initialize",
+        "notifications/initialized",
+        "tools/list",
+        "tools/call"
+      ],
+      "controlled_read": "recall_show",
+      "controlled_refusal": true,
+      "metadata_backend_requests": 0,
+      "tool_names": [
+        "recall_context",
+        "recall_search",
+        "recall_show"
+      ]
+    },
+    "webmux": {
+      "exit_code": 0,
+      "server_info": {
+        "name": "webmux-coordination",
+        "version": "webmux-session-coordination/v1"
+      },
+      "protocol_version": "2025-11-25",
+      "sent_methods": [
+        "initialize",
+        "notifications/initialized",
+        "tools/list",
+        "tools/call"
+      ],
+      "controlled_read": "webmux_coordination_view",
+      "controlled_refusal": true,
+      "metadata_backend_requests": 0,
+      "tool_names": [
+        "webmux_coordination_act",
+        "webmux_coordination_view"
+      ]
+    },
+    "agent_deck_catalog": {
+      "exit_code": 0,
+      "fixture_entry_only": true
+    },
+    "agent_deck_disabled_recall": {
+      "exit_code": 2,
+      "expected_refusal": true
+    },
+    "executable_sha256": {
+      "rig_node": "68f4d07ca49e0500cc135c7e0a445093e228e42e126ac22306d045f0a8c2636b",
+      "rig_entry": "d234371ba866b7e1dee9e781730bd6657f696ffecd161963cfc3bb1ea20ab671",
+      "agent_deck": "728e02638e643801784f708ad22c8e376cad8ae00c0d28680eee363ed309ef89",
+      "webmux": "cfd3b9f454b157f80a40ad9ec1b4a329f2fed855f2ebab6f04b5687df510bcb3",
+      "qualifier_script": "bc7dfd416409a9408110197c06def6b2d21e82b5544d43406473e0a1e09e9e03"
+    },
+    "executables_unchanged": true,
+    "backend_requests": [
+      {
+        "method": "GET",
+        "path": "/healthz"
+      }
+    ]
+  },
+  "qualifier_sha256": "bc7dfd416409a9408110197c06def6b2d21e82b5544d43406473e0a1e09e9e03",
+  "agent_deck_source": {
+    "reported_version": "1.16.34",
+    "binary_vcs_revision": "f36e77d6170b8d8b54f50c960c3f16e8a2c5df19",
+    "release_tag_matches_binary_revision": true,
+    "source_files": {
+      "cmd/agent-deck/mcp_cmd.go": {
+        "sha256": "0c5fb15bebe4ad36762cbab668f2a35023252a8090247b8e82caa095ea5cae9d",
+        "url": "https://github.com/asheshgoplani/agent-deck/blob/f36e77d6170b8d8b54f50c960c3f16e8a2c5df19/cmd/agent-deck/mcp_cmd.go"
+      },
+      "internal/session/instance_mcp.go": {
+        "sha256": "bd75e39b97b9708aa5c0b88e1f5e37c2f4fc83d3bb77d53ac942baffa7f16929",
+        "url": "https://github.com/asheshgoplani/agent-deck/blob/f36e77d6170b8d8b54f50c960c3f16e8a2c5df19/internal/session/instance_mcp.go"
+      },
+      "internal/session/codex_mcp.go": {
+        "sha256": "c400ef992c2dcb9ed037bfaed0fe4fb3b2232b218b000ef689ebf3f7e5030b59",
+        "url": "https://github.com/asheshgoplani/agent-deck/blob/f36e77d6170b8d8b54f50c960c3f16e8a2c5df19/internal/session/codex_mcp.go"
+      },
+      "cmd/agent-deck/recall_mcp_cmd.go": {
+        "sha256": "5d75d0bdecb7548687538053be8658076b41fa4bfc109950f517984e5aa3e40b",
+        "url": "https://github.com/asheshgoplani/agent-deck/blob/f36e77d6170b8d8b54f50c960c3f16e8a2c5df19/cmd/agent-deck/recall_mcp_cmd.go"
+      },
+      "internal/recall/mcp/mcp.go": {
+        "sha256": "c36bd3c8c1770fe906f5fa95a6058f224d68343b37cb9bcddbd1c96a73e5d5f1",
+        "url": "https://github.com/asheshgoplani/agent-deck/blob/f36e77d6170b8d8b54f50c960c3f16e8a2c5df19/internal/recall/mcp/mcp.go"
+      },
+      "internal/agentpaths/paths.go": {
+        "sha256": "bce8690e40adefefcda8d8bd599594df82227d0524a3c351bc5cf0b0ffe6597f",
+        "url": "https://github.com/asheshgoplani/agent-deck/blob/f36e77d6170b8d8b54f50c960c3f16e8a2c5df19/internal/agentpaths/paths.go"
+      }
+    }
+  },
+  "rig_installed_source": {
+    "reported_version": "0.6.14 (9d0200f3)",
+    "release_directory_id": "9d0200f39c1e",
+    "source_sha256": {
+      "bin-wrapper.js": "d234371ba866b7e1dee9e781730bd6657f696ffecd161963cfc3bb1ea20ab671",
+      "commands/mcp.js": "4fe6394557c96512c7fc7ffab6314828759273fce173d8f4b41af636c498cad3",
+      "mcp-server.js": "fe908dcad6cba8e85da90510d8c9adfb727269bce1d04552902fd397d5aef869",
+      "program-root.js": "cbb65d40ee999f0794018a9717baf4a115b7fd94c320514f9991a74e4e978795",
+      "version.js": "002a7973a8215e1fad167cb2e628540fe00cb10f1a66d8f33d41629e3f9e2c12"
+    }
+  },
+  "raw_evidence_sha256": {
+    "catalog-stdout.json": "706f7d80b7c843625594e6dd06196651fbdbc4730b80b0fa1fa71481c5d7336f",
+    "recall-disabled-stderr.log": "c94c10a825ddb3a23f6acbab86a052ada336f78727a8956f9dc935f33e5653b7",
+    "agent-deck-recall-stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "webmux-protocol.json": "5234be5c0b4ac2d946484a50ae83d1cda18e7655650c800192069f9a311b887f",
+    "rig-protocol.json": "eeeb47982b7c9312245f215617646fb168a23222520f7e2eec127c863c977bb6",
+    "catalog-stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "agent-deck-recall-protocol.json": "1ef7d1bd0f9b39d31a5d29e1a67ee7e16e3af34a78c12e4c5887f8a3cc1f9ca6",
+    "rig-stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "webmux-stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "receipt.json": "f0961461922251cf9248902cecef316a941057f48c342cf7da2a7dc3653cde41"
+  },
+  "qualifier_controls": {
+    "existing_output": {
+      "exit_code": 1,
+      "receipt_unchanged": true
+    },
+    "optimized_python": {
+      "exit_code": 2,
+      "refused_before_output_creation": true
+    }
+  },
+  "python_compile_exit_code": 0,
+  "whitespace_exit_code": 0,
+  "initial_prototype_failure": {
+    "observation": "Fresh Agent Deck Recall profile ended the protocol before initialize",
+    "diagnostic_limit": "Initial prototype retained stderr only on success; original stderr was not retained",
+    "followup": "Final qualifier retains diagnostics on every exit; independent fresh disabled-Recall control exits 2, and only the empty private positive profile enables Recall"
+  },
+  "selection": "Built-in WebMux server coordination with optional existing Agent Deck/Rig lifecycle owners",
+  "preservation": "Private HOME/XDG/config/cache roots; no inherited native credentials; only three fixed read-only tool calls. The sole backend request reaches the owned refusing endpoint. No live daemon, conversation, provider lifecycle, terminal message or installed policy is changed.",
+  "remaining": [
+    "automatic managed/existing-agent channels",
+    "native policy/sandbox and Windows custody acceptance",
+    "complete multicast discovery and authenticated enrollment workflow",
+    "complete native durable message/claim/reservation lifecycle and uncertain-delivery controls",
+    "all remaining #630/#631 implementation and qualification gates"
+  ]
+}
