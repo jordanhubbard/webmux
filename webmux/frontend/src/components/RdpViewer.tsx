@@ -53,10 +53,20 @@ export function RdpViewer({ sessionId, mode, onStateChange, clientRef, onClipboa
     const focus = () => container.focus();
     const release = () => keyboard?.reset();
 
+    const mouse = new Guacamole.Mouse(container);
+    // CSS-scaled thumbnails receive routed wheel events only. Set their remote
+    // position explicitly because they receive no native pointer movement.
+    const wheelPosition = (event: WheelEvent) => {
+      if (mode !== 'thumbnail') return;
+      const rect = container.getBoundingClientRect();
+      const display = client.getDisplay();
+      mouse.currentState.x = Math.max(0, Math.min(display.getWidth() - 1, (event.clientX - rect.left) * display.getWidth() / (rect.width || 1)));
+      mouse.currentState.y = Math.max(0, Math.min(display.getHeight() - 1, (event.clientY - rect.top) * display.getHeight() / (rect.height || 1)));
+    };
+    container.addEventListener('wheel', wheelPosition, true);
+    mouse.onmousedown = state => { if (active) client.sendMouseState(state); };
+    mouse.onmouseup = state => { if (active) client.sendMouseState(state); };
     if (mode === 'fullscreen') {
-      const mouse = new Guacamole.Mouse(containerRef.current);
-      mouse.onmousedown = state => { if (active) client.sendMouseState(state); };
-      mouse.onmouseup = state => { if (active) client.sendMouseState(state); };
       mouse.onmousemove = state => { if (active) client.sendMouseState(state); };
 
       keyboard = new Guacamole.Keyboard(container);
@@ -71,6 +81,7 @@ export function RdpViewer({ sessionId, mode, onStateChange, clientRef, onClipboa
     client.connect();
 
     return () => {
+      container.removeEventListener('wheel', wheelPosition, true);
       keyboard?.reset();
       if (keyboard) { keyboard.onkeydown = null; keyboard.onkeyup = null; }
       container.removeEventListener('mousedown', focus);
@@ -89,6 +100,7 @@ export function RdpViewer({ sessionId, mode, onStateChange, clientRef, onClipboa
       <div style={{ width: '100%', height: '100%', overflow: 'hidden', position: 'relative' }}>
         <div
           ref={containerRef}
+          data-wheel-surface
           data-1p-ignore
           style={{
             position: 'absolute',
@@ -106,6 +118,7 @@ export function RdpViewer({ sessionId, mode, onStateChange, clientRef, onClipboa
   return (
     <div
       ref={containerRef}
+      data-wheel-surface
       data-1p-ignore
       // Guacamole places canvas layers at z-index -1. Keep them above this
       // viewer's background while preserving their ordering below child layers.

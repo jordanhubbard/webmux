@@ -29,6 +29,14 @@ describe('grid wheel ownership', () => {
     expect(original.defaultPrevented).toBe(true);
     expect([f.root.scrollLeft, f.root.scrollTop]).toEqual([0, 0]);
   });
+  it('routes wheel over add-session buttons to the selected window', () => {
+    const f = fixture();
+    const event = f.wheel(f.root.querySelector('button')!);
+    expect(f.received[0]).toHaveBeenCalledTimes(1);
+    expect(f.received[1]).not.toHaveBeenCalled();
+    expect(event.defaultPrevented).toBe(true);
+    expect([f.root.scrollLeft, f.root.scrollTop]).toEqual([0, 0]);
+  });
   it('preserves native legacy deltas used by terminal wheel normalization', () => {
     const f = fixture();
     const event = new WheelEvent('wheel', { bubbles: true, cancelable: true, deltaY: -240 });
@@ -67,6 +75,21 @@ describe('grid wheel ownership', () => {
     expect(wheel).toHaveBeenCalledTimes(1); expect(f.received[0]).not.toHaveBeenCalled();
     f.wheel(embedded, { shiftKey: true });
     expect(wheel).toHaveBeenCalledTimes(1); expect(f.root.scrollTop).toBe(24);
+  });
+  it('routes desktop surfaces through their native wheel handler with exclusive Shift ownership', () => {
+    const f = fixture(); const desktop = document.createElement('div');
+    desktop.dataset.desktopSession = 'remote';
+    desktop.innerHTML = '<div data-wheel-surface><canvas></canvas></div>';
+    f.root.append(desktop);
+    const surface = desktop.querySelector<HTMLElement>('[data-wheel-surface]')!;
+    const received = vi.fn(); surface.addEventListener('wheel', received);
+    f.select('remote'); f.wheel(f.screens[0]);
+    expect(received).toHaveBeenCalledTimes(1); expect(f.received[0]).not.toHaveBeenCalled();
+    f.wheel(f.root, { shiftKey: true });
+    expect(received).toHaveBeenCalledTimes(1);
+    expect([f.root.scrollLeft, f.root.scrollTop]).toEqual([8, 24]);
+    f.select('one'); f.wheel(surface);
+    expect(f.received[0]).toHaveBeenCalledTimes(1); expect(received).toHaveBeenCalledTimes(1);
   });
   it('preserves browser zoom and other modified input, and removes listeners', () => {
     const f = fixture(); const event = f.wheel(f.screens[1], { ctrlKey: true });
