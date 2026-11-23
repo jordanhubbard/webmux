@@ -135,7 +135,7 @@ func prepareRemoteRecovery(value *browserConnect) bool {
 	}
 	probeArgs := append([]string(nil), args...)
 	probeArgs = recoveryBootstrapTrust(value.Args, probeArgs)
-	probeArgs[len(probeArgs)-1] = "webmux --recovery-capabilities"
+	probeArgs[len(probeArgs)-1] = remoteHelperCommand("--recovery-capabilities")
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	output, err := exec.CommandContext(ctx, "ssh", probeArgs...).Output()
 	cancel()
@@ -181,9 +181,9 @@ func prepareRemoteRecovery(value *browserConnect) bool {
 		}
 	}
 	if value.Request.Transport == "mosh" {
-		value.Args = append(value.Args, "webmux", "--session-attach", value.Request.SessionID)
+		value.Args = append(value.Args, "sh", "-c", remoteHelperScript("--session-attach", value.Request.SessionID))
 	} else {
-		value.Args = append(value.Args, "webmux --session-attach "+shellQuote(value.Request.SessionID))
+		value.Args = append(value.Args, remoteHelperCommand("--session-attach", value.Request.SessionID))
 	}
 	return true
 }
@@ -274,5 +274,5 @@ func recoverySSHArgs(request LaunchRequest, controlPath string) ([]string, error
 	if request.Username != "" {
 		args = append(args, "-l", request.Username)
 	}
-	return append(args, "--", request.Hostname, "webmux --recovery-rpc"), nil
+	return append(args, "--", request.Hostname, remoteHelperCommand("--recovery-rpc")), nil
 }
