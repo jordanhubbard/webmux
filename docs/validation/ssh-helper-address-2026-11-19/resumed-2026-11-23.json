@@ -1,0 +1,510 @@
+{
+  "schema": "webmux.ssh-helper-current-composition-qualification.v1",
+  "issue": 625,
+  "observed_at": "2026-11-23T09:42:46.743565+00:00",
+  "qualified_source_revision": "611647cd597dc4f0fbbd57d863dd175dabbc4fce",
+  "main_parent": "4ce1fc91ba1c63c7edbeec22d3626f94a48fe874",
+  "original_candidate": "b404ab14c2da12e9849b804be3ab2ec79dd40e2a",
+  "publication_merge_subject_amendment": {
+    "revision": "23fdf0bfdcf9ed3192a6baaf64d55cc7853c92f6",
+    "qualified_and_amended_tree": "09b05904b931f4837e53c7fac0758a54d67c3965",
+    "tree_unchanged": true,
+    "reason": "Append [skip ci] to own unpublished merge subject to honor recovered owner quota constraint",
+    "qualified_source_retained_locally": "refs/qualification/ssh-helper625-composed-611647c",
+    "shared_history_rewritten": false
+  },
+  "source_sha256": {
+    "webmux/server/internal/terminal/ssh_address.go": "039873ee468135db636ac072cf0e1a598a70e3ef37e64050de32c043a4325f0e",
+    "webmux/server/internal/terminal/launcher.go": "58334bd81770e76a80ff5b3b8a4d84972da4f2c24b108c44cedce1c894a531de",
+    "webmux/server/internal/terminal/recovery.go": "20506b00a9172d4857e8269496ffa8fdccf647556e0296694759a3804f24cf26",
+    "webmux/server/internal/browser/manager.go": "f076af4e105e9c257ba39cb1de28d3defda2644e53559780f1f23083718d2499",
+    "webmux/server/internal/terminalfiles/transfer.go": "dfd52f535fe8a53ae6174d98ea0c292700d02fb2b079fc7d116efbe54d8e4f45",
+    "webmux/server/internal/terminal/ssh_validation_test.go": "ec6b8b16fde4140a7c4f9f9520029e0a107b53b32624bacf25b60caabe322775",
+    "webmux/server/internal/browser/ssh_validation_test.go": "de4b280572723ba1b347d7d67470fa68900b469fadae5fc13063e228a06b0446",
+    "webmux/server/internal/terminalfiles/ssh_validation_test.go": "612483b361441ead7b975aa890ff94717dfabc8f3df40e379e3d7598c47e78e8",
+    "webmux/server/internal/httpapi/ssh_helper_validation_test.go": "4c4b8a5959f6059fb6af4fe13c9e94c51d053fae941d441359c52013d98fbde2"
+  },
+  "host": "macOS ARM64 local worker",
+  "node_version": "v24.22.2",
+  "node_sha256": "b6fb419f0f43bb2fbca273700294dd2f3b685a64b60e8417c295f47646a70e4a",
+  "go_version": "go version go1.27.4 darwin/arm64",
+  "checks": [
+    {
+      "name": "focused",
+      "exit_code": 0,
+      "started_at": "2026-11-23T09:32:05.838392+00:00",
+      "ended_at": "2026-11-23T09:32:20.046126+00:00"
+    },
+    {
+      "name": "server-race",
+      "exit_code": 0,
+      "started_at": "2026-11-23T09:32:20.046338+00:00",
+      "ended_at": "2026-11-23T09:35:24.236285+00:00"
+    },
+    {
+      "name": "server-vet",
+      "exit_code": 0,
+      "started_at": "2026-11-23T09:35:24.236539+00:00",
+      "ended_at": "2026-11-23T09:35:25.825088+00:00"
+    }
+  ],
+  "native_HTTP_restart_boundary": {
+    "parent": {
+      "passed": true,
+      "binary_sha256": "6282e42611cb06e1f378cf17719080315c2ddecac7ca6c16abe3c23342830f56",
+      "rounds": [
+        [
+          {
+            "case": "username-dollar",
+            "retained": true,
+            "browserStatus": 200,
+            "anonymousStatus": 401,
+            "otherOwnerStatus": 404,
+            "fileStatus": 409
+          },
+          {
+            "case": "username-backslash",
+            "retained": true,
+            "browserStatus": 200,
+            "anonymousStatus": 401,
+            "otherOwnerStatus": 404,
+            "fileStatus": 409
+          },
+          {
+            "case": "hostname-meta",
+            "retained": true,
+            "browserStatus": 200,
+            "anonymousStatus": 401,
+            "otherOwnerStatus": 404,
+            "fileStatus": 409
+          },
+          {
+            "case": "negative-port",
+            "retained": true,
+            "browserStatus": 200,
+            "anonymousStatus": 401,
+            "otherOwnerStatus": 404,
+            "fileStatus": 409
+          }
+        ],
+        [
+          {
+            "case": "username-dollar",
+            "retained": true,
+            "browserStatus": 200,
+            "anonymousStatus": 401,
+            "otherOwnerStatus": 404,
+            "fileStatus": 409
+          },
+          {
+            "case": "username-backslash",
+            "retained": true,
+            "browserStatus": 200,
+            "anonymousStatus": 401,
+            "otherOwnerStatus": 404,
+            "fileStatus": 409
+          },
+          {
+            "case": "hostname-meta",
+            "retained": true,
+            "browserStatus": 200,
+            "anonymousStatus": 401,
+            "otherOwnerStatus": 404,
+            "fileStatus": 409
+          },
+          {
+            "case": "negative-port",
+            "retained": true,
+            "browserStatus": 200,
+            "anonymousStatus": 401,
+            "otherOwnerStatus": 404,
+            "fileStatus": 409
+          }
+        ]
+      ],
+      "ssh_witness_calls": 8,
+      "server_exits": [
+        0,
+        0
+      ],
+      "witness_pids_remaining": [],
+      "binary_unchanged": true
+    },
+    "candidate": {
+      "passed": true,
+      "binary_sha256": "02a12b2965313567bf1a1caeef70f98b06aebc3fd524b45cce38f08dbbccaf08",
+      "rounds": [
+        [
+          {
+            "case": "username-dollar",
+            "retained": true,
+            "browserStatus": 409,
+            "anonymousStatus": 401,
+            "otherOwnerStatus": 404,
+            "fileStatus": 409
+          },
+          {
+            "case": "username-backslash",
+            "retained": true,
+            "browserStatus": 409,
+            "anonymousStatus": 401,
+            "otherOwnerStatus": 404,
+            "fileStatus": 409
+          },
+          {
+            "case": "hostname-meta",
+            "retained": true,
+            "browserStatus": 409,
+            "anonymousStatus": 401,
+            "otherOwnerStatus": 404,
+            "fileStatus": 409
+          },
+          {
+            "case": "negative-port",
+            "retained": true,
+            "browserStatus": 409,
+            "anonymousStatus": 401,
+            "otherOwnerStatus": 404,
+            "fileStatus": 409
+          }
+        ],
+        [
+          {
+            "case": "username-dollar",
+            "retained": true,
+            "browserStatus": 409,
+            "anonymousStatus": 401,
+            "otherOwnerStatus": 404,
+            "fileStatus": 409
+          },
+          {
+            "case": "username-backslash",
+            "retained": true,
+            "browserStatus": 409,
+            "anonymousStatus": 401,
+            "otherOwnerStatus": 404,
+            "fileStatus": 409
+          },
+          {
+            "case": "hostname-meta",
+            "retained": true,
+            "browserStatus": 409,
+            "anonymousStatus": 401,
+            "otherOwnerStatus": 404,
+            "fileStatus": 409
+          },
+          {
+            "case": "negative-port",
+            "retained": true,
+            "browserStatus": 409,
+            "anonymousStatus": 401,
+            "otherOwnerStatus": 404,
+            "fileStatus": 409
+          }
+        ]
+      ],
+      "ssh_witness_calls": 0,
+      "server_exits": [
+        0,
+        0
+      ],
+      "witness_pids_remaining": [],
+      "binary_unchanged": true
+    }
+  },
+  "windows_amd64_cross_builds": [
+    {
+      "package": "browser",
+      "exit_code": 0,
+      "started_at": "2026-11-23T09:39:38.107131+00:00",
+      "completed_at": "2026-11-23T09:39:41.941213+00:00",
+      "scope": "Windows AMD64 cross-compilation only; not native execution"
+    },
+    {
+      "package": "terminalfiles",
+      "exit_code": 0,
+      "started_at": "2026-11-23T09:39:41.941585+00:00",
+      "completed_at": "2026-11-23T09:39:42.460482+00:00",
+      "scope": "Windows AMD64 cross-compilation only; not native execution"
+    },
+    {
+      "package": "terminal",
+      "exit_code": 0,
+      "started_at": "2026-11-23T09:39:42.460926+00:00",
+      "completed_at": "2026-11-23T09:39:43.176053+00:00",
+      "scope": "Windows AMD64 cross-compilation only; not native execution"
+    },
+    {
+      "package": "httpapi",
+      "exit_code": 0,
+      "started_at": "2026-11-23T09:39:43.176461+00:00",
+      "completed_at": "2026-11-23T09:39:45.313428+00:00",
+      "scope": "Windows AMD64 cross-compilation only; not native execution"
+    }
+  ],
+  "private_evidence_sha256": {
+    "parent-native-receipt": "21c7d32a6a60d33c1764e0ca8d3e7dea8cf61e5ba103ac69372111f5bcb43417",
+    "candidate-native-receipt": "5e793c10b44ae64d8b9c6a016929fc852934fb60124bf0571023196019b1c8fe",
+    "focused.log": "e0ead19eb1d3f0793e0ae28e24dee91f2edd95172c051ea513a727c3a44fb52f",
+    "server-race.log": "c086c6a366ed6d9a978df7d77a404fc5ad8bca81a9a50f86dde620905bdf5e3a",
+    "server-vet.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "native-boundary.py": "d5ff3af5d0b2a6b018ed5badcc29d3dc2d00537d148619b419b7ff897b5bced2",
+    "native-builds.json": "28de8b47a2fd19dfa74fcb3a4c322c8da35c9b20d2210585db0ecbbf3488a9dc",
+    "worker-admission.json": "496954e0ed59bb5039b8c2422688f1ab8a54ea35b3e7a668915aed2f0d57d471"
+  },
+  "native_worker_admission": {
+    "newJobsAllowed": true,
+    "checkedUnixSeconds": 1795426648.06483,
+    "observed_at": "2026-11-23T09:37:28.064493+00:00",
+    "cpu_idle_percent": [
+      40.14,
+      56.96,
+      60.16
+    ],
+    "native_memory_free_percent": [
+      71.0,
+      71.0
+    ],
+    "volumes": "Private volume paths omitted; all required volumes exceeded the 10GiB reserve",
+    "system_changes": false
+  },
+  "historical_failures_retained": true,
+  "original_revision_qualification": {
+    "schema": "webmux.ssh-helper-resumed-native-qualification.v1",
+    "issue": 625,
+    "observed_at": "2026-11-23T09:30:16.218676+00:00",
+    "candidate_revision": "b404ab14c2da12e9849b804be3ab2ec79dd40e2a",
+    "parent_overlay_production_revision": "724245532b7b5e0f5e1df411d72aebe61144b9f5",
+    "host": "macOS ARM64",
+    "node_version": "v24.22.2",
+    "node_sha256": "b6fb419f0f43bb2fbca273700294dd2f3b685a64b60e8417c295f47646a70e4a",
+    "go_version": "go version go1.27.4 darwin/arm64",
+    "checks": [
+      {
+        "name": "focused",
+        "exit_code": 0,
+        "started_at": "2026-11-23T09:22:27.830397+00:00",
+        "ended_at": "2026-11-23T09:22:42.136451+00:00"
+      },
+      {
+        "name": "server-race",
+        "exit_code": 0,
+        "started_at": "2026-11-23T09:22:42.136702+00:00",
+        "ended_at": "2026-11-23T09:24:00.606864+00:00"
+      },
+      {
+        "name": "server-vet",
+        "exit_code": 0,
+        "started_at": "2026-11-23T09:24:00.607120+00:00",
+        "ended_at": "2026-11-23T09:24:01.364402+00:00"
+      }
+    ],
+    "native_boundary": {
+      "parent": {
+        "passed": true,
+        "binary_sha256": "cf32ecd0f77ef1a0c9b44eb0ee93ed9d62e096ba06e6e52f57da946b9e8ad047",
+        "rounds": [
+          [
+            {
+              "case": "username-dollar",
+              "retained": true,
+              "browserStatus": 200,
+              "anonymousStatus": 401,
+              "otherOwnerStatus": 404,
+              "fileStatus": 409
+            },
+            {
+              "case": "username-backslash",
+              "retained": true,
+              "browserStatus": 200,
+              "anonymousStatus": 401,
+              "otherOwnerStatus": 404,
+              "fileStatus": 409
+            },
+            {
+              "case": "hostname-meta",
+              "retained": true,
+              "browserStatus": 200,
+              "anonymousStatus": 401,
+              "otherOwnerStatus": 404,
+              "fileStatus": 409
+            },
+            {
+              "case": "negative-port",
+              "retained": true,
+              "browserStatus": 200,
+              "anonymousStatus": 401,
+              "otherOwnerStatus": 404,
+              "fileStatus": 409
+            }
+          ],
+          [
+            {
+              "case": "username-dollar",
+              "retained": true,
+              "browserStatus": 200,
+              "anonymousStatus": 401,
+              "otherOwnerStatus": 404,
+              "fileStatus": 409
+            },
+            {
+              "case": "username-backslash",
+              "retained": true,
+              "browserStatus": 200,
+              "anonymousStatus": 401,
+              "otherOwnerStatus": 404,
+              "fileStatus": 409
+            },
+            {
+              "case": "hostname-meta",
+              "retained": true,
+              "browserStatus": 200,
+              "anonymousStatus": 401,
+              "otherOwnerStatus": 404,
+              "fileStatus": 409
+            },
+            {
+              "case": "negative-port",
+              "retained": true,
+              "browserStatus": 200,
+              "anonymousStatus": 401,
+              "otherOwnerStatus": 404,
+              "fileStatus": 409
+            }
+          ]
+        ],
+        "ssh_witness_calls": 8,
+        "server_exits": [
+          0,
+          0
+        ],
+        "witness_pids_remaining": [],
+        "binary_unchanged": true
+      },
+      "candidate": {
+        "passed": true,
+        "binary_sha256": "e831c1ca20fc6be099ae25fd2d02a6b17c61f0220a2bfa706565f685b1839749",
+        "rounds": [
+          [
+            {
+              "case": "username-dollar",
+              "retained": true,
+              "browserStatus": 409,
+              "anonymousStatus": 401,
+              "otherOwnerStatus": 404,
+              "fileStatus": 409
+            },
+            {
+              "case": "username-backslash",
+              "retained": true,
+              "browserStatus": 409,
+              "anonymousStatus": 401,
+              "otherOwnerStatus": 404,
+              "fileStatus": 409
+            },
+            {
+              "case": "hostname-meta",
+              "retained": true,
+              "browserStatus": 409,
+              "anonymousStatus": 401,
+              "otherOwnerStatus": 404,
+              "fileStatus": 409
+            },
+            {
+              "case": "negative-port",
+              "retained": true,
+              "browserStatus": 409,
+              "anonymousStatus": 401,
+              "otherOwnerStatus": 404,
+              "fileStatus": 409
+            }
+          ],
+          [
+            {
+              "case": "username-dollar",
+              "retained": true,
+              "browserStatus": 409,
+              "anonymousStatus": 401,
+              "otherOwnerStatus": 404,
+              "fileStatus": 409
+            },
+            {
+              "case": "username-backslash",
+              "retained": true,
+              "browserStatus": 409,
+              "anonymousStatus": 401,
+              "otherOwnerStatus": 404,
+              "fileStatus": 409
+            },
+            {
+              "case": "hostname-meta",
+              "retained": true,
+              "browserStatus": 409,
+              "anonymousStatus": 401,
+              "otherOwnerStatus": 404,
+              "fileStatus": 409
+            },
+            {
+              "case": "negative-port",
+              "retained": true,
+              "browserStatus": 409,
+              "anonymousStatus": 401,
+              "otherOwnerStatus": 404,
+              "fileStatus": 409
+            }
+          ]
+        ],
+        "ssh_witness_calls": 0,
+        "server_exits": [
+          0,
+          0
+        ],
+        "witness_pids_remaining": [],
+        "binary_unchanged": true
+      }
+    },
+    "private_evidence_sha256": {
+      "parent-native-receipt": "43e057156988cf71cecbdefb976dc4113eb33eb560e9a86156bfd73e6d148eb5",
+      "candidate-native-receipt": "e65706f71464bccd20f84772fdd13fdb4b49b896abc323daa804f6c12d1e5179",
+      "focused.log": "fc8c6b79495f35134f71e0c08565b46881032074abe89f0ad741c9b4b7520439",
+      "server-race.log": "ba6aa1a24e6a478153a6bef58a110007ef5d273dd1c19f88fe4f0859d157c892",
+      "server-vet.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "worker_admission": {
+      "CPU_idle_percent": [
+        43.79,
+        59.21,
+        60.67
+      ],
+      "native_memory_pressure_free_percent": [
+        72,
+        72
+      ],
+      "available_GiB_approx": 365,
+      "prior_overload_cleared": true,
+      "cleanup_required": false
+    },
+    "historical_failures_retained": true,
+    "limits": [
+      "Original source revision qualified; later main composition still requires its own checks.",
+      "Controlled SSH executable witness only: no native SSH authentication, remote Chrome rendering or vendor exploit claim.",
+      "Private temporary WebMux accounts and two native server restarts per mode; no installed runtime/auth change.",
+      "No hosted workflow dispatch or NAS access in this qualification."
+    ],
+    "source_change_in_original_owner_checkout": false
+  },
+  "CI_constraint": {
+    "source": "Prior owner handoff _build/roadmap-handoff-current.json, roadmap_acceptance_audits_20261119_2215.executionConstraint",
+    "recorded_at": "2026-11-19T22:19:37.970982+00:00",
+    "instruction": "Local resources only; no new hosted qualification jobs. All future commits/merge subjects must include [skip ci].",
+    "original_user_turn_retrieved": false,
+    "new_hosted_workflow_dispatched": false
+  },
+  "limits": [
+    "Native evidence covers the actual Go HTTP/OS-exec boundary with a controlled SSH executable, not remote SSH authentication or browser rendering.",
+    "Windows evidence is cross-compilation only, not native runtime acceptance.",
+    "Subject amendment retains the entire qualified source tree; evidence is attributed to actual execution at611647c, not falsely described as execution of a later commit.",
+    "No installed services/authentication, global SDK, MAC source/fleet or NAS state changed.",
+    "Original private logs, scripts and source-owner checkout are preserved; no global handoff file was rewritten."
+  ]
+}

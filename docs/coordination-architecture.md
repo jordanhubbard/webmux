@@ -14,8 +14,8 @@ second task/lease authority for a MAC-connected project.
 
 WebMux retains node/account/session identity, terminal presentation, authenticated
 peer access and DNS-SD discovery. Agent Deck, Rig and existing fleet workers retain
-their lifecycle owners. The earlier
-[source-bound provider comparison](https://github.com/jordanhubbard/webmux/blob/22dd1965b8bc88ece69ed8e6f15360aa0be9b5a9/docs/validation/coordination-architecture-selection-2026-11-22/README.md)
+their lifecycle owners. The
+[source-bound provider comparison](validation/coordination-architecture-selection-2026-11-22/README.md)
 remains valid within its tested scope; it did not compare MAC or establish shared
 project priority, admission or publication authority. The
 [project coordination contract](mac-project-coordination.md) defines the authority
@@ -36,6 +36,10 @@ Each completed initialize, tool discovery and a controlled unavailable read.
 Agent Deck's catalog used only a fixture-owned, non-executable MCP definition;
 its disabled-Recall control exited with the expected refusal. All evidence is
 bound to executable/source hashes and exact protocol responses in the receipt.
+The final repeatable qualifier also preserves failed diagnostics, refuses output
+reuse and refuses optimized Python before producing output. Its historical
+receipt remains pinned to the actual inputs; publishing it does not turn those
+inputs into a fresh execution of this branch or of every provider capability.
 
 Agent Deck's Go build records revision
 `f36e77d6170b8d8b54f50c960c3f16e8a2c5df19`, matching the inspected release source.
@@ -61,7 +65,7 @@ queue mutation, live conversation or existing provider configuration was accesse
 | --- | --- | --- |
 | Agent Deck | Profiles, managed sessions, native recovery, remote deck management, conductors/watchers, worktree helpers and MCP/skill tooling. The separate Recall server exposes search/show/context. | Its profile/configuration and conversation-index scopes require explicit mapping to WebMux accounts and verified projects. Recall's three tools do not implement WebMux claims, acknowledged inbox receipts or worker fences. Its configuration/restart path cannot establish automatic awareness while preserving existing agents. Requiring it on every node adds another CLI, tmux/profile management and native configuration compatibility. |
 | Rig | Topology, managed launch/attach and continuity, durable owned work/handoffs, workflow dependency graphs and typed receipts, cross-host routing/rosters and human routes. The earlier native MCP probe exposes only part of that product. | Rig seat/daemon identity needs an adapter to WebMux node/account/session identity and project authority. Its host-owned queue/workflow model overlaps MAC and needs an explicit delegation/authority boundary. Installed remote-pinned workflow execution is refused; no global project write-scope/resource guarantee is established by its MCP catalog. Its daemon, Node/native dependencies, tmux and version-specific launch wrappers add deployment and upgrade work. Keep lifecycle operations with their owner. |
-| Built-in WebMux plane | Existing WebMux identities, private session capabilities, durable ledger, separately authorized peer context/messages/claims/reservations, authenticated execution-host project observations and scoped CLI/MCP. The current MCP server exposes two coordination tools and refuses reads without private access. | Ships with the Go server/helper, avoiding a mandatory manager on otherwise ordinary nodes. WebMux owns schema, transport, revocation, retention and resource-bound maintenance. Runtime-specific native policies, sandbox reachability, managed-provider channels and platform custody still require dedicated adapters and acceptance. |
+| Built-in WebMux plane | Existing WebMux identities, private session capabilities, durable ledger, separately authorized peer context/messages/claims/reservations, authenticated execution-host project observations and scoped CLI/MCP. The pinned native comparison exposes two coordination tools and refuses reads without private access. | Ships with the Go server/helper, avoiding a mandatory manager on otherwise ordinary nodes. WebMux owns schema, transport, revocation, retention and resource-bound maintenance. Runtime-specific native policies, sandbox reachability, managed-provider channels and platform custody still require dedicated adapters and acceptance. |
 | MAC execution authority | Project/task ledger, canonical machine/worker identities, task-attempt leases, dependencies, evidence/review/publication and integration observations/findings. | Reuse the existing fleet for connected projects. The interactive-session adapter, source-roadmap mapping and strict project priority/write-scope admission still require implementation and qualification. MAC dispatch classes are scheduling hints, not proof of roadmap ordering or arbitrary file exclusivity. |
 
 The existing adapters inspected include
@@ -132,5 +136,5 @@ uncertain-delivery controls. Durable messages, advisory claims and shared worker
 reservations must be observed through actual native calls and authoritative
 receipts throughout that workflow. Native sandbox/permission boundaries remain
 authoritative. Retention/scale and all stated transport/platform gaps remain
-tracked under #630/#631. Completing architecture selection closes none of those
+tracked under #664/#631, retaining #630's historical requirements. Completing architecture selection closes none of those
 implementation or qualification requirements.
