@@ -96,8 +96,11 @@ browser/controller namespace check also retains one original project through a
 lost native reply and controller restart. These are separate evidence scopes.
 
 Linux authenticated creation/environment-handoff/conversation recovery remains
-open under [#523](https://github.com/jordanhubbard/webmux/issues/523): the current
-Linux qualification account is not signed in. Public native-owned member
+open under [#523](https://github.com/jordanhubbard/webmux/issues/523). The original
+fresh-guest qualification account was not signed in. A separate existing Linux
+account now passes [authenticated no-turn observation](../linux-authenticated-observation-2026-11-23/README.md)
+with the exact qualified native image and unchanged isolation controls; it does
+not establish coding, managed creation or recovery. Public native-owned member
 creation/readiness/attachment/uncertainty and recovery remain incomplete under
 #438/#318. Canonical empty-pod selection, selected profiles, named graphs,
 broader startup settings and other native platform acceptance remain open.

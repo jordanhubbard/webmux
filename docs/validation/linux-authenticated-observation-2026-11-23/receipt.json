@@ -1,0 +1,153 @@
+{
+  "schema": "webmux.linux.authenticated-observation.v1",
+  "recorded_at": "2026-11-23T11:04:41.193319+00:00",
+  "source_commit": "4cf7eacbc2c2116dcc33de2deacb9d74292c42ce",
+  "scope": "Existing Linux account in place; six native isolation cases and no-turn authenticated owner inspection, not authenticated coding or managed creation/recovery.",
+  "runtime": {
+    "kernel": "Linux",
+    "release": "7.0.0-1025-nvidia",
+    "machine": "aarch64",
+    "python": "3.14.7",
+    "filesystem": "ext4",
+    "node": {
+      "sha256": "b4855de8c4781130b722ceaec9718fed77cca3eed2e5cfc5455e267c0b9ee3b0",
+      "version": "v24.22.2"
+    },
+    "codex": {
+      "sha256": "3bb41c9a80187773e2a59278d4fc355b1a163c31bb5a79581e37d4fe428af047",
+      "version": "codex-cli 0.169.0"
+    }
+  },
+  "helper_sha256": "47e8b2064ddb5d04bc5d29d5e97b449b0c1c7dc1fcbd796ffc4ae4aa077becf2",
+  "module_sha256": "31982d57e4f931fb060b418eb1991f576cd822a7658defe069bc7c6272800bf1",
+  "qualifier_sha256": "d21a263f5cc2930d3678c8a9e2b56c2806d6f462b1e7d4775b627c5f1952c66b",
+  "startup_controls_sha256": "2d082f6d5c23d23657e4138cb56db33d6fc08809fe0453a887607996fb04991b",
+  "passed": true,
+  "elapsed_seconds": 20.38675856590271,
+  "authenticated": {
+    "version": "0.169.0",
+    "policyType": "workspaceWrite",
+    "approval": "on-request",
+    "stdioStarted": false,
+    "httpRequests": 0,
+    "noTurn": true,
+    "credentialCopy": false,
+    "exit": 0
+  },
+  "same_executable_fork_denied": true,
+  "missing_authentication_control": {
+    "error": "native_account_identity_unavailable",
+    "exit": 0
+  },
+  "cases": [
+    {
+      "mode": "full",
+      "guarded": false,
+      "accountStartsNoMCP": true,
+      "accountStopped": true,
+      "projectMatches": true,
+      "lateProcessStarted": true,
+      "httpRequests": 1,
+      "configUnchanged": true,
+      "noTurn": true,
+      "policyStopped": true
+    },
+    {
+      "mode": "full",
+      "guarded": true,
+      "accountStartsNoMCP": true,
+      "accountStopped": true,
+      "projectMatches": true,
+      "lateProcessStarted": false,
+      "httpRequests": 0,
+      "configUnchanged": true,
+      "noTurn": true,
+      "policyStopped": true
+    },
+    {
+      "mode": "read",
+      "guarded": false,
+      "accountStartsNoMCP": true,
+      "accountStopped": true,
+      "projectMatches": true,
+      "lateProcessStarted": true,
+      "httpRequests": 1,
+      "configUnchanged": true,
+      "noTurn": true,
+      "policyStopped": true
+    },
+    {
+      "mode": "read",
+      "guarded": true,
+      "accountStartsNoMCP": true,
+      "accountStopped": true,
+      "projectMatches": true,
+      "lateProcessStarted": false,
+      "httpRequests": 0,
+      "configUnchanged": true,
+      "noTurn": true,
+      "policyStopped": true
+    },
+    {
+      "mode": "workspace",
+      "guarded": false,
+      "accountStartsNoMCP": true,
+      "accountStopped": true,
+      "projectMatches": true,
+      "lateProcessStarted": true,
+      "httpRequests": 1,
+      "configUnchanged": true,
+      "noTurn": true,
+      "policyStopped": true
+    },
+    {
+      "mode": "workspace",
+      "guarded": true,
+      "accountStartsNoMCP": true,
+      "accountStopped": true,
+      "projectMatches": true,
+      "lateProcessStarted": false,
+      "httpRequests": 0,
+      "configUnchanged": true,
+      "noTurn": true,
+      "policyStopped": true
+    }
+  ],
+  "native_diagnostics": {
+    "process_count": 12,
+    "all_stderr_complete": true,
+    "panic_count": 0,
+    "forced_cleanup_count": 0,
+    "remaining_owned_native_or_helper_process_count": 0
+  },
+  "existing_config_and_auth_file_hashes_unchanged": true,
+  "source_unchanged": true,
+  "official_sdk_file_count": 45,
+  "private_artifact_sha256": {
+    "tool-provenance.json": "bb232cd085052e5f79cead7597df580ed925fe50d8a3a465a0c58d7cbbecca14",
+    "no-turn-controller.json": "fa221843f31760efd9dfe96f359e35f2e95b0031d955aa2dc2bc6b957c65a929",
+    "no-turn-observation.json": "4e2a89c41654cf2afc4efeaf7dd4dcc7dd2902970a7c7b6456e0c305d7f9e909",
+    "no-turn-observation.log": "80115b3095175818ef6d34ec2536801bb61f0c1bf2bd1c42aab9b4b87ddd9d59"
+  },
+  "tool_sources": {
+    "codex": {
+      "metadata": "https://registry.npmjs.org/@openai/codex/0.169.0-linux-arm64",
+      "archive_integrity_verified": true,
+      "matches_original_qualified_native_image": true
+    },
+    "node": {
+      "checksum_list": "https://nodejs.org/download/release/v24.22.2/SHASUMS256.txt",
+      "archive_sha256": "eb187837a2230d4047161ac0be008584e16b46f726e9c9490ee35dc6b17d9ba8"
+    }
+  },
+  "limits": [
+    "Existing already-trusted project and existing account; no trust grant, credential copy, profile or installed-tool change.",
+    "Private pinned SDK/tool staging preserves existing0.170/0.171 coordinator installation.",
+    "Six private unauthenticated homes carry synthetic test configuration; existing account configuration remains unchanged.",
+    "Authenticated observation reports workspaceWrite/on-request; no model turn or coding enforcement witness.",
+    "Original signed-out client-group542 guest, failures and login-expired state remain separate and were not probed or restarted.",
+    "Initial private preparation used wrong package executable subpath and failed before launch; corrected archive path verified without redownloading or changing original failure.",
+    "MAC source prerequisite unresolved; no registration/task claim, activation, dispatch or NAS access.",
+    "No new hosted qualification jobs; all new commit/merge subjects include [skip ci]."
+  ]
+}
