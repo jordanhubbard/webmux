@@ -44,6 +44,7 @@ type RecoveryAction struct {
 }
 
 type RPCResponse struct {
+	RestartSelection      string                `json:"restart_selection,omitempty"`
 	CoordinationDirectory string                `json:"coordination_directory,omitempty"`
 	CoordinationPlatform  string                `json:"coordination_platform,omitempty"`
 	CoordinationSocket    string                `json:"coordination_socket,omitempty"`
@@ -154,6 +155,11 @@ func hostRPC(ctx context.Context, request RPCRequest) (RPCResponse, error) {
 		return RPCResponse{}, err
 	}
 	switch request.Operation {
+	case "restart-preview":
+		selection, err := liveRestartSelection(ctx, request.SessionID)
+		return RPCResponse{RestartSelection: selection}, err
+	case "restart":
+		return restartLiveProvider(ctx, request)
 	case "coordination-observe":
 		directory, err := coordinationProviderDirectory(ctx, request.SessionID)
 		return RPCResponse{CoordinationDirectory: directory, CoordinationPlatform: runtime.GOOS}, err

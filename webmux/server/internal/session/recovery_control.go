@@ -120,6 +120,9 @@ func (b *Broker) applyRecoverySnapshotLocked(e *entry, r *run, response recovery
 			control = &copy
 		}
 	}
+	if r.restarting.Load() && control != nil && control.Instance != "" && control.Instance != "restart-pending" && control.Instance != r.restartOldInstance {
+		r.restarting.Store(false)
+	}
 	r.recoveryControl = control
 	if provider != nil {
 		r.recoveryWarning = provider.Warning
@@ -212,6 +215,9 @@ type RecoveryResult struct {
 }
 
 func (b *Broker) Recover(owner, id string, input RecoveryRequest) (RecoveryResult, error) {
+	if input.Kind == "restart" {
+		return b.restartTerminal(owner, id, input)
+	}
 	b.mu.Lock()
 	e, err := b.ownedLocked(owner, id)
 	b.mu.Unlock()

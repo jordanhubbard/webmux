@@ -1,11 +1,13 @@
 package session
 
 import (
+	"context"
 	"errors"
 	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
+	"time"
 
 	"github.com/jordanhubbard/webmux/server/internal/recovery"
 )
@@ -13,6 +15,10 @@ import (
 // RecoveryView is owner-scoped like the terminal itself. History is plain text;
 // browser/clipboard/shell protocol packets are never replayed from disk.
 type RecoveryView struct {
+	CanRestart              bool             `json:"can_restart"`
+	RestartSelection        string           `json:"restart_selection,omitempty"`
+	ProjectLabel            string           `json:"project_label,omitempty"`
+	Live                    bool             `json:"live"`
 	ManagedOriginalContract bool             `json:"managed_original_contract,omitempty"`
 	ManagedOriginalRequest  *RecoveryRequest `json:"managed_original_request,omitempty"`
 	ManagerSnapshotID       string           `json:"manager_snapshot_id,omitempty"`
@@ -57,6 +63,11 @@ func (b *Broker) Recovery(owner, id string) (RecoveryView, error) {
 	var hostReady bool
 	var warning string
 	live := e.run != nil
+	restarting := live && e.run.restarting.Load()
+	var restartController recoveryController
+	if live && ordinaryLocal(e.value) && !e.value.LocalOwnerManaged && e.value.LocalStop == nil {
+		restartController, _ = e.run.process.(recoveryController)
+	}
 	if e.run != nil {
 		control = e.run.recoveryControl
 		hostReady = e.run.recoveryReady
@@ -65,6 +76,18 @@ func (b *Broker) Recovery(owner, id string) (RecoveryView, error) {
 	}
 	b.mu.Unlock()
 	view := RecoveryView{SessionID: id, Hostname: s.Hostname, Transport: s.Transport, LifecycleOwner: "webmux", State: s.Recovery, ShellReady: ready, Message: "No recorded activity is available. Reconnect or recover this session manually."}
+	view.Live, view.ProjectLabel = live, s.ProjectLabel
+	if restartController != nil && !restarting && (control == nil || control.Mode == "active") {
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		preview := restartController.RecoveryRPC(ctx, recovery.RPCRequest{Operation: "restart-preview"})
+		cancel()
+		if preview.Error == "" && len(preview.RestartSelection) == 64 {
+			view.CanRestart, view.RestartSelection = true, preview.RestartSelection
+			if view.State == nil {
+				view.State = &recovery.State{Version: 1}
+			}
+		}
+	}
 	view.HostRevision = hostRevision
 	view.Warning = warning
 	if control != nil {
@@ -146,6 +169,12 @@ func (b *Broker) Recovery(owner, id string) (RecoveryView, error) {
 	}
 	if s.Recovery.Disposition == "execution-uncertain" {
 		view.Message = "The previous recovery request may have started before the connection was lost. Refresh the host state before choosing another action."
+	}
+	if live && !view.Waiting && view.LifecycleOwner == "webmux" {
+		view.Message += " This is a history preview. A connected terminal does not prove the application is responding. Restarting ends the current terminal work; it does not resume a conversation."
+	}
+	if restarting {
+		view.Message = "Waiting for the replacement terminal to become ready. Select Refresh to check again before choosing how to continue."
 	}
 	if controlError != "" {
 		view.Message += " " + controlError

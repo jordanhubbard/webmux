@@ -251,3 +251,25 @@ it('restores only the original Rig completion action when the dialog is reconstr
  expect(screen.queryByRole('button',{name:'Resume through Rig'})).toBeNull();fireEvent.click(screen.getByLabelText('I approve checking and completing the original Rig recovery request'));
  fireEvent.click(screen.getByRole('button',{name:'Check and complete original Rig recovery'}));await waitFor(()=>expect(recover).toHaveBeenCalledWith('one',original));
 });
+
+it('requires explicit confirmation to replace a live terminal and refreshes before offering resume', async () => {
+  const live = { ...evidence(), transport: 'local', live: true, can_restart: true,
+    restart_selection: 'a'.repeat(64), host_revision: 7, project_label: 'old-project', waiting: false };
+  const load = vi.spyOn(api, 'getSessionRecovery').mockResolvedValue(live);
+  const restart = vi.spyOn(api, 'recoverSession').mockResolvedValue({ outcome: 'consumed' });
+  const close = vi.fn();
+  render(<RecoveryDialog sessionId="one" onClose={close} />);
+  const button = await screen.findByRole('button', { name: 'Restart terminal' });
+  expect(button).toBeDisabled();
+  expect(screen.getByText(/No reliable conversation ID is recorded/)).toBeDefined();
+  expect(screen.getByText(/old-project \(label only/)).toBeDefined();
+  expect(screen.queryByRole('button', { name: /Resume .* conversation/ })).toBeNull();
+  fireEvent.click(screen.getByLabelText(/I approve ending this terminal/));
+  expect(button).toBeEnabled();
+  fireEvent.click(button);
+  await waitFor(() => expect(restart).toHaveBeenCalledOnce());
+  expect(restart.mock.calls[0][1]).toMatchObject({ kind: 'restart', confirm: true, instance: live.restart_selection });
+  await waitFor(() => expect(load).toHaveBeenCalledTimes(2));
+  expect(close).not.toHaveBeenCalled();
+  expect(await screen.findByRole('button', { name: 'Restart terminal' })).toBeDisabled();
+});

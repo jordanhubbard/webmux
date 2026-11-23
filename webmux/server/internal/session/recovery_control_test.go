@@ -12,6 +12,8 @@ import (
 )
 
 type controlProcess struct {
+	restartSelection string
+	controlInstance  string
 	*fakeProcess
 	mu             sync.Mutex
 	key            string
@@ -28,10 +30,16 @@ type controlProcess struct {
 func (p *controlProcess) RecoveryRPC(_ context.Context, request recovery.RPCRequest) recovery.RPCResponse {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	if request.Operation == "action" {
+	if request.Operation == "restart-preview" {
+		return recovery.RPCResponse{Protocol: 1, RestartSelection: p.restartSelection}
+	}
+	if request.Operation == "action" || request.Operation == "restart" {
 		p.actions++
 		if p.actionError != "" {
 			return recovery.RPCResponse{Protocol: 1, Error: p.actionError, Outcome: p.actionOutcome}
+		}
+		if request.Operation == "restart" {
+			p.controlInstance = "replacement-shell"
 		}
 		p.mode = "consumed"
 		p.revision++
@@ -39,6 +47,10 @@ func (p *controlProcess) RecoveryRPC(_ context.Context, request recovery.RPCRequ
 	}
 	if request.Recording != nil && !*request.Recording && p.failPause {
 		return recovery.RPCResponse{Protocol: 1, Error: "host unavailable"}
+	}
+	instance := p.controlInstance
+	if instance == "" {
+		instance = "waiting-worker"
 	}
 	response := recovery.RPCResponse{Protocol: 1, Revision: p.revision}
 	if request.Recording != nil {
@@ -48,7 +60,7 @@ func (p *controlProcess) RecoveryRPC(_ context.Context, request recovery.RPCRequ
 		{Kind: "provider", Mode: "waiting", Helper: "/bin/webmux", Platform: "linux"},
 		{Kind: "command", Instance: "prior-shell", Platform: "linux", Command: "codex", Cwd: "/workspace"},
 		{Kind: "cli", Instance: "prior-shell", Platform: "linux", Cwd: "/workspace", CLI: "codex", Version: "0.167.0", SessionID: "cadc08a9-0d73-4b44-af10-084a60b44f5b", Configuration: p.configuration.Clone(), NativeEvidence: p.nativeEvidence},
-		{Kind: "control", Mode: p.mode, Helper: "/bin/webmux", Platform: "linux", Instance: "waiting-worker"},
+		{Kind: "control", Mode: p.mode, Helper: "/bin/webmux", Platform: "linux", Instance: instance},
 	} {
 		packet, _ := recovery.SignedPacket(event, p.key)
 		var decoder recovery.Decoder
