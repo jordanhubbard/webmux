@@ -321,6 +321,7 @@ export function BrowserCompanion({ session, navigation, onHide, onAuthentication
             if (dragging.current) { void act({ action: 'mouse_up', ...point(event), button: dragging.current.button, buttons: 0, clickCount: dragging.current.count }); dragging.current = null; }
           }}
           onContextMenu={event => event.preventDefault()}
+          data-wheel-native
           onWheel={event => { event.stopPropagation(); void act({ action: 'scroll', ...point(event), deltaX: Math.max(-3000, Math.min(3000, event.deltaX)), deltaY: Math.max(-3000, Math.min(3000, event.deltaY)), modifiers: modifiers(event) }); }}
           onFocus={() => keyboard.current?.focus({ preventScroll: true })}
         />}

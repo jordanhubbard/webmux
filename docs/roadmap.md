@@ -3,6 +3,19 @@
 Reviewed 2026-11-19 against the implementation, qualification receipts and GitHub
 issue states. GitHub issues track implementation and remaining acceptance work.
 
+## Trackpad scrolling
+
+- [ ] **Scroll the selected window with two fingers** under
+  [#661](https://github.com/jordanhubbard/webmux/issues/661). On a gesture-capable
+  trackpad, two-finger scrolling with no modifiers applies to the selected
+  window. Holding **Shift** while two-finger scrolling pans the entire 2D grid.
+  A gesture must scroll its intended target without also scrolling the other.
+
+The [terminal and desktop implementation checkpoint](validation/trackpad-scroll-2026-11-22/README.md)
+passes automated browser wheel, mouse, tmux and keyboard-broadcast isolation
+controls, plus selected VNC/RDP protocol-input isolation and Shift grid panning. Physical trackpad and remaining platform/surface acceptance are still
+open; this does not complete #661.
+
 ## Automatic session coordination and network discovery
 
 Owner requirement added 2026-11-21. These are planned capabilities; the current
