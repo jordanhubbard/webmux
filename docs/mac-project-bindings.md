@@ -102,10 +102,24 @@ arbitrary-bearer configurations, changed credential acceptance, foreign accounts
 redirects, exact wire fields, size bounds, TLS trust, cancellation and data
 redaction. Deliberately removing either negative control or exact policy-field
 checking causes the relevant controls to fail. This is client-contract evidence,
-not live MAC qualification. The local profile metadata audit found no current
-dedicated read-only profile on a qualified transport. No token files were read,
-no connection to that fleet was attempted, and no credentials were created or
-revoked. Actual authority/transport/scope and revocation qualification remain open.
+not live MAC qualification by itself.
+
+A subsequent [same-host native qualification](validation/mac-bindings-2026-11-22/native-read.json)
+used two dedicated MAC clients with exactly the `read` scope. The native hub-owner
+CLI enrolled them without activating a different profile. The test pinned the
+already-running local TCP publisher to its OS account, PID and process-start
+fingerprint before supplying either credential. Actual `CheckReadAccess` calls
+passed for the observer and temporary probe. After native revocation, the probe
+was refused while its expiry was still in the future; the observer continued to
+pass against the same publisher. Both clients refused a generic write request to
+an intentionally nonexistent route. Existing client metadata and active profile
+were preserved. The observer profile remains private and local; the temporary
+probe is revoked. No credentials or enrollment manifests are published here.
+
+This qualifies those same-host read/scope/revocation observations. It does not
+qualify an SSH tunnel, remote publisher, actual project existence or a complete
+least-privilege audit. The synthetic project key only exercises authentication.
+No product loader or human/agent consumer invokes this helper yet.
 
 ## Ordered implementation
 
