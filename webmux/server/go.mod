@@ -10,7 +10,7 @@ require (
 	github.com/creack/pty v1.1.24
 	github.com/ebitengine/purego v0.11.3
 	github.com/golang-jwt/jwt/v5 v5.3.1
-	github.com/gorilla/websocket v1.5.3
+	github.com/gorilla/websocket v1.5.4-0.20240701034025-d67f41855da4
 	github.com/modelcontextprotocol/go-sdk v1.8.0
 	github.com/pion/mdns/v2 v2.2.2
 	go.etcd.io/bbolt v1.5.0
