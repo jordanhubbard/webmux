@@ -166,3 +166,50 @@ explicit user-supplied fleet test context, not a live WebMux project enrollment.
 All observed task owners in that bounded page were unowned: it qualifies neither
 a positive native worker/machine join nor three-host participation. Those gaps
 and source-roadmap/conflict/order requirements remain open.
+
+## Source roadmap snapshots
+
+Source content requires an additional explicit operation grant. A binding may
+add `project.source-roadmap.observe.v1` to `capabilities` together with
+`roadmap_path: "docs/roadmap.md"`. Both must be present; neither implies MAC
+admission or write access. Existing bindings with only `project.observe.v1`
+continue to return `roadmap_state: not_configured`. There is no browser/MCP path
+selector and no automatic scan for roadmap files. Unknown operations, duplicate
+grants, null/case-aliased paths, traversal and Git pathspec syntax are refused.
+The `.github/` directory is permitted; Git metadata paths are excluded.
+
+After MAC authorizes the read, the server samples local source metadata and reads
+the configured **regular Git blob** at that exact commit. It never opens the
+working-copy roadmap or follows a file symlink. The projection retains commit,
+blob ID, SHA-256 of the exact text, binding revision and observation time; changes
+to that roadmap's working copy are reported separately. A changed HEAD/ref/root
+or policy refuses the observation. Nonregular, missing, binary, invalid UTF-8 or
+larger-than-64-KiB content remains unavailable. Local Git replacement refs are
+disabled, so a local replacement cannot substitute different bytes for the named
+blob. Source operations retain the existing no-hook/index-write and output bounds.
+Remote source content remains unavailable until its execution host has a supported
+source observation channel.
+
+Human and MCP consumers receive the same immutable text. The dialog renders it
+as plain text behind “Read committed source roadmap”; no Markdown HTML, command
+execution or new editable backlog is introduced. The reader does not verify issue
+states, interpret dependency/priority policy or claim that this branch's committed
+roadmap is the project's currently accepted admission policy. Working-copy changes
+are excluded explicitly. Requirement-to-MAC-task links, conflict/order assessments
+and source-policy admission remain unlinked/unknown.
+
+A final upstream read qualification follows source/roadmap sampling, with current
+configuration, original enrollment, scope/expiry and publisher checks. Only then
+are receiving account, incarnation, repository, configuration and global policy
+rechecked before release. An observed upstream revocation during local sampling
+discards task, source and roadmap facts together. No earlier successful task read
+can extend authorization for later source collection.
+
+The default-off `TestNativeLocalRoadmapSnapshot` additionally qualifies
+`docs/roadmap.md` on an explicitly named local repository using
+`WEBMUX_MAC_ROADMAP_SOURCE_ROOT` and the exact expected
+`WEBMUX_MAC_ROADMAP_SOURCE_COMMIT`. An optional private
+`WEBMUX_MAC_ROADMAP_SOURCE_RECEIPT` keeps the raw snapshot locally. It performs no
+MAC network request or mutation and does not enroll a project. The public
+`source-roadmap.json` receipt separates that real WebMux Git observation from
+controlled shared-route/MCP/browser tests and the earlier native MAC UI run.

@@ -53,6 +53,13 @@ export function MACProjectDialog({ sessionId, onClose }: { sessionId: string; on
             {value.source.dirty ? 'Uncommitted or untracked changes observed.' : 'No uncommitted or ordinary untracked changes observed.'} Observed {value.source.observed_at}.</p>
           <p>The commit identifies Git history, not the contents of uncommitted changes. This source observation is not linked to a MAC task or roadmap revision.</p>
         </> : <p>{value.source_state === 'execution_host_unavailable' ? 'Source inspection on this execution host is unavailable.' : 'Verified source context is unavailable.'} A displayed session path alone does not verify source identity.</p>}
+        <h3>Source roadmap</h3>
+        {value.roadmap_state === 'observed_committed_snapshot' && value.roadmap ? <>
+          <p>{value.roadmap.path} at commit <code>{value.roadmap.commit}</code>. Observed {value.roadmap.observed_at}.</p>
+          {value.roadmap.working_copy_dirty && <p role="status">Working-copy changes to this roadmap are not included in this committed snapshot.</p>}
+          <details><summary>Read committed source roadmap</summary><pre aria-label="Source roadmap text" className="mac-project-roadmap">{value.roadmap.text}</pre></details>
+          <p>These source requirements have not been linked to MAC tasks. This snapshot does not verify issue status or grant admission.</p>
+        </> : <p>{value.roadmap_state === 'not_configured' ? 'Source roadmap access has not been configured.' : value.roadmap_state === 'execution_host_unavailable' ? 'Source roadmap observation on this execution host is unavailable.' : 'No verified roadmap snapshot is available.'}</p>}
         <h3>Are we duplicating work or conflicting?</h3>
         <p>Assessment: {value.project.conflict_verdict}. Task scope, source changes and ownership have not been reconciled. Standalone history is retained and unreconciled.</p>
         <h3>Are we working in roadmap order?</h3>

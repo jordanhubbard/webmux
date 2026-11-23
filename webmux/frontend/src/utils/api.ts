@@ -207,6 +207,8 @@ export interface MACProjectView {
   source_state?: string;
   source_task_link_state?: string;
   source?: { schema: 'webmux.mac.source-observation.v1'; worktree: string; ref: string; commit: string; detached: boolean; dirty: boolean; observed_at: string } | null;
+  roadmap_state?: string;
+  roadmap?: { schema: 'webmux.mac.source-roadmap-observation.v1'; path: string; commit: string; blob: string; sha256: string; text: string; working_copy_dirty: boolean; task_link_state: string; observed_at: string } | null;
   project: {
     schema: 'webmux.mac.project-observation.v1'; project_key: string; observed_at: string;
     coverage: string; reported_total: number; next_offset: number | null;

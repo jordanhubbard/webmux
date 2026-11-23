@@ -27,6 +27,8 @@ type SessionProjectObservation struct {
 	Source         *SourceObservation   `json:"source"`
 	SourceState    string               `json:"source_state"`
 	SourceTaskLink string               `json:"source_task_link_state"`
+	Roadmap        *RoadmapObservation  `json:"roadmap"`
+	RoadmapState   string               `json:"roadmap_state"`
 }
 
 type ProjectTask struct {

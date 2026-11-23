@@ -6,3 +6,4 @@
 .mac-project-content li { margin-block: 6px; }
 .mac-project-content button { font: inherit; color: inherit; background: #28243f; border: 1px solid #655b8a; border-radius: 4px; padding: 6px 10px; cursor: pointer; }
 .mac-project-content button:focus-visible { outline: 2px solid #b5a4ff; outline-offset: 2px; }
+.mac-project-roadmap { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 28em; overflow: auto; padding: 10px; background: #11101c; font: inherit; }

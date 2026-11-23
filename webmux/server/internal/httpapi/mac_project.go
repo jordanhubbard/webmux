@@ -120,6 +120,7 @@ func (s *Server) macProjectForSession(ctx context.Context, owner, id string, exp
 		return empty, err
 	}
 	source, sourceState := s.macSourceForSession(ctx, current, repository)
+	roadmap, roadmapState := s.macRoadmapForSession(ctx, current, repository, source)
 	retained, err := s.sessionCoord.service.ProjectInventory(owner, repository)
 	if err != nil {
 		return empty, err
@@ -148,6 +149,11 @@ func (s *Server) macProjectForSession(ctx context.Context, owner, id string, exp
 		sessions = append(sessions, projection)
 	}
 	sort.Slice(sessions, func(i, j int) bool { return sessions[i].Session.Key() < sessions[j].Session.Key() })
+	fresh, err := s.macObserver.CheckReadAccess(ctx, owner, repository)
+	if err != nil {
+		return empty, err
+	}
+	observed.ReadAuthentication = fresh
 	// Drop the whole result if account, broker incarnation, working directory,
 	// remote verification or accepted policy changed while MAC was queried.
 	latest, err := s.sessions.Get(owner, id)
@@ -167,7 +173,7 @@ func (s *Server) macProjectForSession(ctx context.Context, owner, id string, exp
 	if err := ctx.Err(); err != nil {
 		return empty, err
 	}
-	return maccoord.SessionProjectObservation{Schema: "webmux.mac.session-project-view.v1", Subject: ref, Project: observed, Sessions: sessions, HistoryState: "retained_unreconciled", Source: source, SourceState: sourceState, SourceTaskLink: "unlinked"}, nil
+	return maccoord.SessionProjectObservation{Schema: "webmux.mac.session-project-view.v1", Subject: ref, Project: observed, Sessions: sessions, HistoryState: "retained_unreconciled", Source: source, SourceState: sourceState, SourceTaskLink: "unlinked", Roadmap: roadmap, RoadmapState: roadmapState}, nil
 }
 
 func (s *Server) macSourceForSession(ctx context.Context, current session.Session, repository *plane.Binding) (*maccoord.SourceObservation, string) {
@@ -179,4 +185,21 @@ func (s *Server) macSourceForSession(ctx context.Context, current session.Sessio
 		return nil, "unavailable"
 	}
 	return &source, "observed"
+}
+
+func (s *Server) macRoadmapForSession(ctx context.Context, current session.Session, repository *plane.Binding, source *maccoord.SourceObservation) (*maccoord.RoadmapObservation, string) {
+	if !coordinationLocal(current) {
+		return nil, "execution_host_unavailable"
+	}
+	if source == nil {
+		return nil, "source_unavailable"
+	}
+	roadmap, err := s.macObserver.ObserveRoadmap(ctx, current.Owner, repository, *source)
+	if errors.Is(err, maccoord.ErrRoadmapUnconfigured) {
+		return nil, "not_configured"
+	}
+	if err != nil {
+		return nil, "unavailable"
+	}
+	return &roadmap, "observed_committed_snapshot"
 }

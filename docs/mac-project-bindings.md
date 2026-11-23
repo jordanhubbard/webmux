@@ -247,3 +247,16 @@ creating this plan does not dispatch parallel fleet work:
 The current binding primitive does not complete #673, #674 or the overall
 convergence outcome. In particular, it does not yet answer the four product
 questions or reconcile existing participants and execution backends.
+
+## Optional source-roadmap read extension
+
+The shared-reader follow-up (#674/#682) adds the explicit read capability
+`project.source-roadmap.observe.v1` paired with a repository-relative
+`roadmap_path`. `project.observe.v1` remains required. Neither capability admits
+work. Older bindings retain their existing behavior; an older implementation
+rejects the new capability instead of silently exposing file contents. Capabilities
+are unique and canonically sorted, and the path participates in binding revision.
+See [source roadmap snapshots](mac-project-view.md#source-roadmap-snapshots) for the
+immutable-blob, receiving-account, local-execution, privacy and provenance rules.
+This read extension does not register the live project or map requirements to MAC
+tasks. The earlier receipts above remain historical component evidence.

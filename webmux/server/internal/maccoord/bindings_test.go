@@ -199,6 +199,14 @@ func FuzzParseBindings(f *testing.F) {
 		f.Fatal(err)
 	}
 	f.Add(data)
+	document := bindingFixture()
+	document.Bindings[0].RoadmapPath = "docs/roadmap.md"
+	document.Bindings[0].Capabilities = []string{ObserveCapability, RoadmapObserveCapability}
+	roadmapSeed, err := json.Marshal(document)
+	if err != nil {
+		f.Fatal(err)
+	}
+	f.Add(roadmapSeed)
 	f.Add([]byte("{}"))
 	f.Add([]byte(`{"schema":"old","schema":"webmux.mac.project-bindings.v1"}`))
 	f.Fuzz(func(t *testing.T, data []byte) {
@@ -213,11 +221,13 @@ func FuzzParseBindings(f *testing.F) {
 			t.Fatal("successful parse returned no bindings")
 		}
 		selected, err := bindings.Resolve("alice", repository())
+		caps := selected.Project.Capabilities
+		supported := len(caps) == 1 && caps[0] == ObserveCapability && selected.Project.RoadmapPath == "" ||
+			len(caps) == 2 && caps[0] == ObserveCapability && caps[1] == RoadmapObserveCapability && validRoadmapPath(selected.Project.RoadmapPath)
 		if err == nil && (selected.Project.Owner != "alice" ||
 			selected.Project.RepositoryID != repository().ID ||
 			selected.Project.Repository != repository().Repository ||
-			len(selected.Project.Capabilities) != 1 ||
-			selected.Project.Capabilities[0] != ObserveCapability) {
+			!supported) {
 			t.Fatal("successful resolution crossed the account/repository/read boundary")
 		}
 	})

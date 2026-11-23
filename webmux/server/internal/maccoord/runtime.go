@@ -156,6 +156,20 @@ func (r *Runtime) ObserveSource(ctx context.Context, owner string, repository *c
 	return source, nil
 }
 
+func (r *Runtime) ObserveRoadmap(ctx context.Context, owner string, repository *coordination.Binding, source SourceObservation) (RoadmapObservation, error) {
+	if mode, err := r.Backend(owner, repository); err != nil || mode != "mac" {
+		return RoadmapObservation{}, ErrUnmapped
+	}
+	roadmap, err := r.bindings.ObserveRoadmap(ctx, owner, repository, source)
+	if err != nil {
+		return RoadmapObservation{}, err
+	}
+	if err := r.current(); err != nil {
+		return RoadmapObservation{}, err
+	}
+	return roadmap, nil
+}
+
 func (r *Runtime) ObserveProject(ctx context.Context, owner string, repository *coordination.Binding, offset, limit int) (ProjectObservation, error) {
 	mode, err := r.Backend(owner, repository)
 	if err != nil {
@@ -173,41 +187,101 @@ func (r *Runtime) ObserveProject(ctx context.Context, owner string, repository *
 	if err != nil {
 		return ProjectObservation{}, err
 	}
-	reference, exists := r.credentials[selected.Authority.ID]
-	if !exists {
-		return ProjectObservation{}, ErrReadAccess
-	}
-	if err := qualifyPublisher(ctx, selected.Authority.Origin, reference.Publisher); err != nil {
-		return ProjectObservation{}, err
-	}
-	data, err := privateFile(reference.EnrollmentFile, 64<<10)
-	if err != nil {
-		return ProjectObservation{}, ErrReadAccess
-	}
-	token, err := enrollmentToken(data, reference.ClientID, selected.Authority.Origin)
+	client, err := r.openReadClient(ctx, selected)
 	if err != nil {
 		return ProjectObservation{}, err
 	}
-	// Reject broad administrator/write credentials at a nonexistent route. There
-	// is no business operation to dispatch; do not infer scope from a label alone.
-	if err := readOnlyCredential(ctx, selected.Authority.Origin, token, r.roots); err != nil {
-		return ProjectObservation{}, err
-	}
-	view, err := r.bindings.ObserveProject(ctx, owner, repository, token, r.roots, offset, limit)
+	view, err := r.bindings.ObserveProject(ctx, owner, repository, client.token, r.roots, offset, limit)
 	if err != nil {
 		return ProjectObservation{}, err
 	}
-	if err := r.current(); err != nil {
-		return ProjectObservation{}, err
-	}
-	after, err := privateFile(reference.EnrollmentFile, 64<<10)
-	if err != nil || sha256.Sum256(after) != sha256.Sum256(data) {
-		return ProjectObservation{}, ErrReadAccess
-	}
-	if err := qualifyPublisher(ctx, selected.Authority.Origin, reference.Publisher); err != nil {
+	if err := r.finishReadClient(ctx, client); err != nil {
 		return ProjectObservation{}, err
 	}
 	return view, nil
+}
+
+type runtimeReadClient struct {
+	selected  Selection
+	reference credentialReference
+	token     string
+	digest    [32]byte
+}
+
+func (r *Runtime) openReadClient(ctx context.Context, selected Selection) (runtimeReadClient, error) {
+	var empty runtimeReadClient
+	reference, exists := r.credentials[selected.Authority.ID]
+	if !exists {
+		return empty, ErrReadAccess
+	}
+	if err := qualifyPublisher(ctx, selected.Authority.Origin, reference.Publisher); err != nil {
+		return empty, err
+	}
+	data, err := privateFile(reference.EnrollmentFile, 64<<10)
+	if err != nil {
+		return empty, ErrReadAccess
+	}
+	token, err := enrollmentToken(data, reference.ClientID, selected.Authority.Origin)
+	if err != nil {
+		return empty, err
+	}
+	// No business operation exists at this path. Actual generic write refusal
+	// is required; a metadata label alone cannot qualify a read-only credential.
+	if err := readOnlyCredential(ctx, selected.Authority.Origin, token, r.roots); err != nil {
+		return empty, err
+	}
+	return runtimeReadClient{selected: selected, reference: reference, token: token, digest: sha256.Sum256(data)}, nil
+}
+
+func (r *Runtime) finishReadClient(ctx context.Context, client runtimeReadClient) error {
+	if err := r.current(); err != nil {
+		return err
+	}
+	after, err := privateFile(client.reference.EnrollmentFile, 64<<10)
+	if err != nil || sha256.Sum256(after) != client.digest {
+		return ErrReadAccess
+	}
+	// An unchanged file may have expired while local source data was sampled.
+	token, err := enrollmentToken(after, client.reference.ClientID, client.selected.Authority.Origin)
+	if err != nil || token != client.token {
+		return ErrReadAccess
+	}
+	return qualifyPublisher(ctx, client.selected.Authority.Origin, client.reference.Publisher)
+}
+
+// CheckReadAccess is a final fresh qualification after local source/roadmap
+// collection, so later stages cannot release earlier authorized task data after
+// an observed upstream credential refusal. It retains no successful response.
+func (r *Runtime) CheckReadAccess(ctx context.Context, owner string, repository *coordination.Binding) (ReadEvidence, error) {
+	var empty ReadEvidence
+	mode, err := r.Backend(owner, repository)
+	if err != nil {
+		return empty, err
+	}
+	if mode != "mac" {
+		return empty, ErrUnmapped
+	}
+	if ctx == nil {
+		return empty, ErrInvalid
+	}
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	selected, err := r.bindings.Resolve(owner, repository)
+	if err != nil {
+		return empty, err
+	}
+	client, err := r.openReadClient(ctx, selected)
+	if err != nil {
+		return empty, err
+	}
+	evidence, err := r.bindings.CheckReadAccess(ctx, owner, repository, client.token, r.roots)
+	if err != nil {
+		return empty, err
+	}
+	if err := r.finishReadClient(ctx, client); err != nil {
+		return empty, err
+	}
+	return evidence, nil
 }
 
 func parseRuntime(data []byte) (*Bindings, map[string]credentialReference, error) {
