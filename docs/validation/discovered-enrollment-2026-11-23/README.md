@@ -47,3 +47,52 @@ The [public receipt](receipt.json) records source/binary/log hashes and outcomes
 These are isolated production API/discovery components, not installed `cmd/webmux` services, browser enrollment, real coding agents or host reboot tests. The port move rebinds owned listeners/registrations while retaining the receiving API; controller reconstruction preserves the store but is not a process/OS reboot claim. Only macOS-controller to Linux-receiver enrollment/migration is qualified here. The receiver is not race-instrumented; cross-compilation does not qualify native Windows or Intel behavior. Full reverse/platform/IPv6 transport, certificate installation/renewal, duplicate/spoofed-node native controls, isolated networks, service expiry and the complete authorized ordinary/managed agent workflow remain open.
 
 Local-only qualification follows the retained owner instruction: no new hosted jobs and `[skip ci]` on new commit/merge subjects. No installed runtime, service, network/trust/OS policy or shared-storage state changed.
+
+## Reverse roles and polling-budget control
+
+At source `c60273a`, the same workload also passes with a native Linux ARM64
+controller and a race-enabled native macOS ARM64 receiver. It observes the real
+advertisement, refuses anonymous/foreign discovery access and implicit enrollment,
+enrolls the observed endpoint, follows its port change through the production
+background timer, and retains the enrolled identity after controller
+reconstruction. The receiver independently records seven proofs and five bearer
+requests on proven TLS connections. Both processes exit zero. The updated runner
+also passes the original macOS-controller/Linux-receiver direction at this source.
+Neither direction changes the original observation bounds or injects candidates.
+
+The first reverse positive at `3658bef` passed, but its silent-advertiser control
+failed with HTTP 429 at 7.75 seconds. The fixture's 25ms polling can consume the
+unchanged 300-request/minute API budget before the eight-second discovery bound.
+That original failed control remains retained; it is not discovery-refusal proof.
+The fixture now polls every 100ms, keeping both discovery windows within the
+budget. HTTP-success assertions, actual discovery, production rate limits and
+the eight-second bound are unchanged.
+
+The corrected silent-advertiser control at `c60273a` exits one specifically because
+the exact listener was not observed within eight seconds (8.14 seconds including
+test cleanup). Its receipt remains `passed: false`, with no 429 response. The
+controller terminates and waits for its owned macOS receiver, recording exit -15.
+This is an absence control, not a general multicast-isolation qualification.
+
+Use the same fresh-directory and authorized-host prerequisites above:
+
+```sh
+python3 scripts/qualify-discovered-enrollment.py \
+  --output /YOUR/PRIVATE/NEW/OUTPUT \
+  --ssh-host YOUR_AUTHORIZED_LINUX_ARM64_HOST \
+  --remote-root /YOUR/EXISTING/PRIVATE/PARENT/new-fixture \
+  --reverse --local-bind YOUR_VERIFIED_MACOS_LAN_IP --race-primary
+```
+
+`--race-primary` instruments the local macOS receiver in reverse mode. The remote
+Linux controller remains a standalone `CGO_ENABLED=0` binary. The runner verifies
+native architectures and executable digests, captures both witnesses and checks
+unchanged source inventories. Existing-output refusal preserves the prior receipt
+before building or contacting SSH. Both the local and embedded remote Python
+controllers compile. Raw output remains private under `_build/discovered-enrollment631/`;
+the [reverse-role receipt](reverse-receipt.json) records source/binary/log bindings
+and preserves the original failed outcomes.
+
+This adds reverse native API-component evidence. Installed applications, browser
+enrollment, OS trust, native Windows/Intel/IPv6 coverage, real agents and the other
+complete-workflow requirements remain open. It does not close #631 or #664.

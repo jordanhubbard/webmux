@@ -31,6 +31,12 @@ if hashlib.sha256(binary.read_bytes()).hexdigest()!=i['sha256']:raise RuntimeErr
 env={k:v for k,v in os.environ.items() if k in ('PATH','HOME','TMPDIR','LANG','TZ')}
 env.update(WEBMUX_NODE_NETWORK_ROLE='server',WEBMUX_NODE_NETWORK_DIR=str(root),WEBMUX_NODE_NETWORK_BIND=i['bind'],WEBMUX_NODE_NETWORK_DISCOVERY='1')
 env['WEBMUX_NODE_NETWORK_DISCOVERY_SILENT']='1' if i.get('without_advertisement') else '0'
+if i['operation']=='client':
+ (root/'manifest.json').write_text(json.dumps(i['manifest'])+'\n')
+ env['WEBMUX_NODE_NETWORK_ROLE']='client'
+ with (root/'client.log').open('xb') as log:
+  result=subprocess.run([str(binary),'-test.run=^TestNodeIdentityNativeNetworkClient$','-test.v','-test.timeout=60s'],env=env,stdin=subprocess.DEVNULL,stdout=log,stderr=subprocess.STDOUT,timeout=65)
+ sys.stdout.write((root/'client.log').read_text());sys.exit(result.returncode)
 with (root/'server.log').open('xb') as log:
  p=subprocess.Popen([str(binary),'-test.run=^TestNodeIdentityNativeNetworkServer$','-test.v','-test.timeout=100s'],env=env,stdin=subprocess.DEVNULL,stdout=log,stderr=subprocess.STDOUT)
  try:
@@ -64,20 +70,64 @@ def digest(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def reverse(args, environment, ssh, receipt, command, credential):
+    """Run the unchanged server locally and client on the native Linux worker."""
+    server_env = dict(environment, WEBMUX_NODE_NETWORK_ROLE='server',
+                      WEBMUX_NODE_NETWORK_DIR=str(args.output),
+                      WEBMUX_NODE_NETWORK_BIND=args.local_bind,
+                      WEBMUX_NODE_NETWORK_DISCOVERY='1',
+                      WEBMUX_NODE_NETWORK_DISCOVERY_SILENT='1' if args.without_advertisement else '0')
+    with (args.output/'server.log').open('xb') as log:
+        server = subprocess.Popen([str(args.output/'httpapi-darwin-arm64.test'),
+                                   '-test.run=^TestNodeIdentityNativeNetworkServer$',
+                                   '-test.v', '-test.timeout=100s'], env=server_env,
+                                  stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT)
+        try:
+            deadline = time.monotonic()+8
+            manifest_path = args.output/'manifest.json'
+            while time.monotonic() < deadline and not manifest_path.exists() and server.poll() is None:
+                time.sleep(.025)
+            require(manifest_path.exists(), 'Native macOS receiver not ready within eight seconds')
+            request = {'operation':'client', 'root':str(args.remote_root),
+                       'bind':args.local_bind, 'credential':credential,
+                       'sha256':receipt['binary_sha256']['linux'],
+                       'manifest':json.loads(manifest_path.read_text())}
+            command('client', ssh, timeout=70, input=(json.dumps(request)+'\n').encode())
+            # The receiver's independent proof/bearer witness must also pass.
+            server.wait(timeout=15)
+            receipt['server_exit_code'] = server.returncode
+            require(server.returncode == 0, 'Independent native macOS receiver witness failed')
+            receipt['passed'] = True
+        finally:
+            if server.poll() is None:
+                server.terminate()
+                try:
+                    server.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    server.kill()
+                    server.wait(timeout=5)
+            receipt['server_exit_code'] = server.returncode
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--ssh-host', required=True)
     parser.add_argument('--remote-root', type=Path, required=True)
-    parser.add_argument('--remote-bind', required=True, help='Verified non-loopback Linux LAN address')
-    parser.add_argument('--race-primary', action='store_true', help='Use a race-enabled native macOS controller')
+    parser.add_argument('--remote-bind', help='Verified non-loopback Linux receiver LAN address')
+    parser.add_argument('--reverse', action='store_true', help='Run the Linux controller against a native macOS receiver')
+    parser.add_argument('--local-bind', help='Verified non-loopback macOS receiver LAN address; required with --reverse')
+    parser.add_argument('--race-primary', action='store_true', help='Use a race-enabled native macOS process (controller, or receiver with --reverse)')
     parser.add_argument('--without-advertisement', action='store_true', help='Negative control: owned server remains silent; command must fail discovery')
     args = parser.parse_args()
     if not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.@-]*', args.ssh_host):
         parser.error('Use an already authorized plain SSH target')
     if not args.output.is_absolute() or not re.fullmatch(r'/[A-Za-z0-9_./-]+', str(args.remote_root)) or '..' in args.remote_root.parts:
         parser.error('Use fresh absolute private directories without parent traversal')
-    address = ipaddress.ip_address(args.remote_bind)
+    bind = args.local_bind if args.reverse else args.remote_bind
+    if not bind:
+        parser.error('--local-bind is required with --reverse; otherwise --remote-bind is required')
+    address = ipaddress.ip_address(bind)
     if address.is_loopback or address.is_unspecified or address.is_multicast:
         parser.error('An explicit non-loopback listener address is required')
     require(sys.platform == 'darwin' and os.uname().machine == 'arm64', 'Primary must be native Darwin ARM64')
@@ -89,9 +139,9 @@ def main():
         paths = [Path(__file__).resolve(), server_root/'go.mod', server_root/'go.sum']
         paths += sorted((server_root/'internal').rglob('*.go'))
         return {str(p.relative_to(root)): digest(p) for p in paths}
-    receipt = {'passed': False, 'sources_before': sources(), 'commands': {}, 'race_primary':args.race_primary, 'without_advertisement':args.without_advertisement, 'scope': 'Native API fixtures, actual mDNS observations and background reconciliation; not installed application, OS trust or agent-workflow qualification'}
+    receipt = {'passed': False, 'sources_before': sources(), 'commands': {}, 'race_primary':args.race_primary, 'reverse':args.reverse, 'without_advertisement':args.without_advertisement, 'scope': 'Native API fixtures, actual mDNS observations and background reconciliation; not installed application, OS trust or agent-workflow qualification'}
     ssh = ['ssh', '-o', 'BatchMode=yes', '-o', 'StrictHostKeyChecking=yes', '-o', 'ConnectTimeout=5', args.ssh_host, 'python3 -c '+shlex.quote(REMOTE)]
-    environment = {k:v for k,v in os.environ.items() if k in ('PATH','HOME','TMPDIR','LANG','TZ','GOPATH','GOMODCACHE','GOCACHE','GOTOOLCHAIN')}
+    environment = {k:v for k,v in os.environ.items() if k in ('PATH','HOME','TMPDIR','LANG','TZ','GOPATH','GOMODCACHE','GOCACHE','GOTOOLCHAIN','GOMAXPROCS','GOFLAGS')}
     remote = None
     def command(name, argv, timeout=120, **kwargs):
         result = subprocess.run(argv, capture_output=True, timeout=timeout, **kwargs)
@@ -111,26 +161,29 @@ def main():
         command('transfer', ['scp','-B','-o','StrictHostKeyChecking=yes','-o','ConnectTimeout=5',str(args.output/'httpapi-linux-arm64.test'),args.ssh_host+':'+str(args.remote_root)+'/httpapi-linux-arm64.test'])
         credential = secrets.token_hex(32)
         (args.output/'credential').write_text(credential+'\n')
-        remote = subprocess.Popen(ssh, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        remote.stdin.write((json.dumps({'operation':'run','root':str(args.remote_root),'bind':str(address),'credential':credential,'sha256':receipt['binary_sha256']['linux'],'without_advertisement':args.without_advertisement})+'\n').encode())
-        remote.stdin.flush()
-        # select bounds startup independently of SSH connection and native fixture deadlines.
-        import select
-        require(bool(select.select([remote.stdout], [], [], 12)[0]), 'Remote readiness response timed out')
-        ready = json.loads(remote.stdout.readline())
-        manifest = ready['manifest']
-        (args.output/'manifest.json').write_text(json.dumps(manifest)+'\n')
-        client_env = dict(environment, WEBMUX_NODE_NETWORK_ROLE='client', WEBMUX_NODE_NETWORK_DIR=str(args.output), WEBMUX_NODE_NETWORK_DISCOVERY='1')
-        command('client', [str(args.output/'httpapi-darwin-arm64.test'),'-test.run=^TestNodeIdentityNativeNetworkClient$','-test.v','-test.timeout=60s'], timeout=65, env=client_env)
-        # Success requires the independent receiver witness, not only client exit.
-        out, error = remote.communicate(input=b'stop\n', timeout=15)
-        (args.output/'remote-result.log').write_bytes(out+error)
-        receipt['server_exit_code'] = remote.returncode
-        require(remote.returncode == 0, 'Independent remote witness failed')
-        result = json.loads(out)
-        require(result['server_exit_code'] == 0, 'Native server did not exit successfully')
-        (args.output/'server.log').write_text(result['server_log'])
-        receipt['passed'] = True
+        if args.reverse:
+            reverse(args, environment, ssh, receipt, command, credential)
+        else:
+            remote = subprocess.Popen(ssh, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            remote.stdin.write((json.dumps({'operation':'run','root':str(args.remote_root),'bind':str(address),'credential':credential,'sha256':receipt['binary_sha256']['linux'],'without_advertisement':args.without_advertisement})+'\n').encode())
+            remote.stdin.flush()
+            # select bounds startup independently of SSH connection and native fixture deadlines.
+            import select
+            require(bool(select.select([remote.stdout], [], [], 12)[0]), 'Remote readiness response timed out')
+            ready = json.loads(remote.stdout.readline())
+            manifest = ready['manifest']
+            (args.output/'manifest.json').write_text(json.dumps(manifest)+'\n')
+            client_env = dict(environment, WEBMUX_NODE_NETWORK_ROLE='client', WEBMUX_NODE_NETWORK_DIR=str(args.output), WEBMUX_NODE_NETWORK_DISCOVERY='1')
+            command('client', [str(args.output/'httpapi-darwin-arm64.test'),'-test.run=^TestNodeIdentityNativeNetworkClient$','-test.v','-test.timeout=60s'], timeout=65, env=client_env)
+            # Success requires the independent receiver witness, not only client exit.
+            out, error = remote.communicate(input=b'stop\n', timeout=15)
+            (args.output/'remote-result.log').write_bytes(out+error)
+            receipt['server_exit_code'] = remote.returncode
+            require(remote.returncode == 0, 'Independent remote witness failed')
+            result = json.loads(out)
+            require(result['server_exit_code'] == 0, 'Native server did not exit successfully')
+            (args.output/'server.log').write_text(result['server_log'])
+            receipt['passed'] = True
     except Exception as error:
         receipt['error'] = str(error)
         raise

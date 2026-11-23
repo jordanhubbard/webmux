@@ -96,7 +96,10 @@ func qualifyDiscoveredEnrollment(t *testing.T, secret string, manifest nodeNetwo
 					return candidate
 				}
 			}
-			time.Sleep(25 * time.Millisecond)
+			// Keep both discovery windows below the unchanged 300/minute
+			// API budget, including when no advertisement arrives. A 25ms
+			// loop can exhaust that budget before the eight-second bound.
+			time.Sleep(100 * time.Millisecond)
 		}
 		t.Fatal("actual discovery API did not observe the exact owned TLS listener within eight seconds")
 		return discovery.Candidate{}

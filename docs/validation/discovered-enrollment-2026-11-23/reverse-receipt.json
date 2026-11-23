@@ -1,0 +1,265 @@
+{
+  "schema": "webmux.native-discovered-enrollment-reverse.v1",
+  "source_revision": "c60273aa8001678ab998c000885d032c17ae5ee6",
+  "scope": "Native API components only; not installed application, OS trust, browser or real-agent workflow acceptance",
+  "cases": {
+    "reverse-3658bef": {
+      "passed": true,
+      "reverse": true,
+      "without_advertisement": false,
+      "race_primary": true,
+      "sources_unchanged": true,
+      "source_manifest_sha256": "51bf8590beb1cdda395358d07f4b5cebfcd77d70806c6972e7c078d93348eba2",
+      "binary_sha256": {
+        "darwin": "50f135503b065983c3488853119454c6ecd9fc7a1a9cc65f83487c75ea8b057f",
+        "linux": "9ce2a11f225bae168ce4f271fc6ac20c1411bc9dc64f307b4021a211173ee928"
+      },
+      "commands": {
+        "build-darwin": {
+          "exit_code": 0
+        },
+        "build-linux": {
+          "exit_code": 0
+        },
+        "remote-prepare": {
+          "exit_code": 0
+        },
+        "transfer": {
+          "exit_code": 0
+        },
+        "client": {
+          "exit_code": 0
+        }
+      },
+      "server_exit_code": 0,
+      "log_sha256": {
+        "build-linux.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "client.log": "bbab2db7245d22f475298d95ba36f343681fbdf6956430b841cf5c7a6215e778",
+        "build-darwin.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "transfer.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "remote-prepare.log": "e8559cc652d6145897339adf6714e6d31b0be9667573bbe04618333896f8d182",
+        "server.log": "b406977d21f581b8b777b85102e4b800cdaf8332177414294d813c8d5f80d019"
+      },
+      "receiver_witness": {
+        "proofs": 7,
+        "bearer_requests": 5,
+        "all_on_proven_tls_connections": true
+      },
+      "source_revision": "3658befabab369ddae5d7755175d84dc8367c8f2"
+    },
+    "reverse-silent-3658bef": {
+      "passed": false,
+      "reverse": true,
+      "without_advertisement": true,
+      "race_primary": true,
+      "sources_unchanged": true,
+      "source_manifest_sha256": "51bf8590beb1cdda395358d07f4b5cebfcd77d70806c6972e7c078d93348eba2",
+      "binary_sha256": {
+        "darwin": "50f135503b065983c3488853119454c6ecd9fc7a1a9cc65f83487c75ea8b057f",
+        "linux": "9ce2a11f225bae168ce4f271fc6ac20c1411bc9dc64f307b4021a211173ee928"
+      },
+      "commands": {
+        "build-darwin": {
+          "exit_code": 0
+        },
+        "build-linux": {
+          "exit_code": 0
+        },
+        "remote-prepare": {
+          "exit_code": 0
+        },
+        "transfer": {
+          "exit_code": 0
+        },
+        "client": {
+          "exit_code": 1
+        }
+      },
+      "server_exit_code": -15,
+      "log_sha256": {
+        "build-linux.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "client.log": "c22160aa87e0e654d279b356faf92838892fd342592f4282dee1186acd6fc036",
+        "build-darwin.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "transfer.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "remote-prepare.log": "e8559cc652d6145897339adf6714e6d31b0be9667573bbe04618333896f8d182",
+        "server.log": "ebba4f89891af9407318763413ed499892a66281f787df3916396d5887b832f5"
+      },
+      "failure": "HTTP 429 before discovery deadline; not a discovery-refusal control",
+      "source_revision": "3658befabab369ddae5d7755175d84dc8367c8f2"
+    },
+    "forward-3658bef": {
+      "passed": true,
+      "reverse": false,
+      "without_advertisement": false,
+      "race_primary": true,
+      "sources_unchanged": true,
+      "source_manifest_sha256": "51bf8590beb1cdda395358d07f4b5cebfcd77d70806c6972e7c078d93348eba2",
+      "binary_sha256": {
+        "darwin": "50f135503b065983c3488853119454c6ecd9fc7a1a9cc65f83487c75ea8b057f",
+        "linux": "9ce2a11f225bae168ce4f271fc6ac20c1411bc9dc64f307b4021a211173ee928"
+      },
+      "commands": {
+        "build-darwin": {
+          "exit_code": 0
+        },
+        "build-linux": {
+          "exit_code": 0
+        },
+        "remote-prepare": {
+          "exit_code": 0
+        },
+        "transfer": {
+          "exit_code": 0
+        },
+        "client": {
+          "exit_code": 0
+        }
+      },
+      "server_exit_code": 0,
+      "log_sha256": {
+        "build-linux.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "client.log": "7e603efe8f7605eed9b9c4fd712923d8a331da71ec9d4bb1ee5560b52156b56c",
+        "build-darwin.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "remote-result.log": "61d6e0ef7d505ef8975b3eefb993c607ccd2650d3c478a512ea21a61dce36691",
+        "transfer.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "remote-prepare.log": "e8559cc652d6145897339adf6714e6d31b0be9667573bbe04618333896f8d182",
+        "server.log": "3956e176e9aebe43430fd7121c4c2bc8b14cbce529e8f84de9f574ee13e27be7"
+      },
+      "receiver_witness": {
+        "proofs": 7,
+        "bearer_requests": 5,
+        "all_on_proven_tls_connections": true
+      },
+      "source_revision": "3658befabab369ddae5d7755175d84dc8367c8f2"
+    },
+    "reverse-silent-c60273a": {
+      "passed": false,
+      "reverse": true,
+      "without_advertisement": true,
+      "race_primary": true,
+      "sources_unchanged": true,
+      "source_manifest_sha256": "f6f429d780428e29433b446309aa7e4802e413909e9c2b5b63230f09df8460cc",
+      "binary_sha256": {
+        "darwin": "876a9759722d5c7a058bcfe36a459447bfc93e8b7a0d9abbf1d717e0257073d8",
+        "linux": "9498f660fe138ef235c53b9cf1d9bb8dd5199305857c077a18e4c2867782fdae"
+      },
+      "commands": {
+        "build-darwin": {
+          "exit_code": 0
+        },
+        "build-linux": {
+          "exit_code": 0
+        },
+        "remote-prepare": {
+          "exit_code": 0
+        },
+        "transfer": {
+          "exit_code": 0
+        },
+        "client": {
+          "exit_code": 1
+        }
+      },
+      "server_exit_code": -15,
+      "log_sha256": {
+        "build-linux.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "client.log": "d7f577be7986a4e103e82d2894e6453454087db5b0ce36b541294d3153231d78",
+        "build-darwin.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "transfer.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "remote-prepare.log": "e8559cc652d6145897339adf6714e6d31b0be9667573bbe04618333896f8d182",
+        "server.log": "ebba4f89891af9407318763413ed499892a66281f787df3916396d5887b832f5"
+      },
+      "failure": "exact listener absent at unchanged eight-second discovery gate",
+      "source_revision": "c60273aa8001678ab998c000885d032c17ae5ee6"
+    },
+    "reverse-c60273a": {
+      "passed": true,
+      "reverse": true,
+      "without_advertisement": false,
+      "race_primary": true,
+      "sources_unchanged": true,
+      "source_manifest_sha256": "f6f429d780428e29433b446309aa7e4802e413909e9c2b5b63230f09df8460cc",
+      "binary_sha256": {
+        "darwin": "876a9759722d5c7a058bcfe36a459447bfc93e8b7a0d9abbf1d717e0257073d8",
+        "linux": "9498f660fe138ef235c53b9cf1d9bb8dd5199305857c077a18e4c2867782fdae"
+      },
+      "commands": {
+        "build-darwin": {
+          "exit_code": 0
+        },
+        "build-linux": {
+          "exit_code": 0
+        },
+        "remote-prepare": {
+          "exit_code": 0
+        },
+        "transfer": {
+          "exit_code": 0
+        },
+        "client": {
+          "exit_code": 0
+        }
+      },
+      "server_exit_code": 0,
+      "log_sha256": {
+        "build-linux.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "client.log": "bbab2db7245d22f475298d95ba36f343681fbdf6956430b841cf5c7a6215e778",
+        "build-darwin.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "transfer.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "remote-prepare.log": "e8559cc652d6145897339adf6714e6d31b0be9667573bbe04618333896f8d182",
+        "server.log": "b406977d21f581b8b777b85102e4b800cdaf8332177414294d813c8d5f80d019"
+      },
+      "receiver_witness": {
+        "proofs": 7,
+        "bearer_requests": 5,
+        "all_on_proven_tls_connections": true
+      },
+      "source_revision": "c60273aa8001678ab998c000885d032c17ae5ee6"
+    },
+    "forward-c60273a": {
+      "passed": true,
+      "reverse": false,
+      "without_advertisement": false,
+      "race_primary": true,
+      "sources_unchanged": true,
+      "source_manifest_sha256": "f6f429d780428e29433b446309aa7e4802e413909e9c2b5b63230f09df8460cc",
+      "binary_sha256": {
+        "darwin": "876a9759722d5c7a058bcfe36a459447bfc93e8b7a0d9abbf1d717e0257073d8",
+        "linux": "9498f660fe138ef235c53b9cf1d9bb8dd5199305857c077a18e4c2867782fdae"
+      },
+      "commands": {
+        "build-darwin": {
+          "exit_code": 0
+        },
+        "build-linux": {
+          "exit_code": 0
+        },
+        "remote-prepare": {
+          "exit_code": 0
+        },
+        "transfer": {
+          "exit_code": 0
+        },
+        "client": {
+          "exit_code": 0
+        }
+      },
+      "server_exit_code": 0,
+      "log_sha256": {
+        "build-linux.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "client.log": "7e603efe8f7605eed9b9c4fd712923d8a331da71ec9d4bb1ee5560b52156b56c",
+        "build-darwin.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "remote-result.log": "a2062106d5185311310434a4b82e2a5bb43a58bb9591629826a41d7dde549f96",
+        "transfer.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "remote-prepare.log": "e8559cc652d6145897339adf6714e6d31b0be9667573bbe04618333896f8d182",
+        "server.log": "1b1abbc68d96d7e3d2d9b4d22abf5a9d8ae2c17f2a463c7d36ccf86fc1c8b8b2"
+      },
+      "receiver_witness": {
+        "proofs": 7,
+        "bearer_requests": 5,
+        "all_on_proven_tls_connections": true
+      },
+      "source_revision": "c60273aa8001678ab998c000885d032c17ae5ee6"
+    }
+  }
+}
