@@ -1,0 +1,63 @@
+{
+  "schema": "webmux.mac.source-qualification.v1",
+  "observed_at": "2026-11-23T05:47:01.438993+00:00",
+  "scope": "Local Git source observation only; no live MAC project or product consumer",
+  "native_observation": {
+    "schema": "webmux.mac.source-observation.v1",
+    "binding_revision": "25c9cba1d1521dba5eb1b71c54081d277ffa3d948215a81bdab15db4043d41b1",
+    "authority_id": "fleet-a",
+    "project_key": "alpha",
+    "provenance": "verified-git",
+    "repository_id": "e9319885c4b08dd63c754f1b02a84ae5d125ef37d0f91ad4fa72408f2a0868ee",
+    "repository": "github.com/jordanhubbard/webmux",
+    "ref": "refs/heads/feat/mac-project-bindings-673",
+    "commit": "da554a964b8a917d7d74c97ac3614d2674d283a8",
+    "detached": false,
+    "dirty": true,
+    "observed_at": "2026-11-23T05:46:03.805507Z"
+  },
+  "native_observation_private_worktree_omitted": true,
+  "native_mapping_is_test_only": true,
+  "source_sha256": {
+    "webmux/server/internal/maccoord/source.go": "b8f89f03834a6ef401f757a0c3fdd109ad1fdcbc809f2f672e6d60d9d8843f85",
+    "webmux/server/internal/maccoord/source_test.go": "fb4be2b7e9c7240d8fcadd065e6e635922a7f8a59100ae190f8b923e8b1c57c3"
+  },
+  "checks": [
+    {
+      "command": "go test -race -v ./internal/maccoord -count=1 -timeout=60s",
+      "explicit_local_source_qualification": true,
+      "native_MAC_authentication_test": "skipped; separate earlier native-read.json retains actual auth evidence",
+      "exit_code": 0,
+      "elapsed_seconds": 10.964
+    },
+    {
+      "command": "go vet ./internal/maccoord",
+      "exit_code": 0
+    },
+    {
+      "command": "GOOS=windows GOARCH=amd64 go test -c ./internal/maccoord",
+      "exit_code": 0,
+      "classification": "cross-compilation only"
+    }
+  ],
+  "controlled_real_git_cases": [
+    "clean, modified, staged and untracked worktree",
+    "new commit refresh",
+    "detached HEAD",
+    "independent root with same canonical remote refused",
+    "foreign/unknown account and nil repository refused",
+    "inherited GIT_DIR/GIT_WORK_TREE/GIT_CONFIG overrides ignored",
+    "cancellation preserved without partial metadata",
+    "output budget enforced through io.Copy optional interfaces"
+  ],
+  "limitations": [
+    "No atomic filesystem snapshot or protection from concurrent/ABA edits",
+    "Commit identifies committed Git content, not dirty files or ignored outputs",
+    "No roadmap requirement, policy revision, session, task, attempt or lease inference",
+    "Test-only authority/project mapping is not a live MAC project binding",
+    "No product loader or consumer yet"
+  ],
+  "nas_access": false,
+  "MAC_access": false,
+  "service_changes": false
+}

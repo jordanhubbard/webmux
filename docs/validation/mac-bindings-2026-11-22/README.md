@@ -95,3 +95,31 @@ remain open.
 An optional broad `GET /projects` request timed out after three seconds. Fresh
 health and fixed graph calls passed afterward. No broader endpoint retry,
 deadline increase or service restart was used; its exact cause remains unproved.
+
+## Source revision qualification
+
+The [source receipt](source-observation.json) covers the later execution-host Git
+observation component. Real temporary repositories exercise commit refresh,
+clean/modified/staged/untracked and detached states, a different root with the
+same remote, account refusal, inherited Git routing/configuration, cancellation
+and bounded output (including `io.Copy`'s optional fast paths). The full package
+race suite and vet pass; Windows AMD64 cross-compilation passes.
+
+An explicit opt-in test also called the helper on this feature worktree and
+matched the supplied exact commit, canonical root and dirty state. Its test-only
+authority/project mapping does not identify or enroll a live MAC project. The
+private raw receipt retains the local worktree path; the public receipt omits it.
+No MAC credential, worker/task state, service or NAS access was involved.
+
+From `webmux/server`, use a fresh private receipt path and explicit expectations:
+
+```sh
+WEBMUX_MAC_SOURCE_RECEIPT=/private/path/new-source-observation.json \
+WEBMUX_MAC_SOURCE_EXPECTED_ROOT=/canonical/feature/worktree \
+WEBMUX_MAC_SOURCE_EXPECTED_COMMIT=<full-commit-object-id> \
+WEBMUX_MAC_SOURCE_EXPECTED_DIRTY=1 \
+go test -v ./internal/maccoord -run '^TestNativeLocalSourceObservation$' -count=1 -timeout=30s
+```
+
+The test skips by default. This is metadata sampling, not a frozen workspace,
+roadmap-source import, session/task/lease mapping or publication qualification.

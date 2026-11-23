@@ -121,6 +121,32 @@ qualify an SSH tunnel, remote publisher, actual project existence or a complete
 least-privilege audit. The synthetic project key only exercises authentication.
 No product loader or human/agent consumer invokes this helper yet.
 
+## Execution-host source observation
+
+`ObserveSource` adds the versioned `webmux.mac.source-observation.v1` boundary.
+It resolves the receiving account and exact configured repository before touching
+its server-supplied worktree. Actual Git remote/root witnesses must match that
+binding. The result includes the binding revision, configured authority/project
+selection, `verified-git` provenance, canonical worktree, exact commit, full branch
+ref (or explicit detached state), dirty flag and observation time.
+
+The helper uses a five-second total budget and bounded Git output. It strips
+inherited Git routing/config overrides, disables filesystem-monitor hooks and
+optional index writes, and never fetches or contacts MAC. Repository witnesses
+are rechecked, and the commit/ref must match on both sides of the status and
+second repository check. Refusal returns no source metadata; errors do not expose
+paths, remote configuration or command output, and cancellation remains detectable.
+
+This is a local metadata observation, not an atomic filesystem snapshot or lock.
+The dirty flag covers tracked and ordinary untracked changes, including staged
+changes; ignored outputs are outside its scope. The commit identifies a Git
+object and does not identify the content of a dirty worktree. Concurrent edits,
+including a change and restoration between samples, cannot be excluded. No task,
+lease, roadmap item/revision, approved branch policy or accepted publication head
+is inferred from this observation. Those require separate authority/source joins
+and validation at admission/publication. No product consumer invokes this helper
+yet. See the [source qualification](validation/mac-bindings-2026-11-22/source-observation.json).
+
 ## Ordered implementation
 
 The following are sub-issues of #664 with actual GitHub blocker relationships;
