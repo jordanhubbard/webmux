@@ -150,6 +150,8 @@ func TestNativeLocalMACReadAccess(t *testing.T) {
 		t.Fatal("native read access failed:", err)
 	}
 	var task *TaskObservation
+	var worker *WorkerObservation
+	unownedWorkerRefused := false
 	foreignTaskRefused, missingTaskRefused := false, false
 	if taskID != "" && !refusal {
 		observation, err := bindings.ObserveTask(ctx, "native-qualification", repo, taskID, manifest.Credential.Token, nil)
@@ -158,6 +160,18 @@ func TestNativeLocalMACReadAccess(t *testing.T) {
 			t.Fatal("native task identity observation failed:", err)
 		}
 		task = &observation
+		ownerObservation, err := bindings.ObserveTaskWorker(ctx, "native-qualification", repo, taskID, manifest.Credential.Token, nil)
+		if observation.OwnerWorkerID == nil {
+			if !errors.Is(err, ErrUnmapped) || ownerObservation.Schema != "" {
+				t.Fatal("native unowned task acquired an inferred worker")
+			}
+			unownedWorkerRefused = true
+		} else {
+			if err != nil || ownerObservation.Schema != WorkerIdentitySchema {
+				t.Fatal("native task owner/machine observation failed:", err)
+			}
+			worker = &ownerObservation
+		}
 		// The same real task must not cross a different receiving-project binding.
 		foreign := document
 		foreign.Bindings = append([]ProjectBinding(nil), document.Bindings...)
@@ -200,21 +214,23 @@ func TestNativeLocalMACReadAccess(t *testing.T) {
 		t.Fatal("native publisher changed during qualification")
 	}
 	receipt := struct {
-		Schema               string           `json:"schema"`
-		ClientID             string           `json:"client_id"`
-		ObservedAt           time.Time        `json:"observed_at"`
-		CredentialExpiresAt  time.Time        `json:"credential_expires_at"`
-		PublisherFingerprint string           `json:"publisher_fingerprint"`
-		RepositoryID         string           `json:"repository_id"`
-		Read                 ReadEvidence     `json:"read"`
-		ExpectedRefusal      bool             `json:"expected_refusal"`
-		WriteRefused         bool             `json:"write_refused"`
-		Task                 *TaskObservation `json:"task,omitempty"`
-		ForeignTaskRefused   bool             `json:"foreign_task_refused,omitempty"`
-		MissingTaskRefused   bool             `json:"missing_task_refused,omitempty"`
-		Scope                string           `json:"scope"`
+		Schema               string             `json:"schema"`
+		ClientID             string             `json:"client_id"`
+		ObservedAt           time.Time          `json:"observed_at"`
+		CredentialExpiresAt  time.Time          `json:"credential_expires_at"`
+		PublisherFingerprint string             `json:"publisher_fingerprint"`
+		RepositoryID         string             `json:"repository_id"`
+		Read                 ReadEvidence       `json:"read"`
+		ExpectedRefusal      bool               `json:"expected_refusal"`
+		WriteRefused         bool               `json:"write_refused"`
+		Task                 *TaskObservation   `json:"task,omitempty"`
+		ForeignTaskRefused   bool               `json:"foreign_task_refused,omitempty"`
+		MissingTaskRefused   bool               `json:"missing_task_refused,omitempty"`
+		Worker               *WorkerObservation `json:"worker,omitempty"`
+		UnownedWorkerRefused bool               `json:"unowned_worker_refused,omitempty"`
+		Scope                string             `json:"scope"`
 	}{"webmux.mac.native-read-qualification.v1", manifest.ClientID, time.Now().UTC(), expires, before,
-		repo.ID, evidence, refusal, true, task, foreignTaskRefused, missingTaskRefused,
+		repo.ID, evidence, refusal, true, task, foreignTaskRefused, missingTaskRefused, worker, unownedWorkerRefused,
 		"Native read/scope and optional user-supplied fleet-task observations only; test binding is not WebMux project/session enrollment or admission"}
 	encoded, err := json.MarshalIndent(receipt, "", "  ")
 	if err != nil {

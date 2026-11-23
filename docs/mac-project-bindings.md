@@ -185,6 +185,45 @@ not enroll a WebMux project or session. The explicit lowercase `webmux` graph
 selection returned zero nodes; no project-existence conclusion follows. No
 product browser, CLI or MCP consumer invokes this reader yet.
 
+## Separate session and worker/machine observations
+
+`ObserveSession` converts trusted WebMux broker inventory into
+`webmux.mac.session-identity.v1`. It requires the receiving owner, verified
+repository binding and complete node/account/session/incarnation reference.
+Execution-host and transport labels remain separate from canonical MAC IDs.
+Present, absent, unknown and revoked observations retain their original timestamps;
+freshness remains unqualified until the view applies its explicit policy. Broker
+activity does not prove MAC task execution. MAC machine/worker/task/attempt/lease
+fields remain null and `mac_link_state` remains `unlinked`. Free-form declared work
+is not copied into a task ID. Projection performs no I/O or registration.
+
+`ObserveTaskWorker` starts from a newly authorized project task and follows only
+its owner through the audited read-only agent and machine GET routes. It returns
+`webmux.mac.worker-identity.v1` with canonical worker/machine IDs, separate display
+labels, reported status/health, deletion and observation timestamps. It rechecks
+the worker's machine/deletion association and task owner/state/attempt/lease
+around the join. Changed observations yield no partial tuple. Task, worker and
+machine reads each retain their negative authentication controls and share a
+five-second total budget. Unowned tasks cannot trigger arbitrary worker lookup.
+The MAC agent/machine records are unversioned; the adapter requires the exact
+inspected fields and supplies its own versioned projection.
+
+A shared worker's other current task, resources, capabilities and persona context
+are withheld. A deleted historical owner remains identified as deleted. Neither
+reported busy/healthy/trusted fields nor an unexpired lease grant execution or
+publication. The joins are metadata sampling, not an atomic snapshot; changes
+and restoration between samples remain possible. Freshness remains unqualified,
+and the WebMux session and source links remain unlinked.
+
+The [worker/session receipt](validation/mac-bindings-2026-11-22/worker-session.json)
+separates controlled positive joins from native evidence. The real fleet-root task
+was unowned; the native reader correctly refused to invent its worker. No positive
+native worker/machine or session join is claimed. No product consumer invokes
+these helpers. In particular, the existing standalone owner view filters revoked
+members: the future project view still needs a supported retained-inventory path
+before it can expose offline/revoked sessions. These helper tests do not complete
+that lifecycle requirement or #673/#674.
+
 ## Ordered implementation
 
 The following are sub-issues of #664 with actual GitHub blocker relationships;

@@ -48,8 +48,7 @@ func (b *Bindings) ObserveTask(parent context.Context, owner string, repository 
 	if err != nil {
 		return TaskObservation{}, err
 	}
-	if parent == nil || !validReadToken(token) || !validText(taskID, 256) ||
-		strings.ContainsAny(taskID, "/\\?#%") || taskID == "." || taskID == ".." {
+	if parent == nil || !validReadToken(token) || !validReadID(taskID) {
 		return TaskObservation{}, ErrInvalid
 	}
 	ctx, cancel := context.WithTimeout(parent, 5*time.Second)
@@ -154,4 +153,8 @@ func projectTask(body []byte, selected Selection, taskID string) (TaskObservatio
 		SessionLinkState: "unlinked", MachineIdentityState: "unavailable", SourceLinkState: "unlinked",
 		AuthorityTime: clock, UpdatedAt: updated, ObservedAt: time.Now().UTC(),
 	}, nil
+}
+
+func validReadID(value string) bool {
+	return validText(value, 256) && !strings.ContainsAny(value, "/\\?#%") && value != "." && value != ".."
 }

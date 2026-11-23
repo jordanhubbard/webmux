@@ -154,3 +154,20 @@ test input must identify an explicitly selected existing task and project using
 `test_only_mapping_eligible: true`. The reader independently verifies the returned
 task/project and refuses the foreign/missing controls. This is test plumbing,
 not a product mapping loader, automatic enrollment or a dispatch mechanism.
+
+## Worker/machine and session identity boundaries
+
+The [worker/session receipt](worker-session.json) covers separate canonical MAC
+worker/machine identities and WebMux node/account/session/incarnation identities.
+Controlled HTTP joins require an authorized task owner, withhold shared-worker
+context and refuse changed task/attempt/lease, machine association and tombstones.
+Separate session projection controls preserve unknown/revoked observations and
+new incarnations without inventing MAC links or freshness. These are component
+checks, not a deployed retained broker-inventory view.
+
+The native fleet-root task was still unowned. Its worker reader returned the
+expected refusal; no worker/machine tuple was synthesized. The existing native
+task/scope/foreign-project/missing-task controls still passed against the same
+publisher. Positive native worker/machine joins, session links, offline inventory,
+project-source joins and actual human/agent consumers remain open. No provider,
+task, worker, profile, credential, service or NAS state was changed.
