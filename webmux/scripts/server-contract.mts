@@ -701,6 +701,18 @@ try {
   assert.ok(!context.isError);
   assert.ok(JSON.stringify(context).includes('node-local'));
   assert.ok(!JSON.stringify(context).includes('wmc1.'));
+  const markup = '<>&'.repeat(300);
+  const work = await rpc('tools/call', { name: 'webmux_coordination_act', arguments: { request_id: 'markup-stdio-work-1', action: 'work', text: markup } });
+  assert.ok(!work.isError);
+  assert.equal(work.structuredContent.status, 'updated');
+  const oversized = await rpc('tools/call', { name: 'webmux_coordination_act', arguments: { request_id: 'oversized-stdio-1', action: 'message', kind: 'message', target: view.self.ref, text: 'x'.repeat(20 << 10) } });
+  assert.equal(oversized.isError, true);
+  assert.ok(JSON.stringify(oversized).includes('exceeds 16 KiB'));
+  const after = await rpc('tools/call', { name: 'webmux_coordination_view', arguments: {} });
+  assert.ok(!after.isError);
+  assert.equal(after.structuredContent.self.task, markup);
+  assert.deepEqual(after.structuredContent.self.ref, view.self.ref);
+  assert.ok(!JSON.stringify(after).includes('wmc1.'));
 } finally { mcp.stdin.end(); lines.close(); }
 
 writeFileSync(${JSON.stringify(marker)}, 'scoped CLI completed before any browser viewer opened', { mode: 0o600 });
