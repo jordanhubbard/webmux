@@ -167,7 +167,7 @@ print(json.dumps({'root':r,'port':port}))`)) as { root: string; port: number };
   const context=await browser.newContext({viewport:{width:1440,height:1000}});
   await context.addInitScript(token=>localStorage.setItem('webmux_token',token),token);
   const page=await context.newPage();await page.goto(controllerURL);
-  await page.getByRole('group',{name:'WebMux cluster'}).getByRole('button',{name:'Add server',exact:true}).click();
+  await page.getByRole('group',{name:'WebMux cluster'}).getByRole('button',{name:'Manage servers',exact:true}).click();
   const manager=page.getByRole('dialog',{name:'Manage servers'});
   const candidate=manager.locator('section').filter({hasText:nodeID}).filter({hasText:`${localBind}:${tlsPort}`});
   await expect(candidate).toHaveCount(1);
