@@ -24,3 +24,25 @@ was accessed, and no task, worker, credential or fleet policy was changed.
 Remaining #673 mappings and actual authority qualification, human/agent read
 consumers, shared admission/publication and three-host acceptance remain open.
 The observed local checks do not qualify those requirements or current-head CI.
+
+
+## Fixed read-route qualifier and exact-field correction
+
+The later [read-access receipt](read-access.json) binds the current source
+separately from the first parser-only checkpoint. A Go helper now checks absent,
+invalid and supplied credentials through one fixed GET route, with TLS, redirect,
+proxy, response-bound and cancellation controls. It exposes only observation
+metadata and leaves principal identity and non-read operations unqualified. No
+product loader, browser/MCP consumer or live fleet configuration invokes it yet.
+
+The work also corrects Go JSON's case-insensitive struct-field matching. Operator
+policy fields are now checked by exact name before decoding; uppercase or
+case-alias fields cannot silently select another account. Upstream evidence uses
+exact wire-key lookup as well. Deliberate missing/invalid-credential and case-alias
+mutations fail the intended controls; the actual source remains unchanged.
+
+Private profile metadata was inspected locally without reading credential files.
+No suitable current read-only profile was found. Controlled HTTP/TLS tests do not
+qualify the real fleet, actual least-privilege scopes, verified SSH publisher
+ownership or live revocation. Those and the remaining phase-one wire mappings
+stay open under #673. No MAC or NAS mutation was performed.

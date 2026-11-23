@@ -1,0 +1,92 @@
+{
+  "observed_at": "2026-11-23T04:50:05.123517+00:00",
+  "scope": "Local fixed-read-route authentication observation helper and exact-field policy correction; no live MAC or product-consumer qualification",
+  "source_sha256": {
+    "webmux/server/internal/maccoord/bindings.go": "389eb6b3ee97163fe74da8e08aede18852d371103e65838a33fb4e1d4a9d2e16",
+    "webmux/server/internal/maccoord/bindings_test.go": "38417409fb2f5dbab5a0db9caa24fae7a53a23639bb1acff744f7399b5290d35",
+    "webmux/server/internal/maccoord/read_access.go": "0558d56aee84d81ac0f2496cbf134d8e7b38ee4ef55430674e95229ee772b873",
+    "webmux/server/internal/maccoord/read_access_test.go": "9939f820474ef499497974b3f123ac47a11681bb5a1e7d0c4020646a4a8118bd"
+  },
+  "checks": [
+    {
+      "command": "go test -race ./internal/maccoord",
+      "exit_code": 0
+    },
+    {
+      "command": "go vet ./internal/maccoord",
+      "exit_code": 0
+    },
+    {
+      "command": "go test ./internal/maccoord -run '^$' -fuzz '^FuzzParseBindings$' -fuzztime=5s -parallel=2",
+      "exit_code": 0,
+      "executions": 37542,
+      "elapsed_seconds": 6.245
+    }
+  ],
+  "controlled_HTTP_cases": [
+    "ordered absent/invalid/supplied credential outcomes",
+    "no-token development mode and partial anonymous/arbitrary-bearer modes refused",
+    "foreign account refused before network access",
+    "changed credential acceptance rechecked without cached success",
+    "redirect refused without request to target",
+    "wrong project, unsupported schema, case aliases, duplicate keys and valid oversized JSON refused",
+    "response-body/token/endpoint redaction",
+    "untrusted TLS refused, explicit CA trusted",
+    "request cancellation preserved"
+  ],
+  "deliberate_mutation_controls": {
+    "observedAt": "2026-11-23T04:45:28.035856+00:00",
+    "results": [
+      {
+        "name": "missing-credential-guard",
+        "exit_code": 1,
+        "expectedFailures": [
+          "TestReadAccessRejectsPartialNegativeControls/anonymous"
+        ],
+        "log_sha256": "530bc1e9866c93142994d20c2814c6fdc57de9d00b2838d41ecddb6dc476fcfa",
+        "classification": "Deliberate mutation control, not native MAC or historical failure"
+      },
+      {
+        "name": "invalid-credential-guard",
+        "exit_code": 1,
+        "expectedFailures": [
+          "TestReadAccessRejectsPartialNegativeControls/arbitrary-bearer"
+        ],
+        "log_sha256": "4358951875549e1a7781b986b1b1a3621b16fe32b121915f1eb8dad57f50e0fe",
+        "classification": "Deliberate mutation control, not native MAC or historical failure"
+      },
+      {
+        "name": "case-alias-guard",
+        "exit_code": 1,
+        "expectedFailures": [
+          "TestBindingOriginsAndStrictDocument/uppercase_schema",
+          "TestBindingOriginsAndStrictDocument/uppercase_owner",
+          "TestBindingOriginsAndStrictDocument/case_owner_alias"
+        ],
+        "log_sha256": "25194fe1810c60381fe9fe81b524f467341bb250fa59e705332b8d555e1cebd5",
+        "classification": "Deliberate mutation control, not native MAC or historical failure"
+      }
+    ],
+    "sourceUnchanged": true,
+    "source_sha256": {
+      "internal/maccoord/read_access.go": "0558d56aee84d81ac0f2496cbf134d8e7b38ee4ef55430674e95229ee772b873",
+      "internal/maccoord/bindings.go": "389eb6b3ee97163fe74da8e08aede18852d371103e65838a33fb4e1d4a9d2e16"
+    }
+  },
+  "live_profile_audit": {
+    "credential_metadata_only": true,
+    "live_tokens_read": false,
+    "dedicated_current_read_only_profile_found": false,
+    "live_connection_attempted": false,
+    "profile_mutation": false,
+    "details": "Inspected private local profile metadata; expired or broad-scope profiles do not supply this qualification. No private origins or credential references published."
+  },
+  "limitations": [
+    "Three status/schema observations are not a canonical principal identity, least-privilege audit, project-existence proof or execution grant",
+    "Configured loopback origin does not prove SSH host/publisher ownership; deployment transport trust must be qualified before using a real token",
+    "No product loader, browser, CLI or MCP consumer invokes this helper",
+    "Actual fleet authentication, scope and revocation plus remaining phase-one identity mappings remain open"
+  ],
+  "mac_or_fleet_mutations": false,
+  "nas_access": false
+}

@@ -113,7 +113,7 @@ func validOrigin(value string) bool {
 // ParseBindings accepts a bounded, strict operator document. No environment,
 // files, repository, network, credentials or process state are inspected.
 func ParseBindings(data []byte) (*Bindings, error) {
-	if len(data) > 64<<10 || !utf8.Valid(data) || !uniqueJSON(data) {
+	if len(data) > 64<<10 || !utf8.Valid(data) || !uniqueJSON(data) || !exactBindingFields(data) {
 		return nil, ErrInvalid
 	}
 	var document bindingDocument
@@ -194,6 +194,53 @@ func (b *Bindings) Resolve(owner string, repository *coordination.Binding) (Sele
 	}
 	project.Capabilities = append([]string(nil), project.Capabilities...)
 	return Selection{Revision: b.revision, Authority: b.authorities[project.AuthorityID], Project: project}, nil
+}
+
+// encoding/json matches struct fields case-insensitively, including tagged
+// fields. A versioned policy cannot silently treat "Owner" as "owner".
+func exactBindingFields(data []byte) bool {
+	object := func(data []byte, names ...string) (map[string]json.RawMessage, bool) {
+		var fields map[string]json.RawMessage
+		if json.Unmarshal(data, &fields) != nil || fields == nil {
+			return nil, false
+		}
+		for key := range fields {
+			known := false
+			for _, name := range names {
+				known = known || key == name
+			}
+			if !known {
+				return nil, false
+			}
+		}
+		return fields, true
+	}
+	document, ok := object(data, "schema", "authorities", "bindings")
+	if !ok {
+		return false
+	}
+	for _, section := range []struct {
+		name   string
+		fields []string
+	}{
+		{"authorities", []string{"id", "origin"}},
+		{"bindings", []string{"owner", "repository_id", "repository", "authority_id", "project_key", "capabilities"}},
+	} {
+		raw := document[section.name]
+		if len(raw) == 0 {
+			continue
+		}
+		var rows []json.RawMessage
+		if json.Unmarshal(raw, &rows) != nil {
+			return false
+		}
+		for _, row := range rows {
+			if _, ok := object(row, section.fields...); !ok {
+				return false
+			}
+		}
+	}
+	return true
 }
 
 // Reject duplicate object keys, trailing values and excessive nesting before
