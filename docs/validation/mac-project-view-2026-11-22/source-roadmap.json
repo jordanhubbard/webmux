@@ -147,5 +147,12 @@
   "MAC_mutations": false,
   "installed_profile_config_service_changes": false,
   "NAS_access": false,
-  "reclaimed_bytes": 0
+  "reclaimed_bytes": 0,
+  "fixture_follow_up": {
+    "scope": "Neutral absolute-path refusal fixture after a Generic Password false positive; no credential exists in the reported source line, no detector suppression or credential rotation",
+    "source_file": "webmux/server/internal/maccoord/roadmap_test.go",
+    "source_sha256": "d599c4efd51d0d1e5e475905d2442d513cd20af7b6527737440b0772b14c20ff",
+    "command": "go test ./internal/maccoord -run '^TestRoadmapBindingRequiresExplicitSafePathAndCapability$' -count=1 -timeout=30s",
+    "exit_code": 0
+  }
 }
