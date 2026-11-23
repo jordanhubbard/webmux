@@ -6,7 +6,30 @@ import (
 
 	"github.com/jordanhubbard/webmux/server/internal/coordination"
 	"github.com/jordanhubbard/webmux/server/internal/recovery"
+	"github.com/jordanhubbard/webmux/server/internal/terminal"
 )
+
+// Provisioning may sync a ledger and fsync access files. Serialize its snapshots
+// separately so it never blocks reads of an already running terminal. Take a
+// fresh snapshot after acquiring this lock, not before waiting behind another
+// provisioner: otherwise an older inventory could withdraw a newer interface.
+// The caller holds no broker lock and revalidates the generation before launch.
+func (b *Broker) provisionCoordinationLaunch(e *entry, generation uint64, provision func([]Session, Session) (*terminal.CoordinationAccess, error)) (*terminal.CoordinationAccess, error) {
+	b.provisionMu.Lock()
+	defer b.provisionMu.Unlock()
+	b.mu.Lock()
+	if b.closed {
+		b.mu.Unlock()
+		return nil, ErrClosed
+	}
+	if b.entries[e.value.ID] != e || e.generation != generation {
+		b.mu.Unlock()
+		return nil, ErrRecoveryConflict
+	}
+	all, current := b.coordinationSnapshotLocked(), e.value.clone()
+	b.mu.Unlock()
+	return provision(all, current)
+}
 
 // InspectCoordinationRepository binds a fixed, read-only SSH/mosh RPC to the
 // broker's current live session and authenticated directory observation. Network
@@ -54,4 +77,35 @@ func (b *Broker) coordinationRepositoryCurrent(e *entry, snapshot Session) bool 
 	return v.Owner == snapshot.Owner && v.CreatedAt == snapshot.CreatedAt && v.Transport == snapshot.Transport && v.Hostname == snapshot.Hostname &&
 		v.Username == snapshot.Username && v.Port == snapshot.Port && v.KeyID == snapshot.KeyID && v.RecoveryKey == snapshot.RecoveryKey &&
 		*v.CoordinationActivity == *snapshot.CoordinationActivity
+}
+
+// WaitCoordinationLaunch waits for this caller's provider, not another session.
+// Admission still rechecks the full incarnation in WithCoordinationSnapshot.
+func (b *Broker) WaitCoordinationLaunch(ctx context.Context, owner, id string) error {
+	for {
+		b.mu.Lock()
+		if b.closed {
+			b.mu.Unlock()
+			return ErrClosed
+		}
+		e, err := b.ownedLocked(owner, id)
+		if err != nil {
+			b.mu.Unlock()
+			return err
+		}
+		done := e.launchDone
+		live := e.run != nil && (e.value.State == "connected" || e.value.State == "connecting")
+		b.mu.Unlock()
+		if done == nil {
+			if !live {
+				return ErrNotFound
+			}
+			return nil
+		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-done:
+		}
+	}
 }

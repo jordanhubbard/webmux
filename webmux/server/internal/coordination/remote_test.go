@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	bolt "go.etcd.io/bbolt"
 )
@@ -25,8 +26,14 @@ type remoteHarness struct {
 
 func remoteFixture(t *testing.T) *remoteHarness {
 	t.Helper()
-	h := fixture(t)
+	return remoteFixtureFromSource(t, fixture(t))
+}
+
+func remoteFixtureFromSource(t *testing.T, h *harness) *remoteHarness {
+	t.Helper()
 	r := &remoteHarness{source: h, receiver: New(t.TempDir()), node: strings.Repeat("b", 32)}
+	// Install the fixture clock before Sync persists the authority timestamp.
+	r.receiver.Now = h.s.Now
 	t.Cleanup(func() { _ = r.receiver.Close() })
 	input := h.inputs[0]
 	input.Ref.Node = r.node
@@ -339,5 +346,21 @@ func TestRemoteOutboxRefusesDamagedAuthorityBeforeNetworkSelection(t *testing.T)
 				t.Fatal("damaged outbox selected delivery work", records, err)
 			}
 		})
+	}
+}
+
+// A source initialized in the past deterministically represents receiver setup
+// taking longer than prepareClaims' former one-second clock padding. No sleep
+// or machine-speed assumption is needed to expose the wall-clock handoff.
+func TestRemoteFixtureClockHandoffAfterSlowSetup(t *testing.T) {
+	h := fixtureAt(t, time.Now().UTC().Add(-24*time.Hour))
+	r := remoteFixtureFromSource(t, h)
+	r.source.now = r.source.now.Add(time.Second)
+	r.receiver.Now = func() time.Time { return r.source.now }
+	result, err := r.receiver.Execute(r.node, r.token, r.inputs, Request{
+		ID: "slow-setup-claim", Action: "claim", Kind: "file", Resource: "src/main.go",
+	})
+	if err != nil || result.Status != "claimed" {
+		t.Fatalf("receiver initialized outside the fixture clock: %+v %v", result, err)
 	}
 }
