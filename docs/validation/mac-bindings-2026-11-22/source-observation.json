@@ -59,5 +59,52 @@
   ],
   "nas_access": false,
   "MAC_access": false,
-  "service_changes": false
+  "service_changes": false,
+  "follow_up_qualifications": [
+    {
+      "observed_at": "2026-11-23T05:48:43.089851+00:00",
+      "change": "Normalize both Git and platform path spellings before comparing canonical worktrees; no native Windows execution claimed",
+      "native_observation": {
+        "schema": "webmux.mac.source-observation.v1",
+        "binding_revision": "25c9cba1d1521dba5eb1b71c54081d277ffa3d948215a81bdab15db4043d41b1",
+        "authority_id": "fleet-a",
+        "project_key": "alpha",
+        "provenance": "verified-git",
+        "repository_id": "e9319885c4b08dd63c754f1b02a84ae5d125ef37d0f91ad4fa72408f2a0868ee",
+        "repository": "github.com/jordanhubbard/webmux",
+        "ref": "refs/heads/feat/mac-project-bindings-673",
+        "commit": "9653079acf717e2c2012247538db93316bd2d50a",
+        "detached": false,
+        "dirty": true,
+        "observed_at": "2026-11-23T05:48:01.303395Z"
+      },
+      "private_worktree_omitted": true,
+      "native_mapping_is_test_only": true,
+      "source_sha256": {
+        "webmux/server/internal/maccoord/source.go": "a503184aef4a087ef43a42393eb035f8629ceba623faccf8850862af476cc40c",
+        "webmux/server/internal/maccoord/source_test.go": "b3e748c146b91955a4e7bba753889e753384373d8b85db93380d157a40889731"
+      },
+      "checks": [
+        {
+          "command": "go test -race ./internal/maccoord -count=1 -timeout=60s",
+          "explicit_local_source_qualification": true,
+          "exit_code": 0,
+          "elapsed_seconds": 10.666
+        },
+        {
+          "command": "go vet ./internal/maccoord",
+          "exit_code": 0
+        },
+        {
+          "command": "GOOS=windows GOARCH=amd64 go test -c ./internal/maccoord",
+          "exit_code": 0,
+          "classification": "cross-compilation only"
+        }
+      ],
+      "prior_expectation_error": {
+        "supplied_expected_commit": "9653079",
+        "result": "Opt-in native source test refused the abbreviated expectation; no new receipt was written. Corrected invocation supplied the complete commit ID. This was an invocation error, not a product defect or deliberate mutation control."
+      }
+    }
+  ]
 }

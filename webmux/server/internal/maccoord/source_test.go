@@ -140,7 +140,7 @@ func TestSourceDoesNotFollowInheritedGitRouting(t *testing.T) {
 		t.Setenv(name, value)
 	}
 	got, err := bindings.ObserveSource(t.Context(), "alice", repo)
-	if err != nil || got.Worktree != directory || got.Repository != repo.Repository {
+	if err != nil || filepath.Clean(got.Worktree) != filepath.Clean(directory) || got.Repository != repo.Repository {
 		t.Fatalf("inherited Git routing changed selected source: %+v, %v", got, err)
 	}
 }

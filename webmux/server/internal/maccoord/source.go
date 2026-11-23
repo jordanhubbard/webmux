@@ -64,7 +64,7 @@ func (b *Bindings) ObserveSource(parent context.Context, owner string, repositor
 	inspect := func() bool {
 		actual, err := coordination.InspectRepository(ctx, repository.Worktree)
 		return err == nil && actual.ID == repository.ID && actual.Repository == repository.Repository &&
-			actual.Worktree == filepath.Clean(repository.Worktree)
+			filepath.Clean(actual.Worktree) == filepath.Clean(repository.Worktree)
 	}
 	if !inspect() {
 		return unavailable()
