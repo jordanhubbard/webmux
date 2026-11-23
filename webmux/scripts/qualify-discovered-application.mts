@@ -89,6 +89,21 @@ env.update(p['env']);env.update(WEBMUX_HOME=str(h),WEBMUX_ROOT='',SSL_CERT_FILE=
 with (r/'server.log').open('ab') as log:
  child=subprocess.Popen([str(b)],env=env,stdin=subprocess.DEVNULL,stdout=log,stderr=subprocess.STDOUT)
  (r/'pid').write_text(str(child.pid));sys.exit(child.wait())`;
+const tlsDiagnostic = String.raw`package main
+import("context";"crypto/tls";"encoding/json";"net";"os";"runtime";"time")
+func probe(host,address string) string {
+ ctx,cancel:=context.WithTimeout(context.Background(),3*time.Second);defer cancel()
+ d:=tls.Dialer{NetDialer:&net.Dialer{},Config:&tls.Config{MinVersion:tls.VersionTLS12,ServerName:host,NextProtos:[]string{"http/1.1"}}}
+ c,e:=d.DialContext(ctx,"tcp",address);if e!=nil{return e.Error()};c.Close();return "ok"
+}
+func main(){
+ host,ip,port:=os.Args[1],os.Args[2],os.Args[3]
+ ctx,cancel:=context.WithTimeout(context.Background(),3*time.Second);defer cancel()
+ addresses,e:=net.DefaultResolver.LookupIPAddr(ctx,host)
+ result:=map[string]any{"os":runtime.GOOS,"arch":runtime.GOARCH,"lookup_addresses":addresses,"hostname_tls":probe(host,net.JoinHostPort(host,port)),"direct_address_tls":probe(host,net.JoinHostPort(ip,port))}
+ if e!=nil{result["lookup_error"]=e.Error()};json.NewEncoder(os.Stdout).Encode(result)
+}
+`;
 async function stopRemote() {
   if (!remoteProcess || !remoteRoot) return;
   remote(`import os,sys,json,pathlib,signal,time
@@ -119,6 +134,12 @@ try {
   run('npm', ['run', 'build', '--workspace=frontend'], undefined, path.join(root, 'webmux'));
   for (const target of ['darwin', 'linux']) run('go', ['run', './cmd/build', '-goos', target, '-goarch', 'arm64', '-o', path.join(output, target+'-webmux')], undefined, path.join(root, 'webmux/server'));
   receipt.binarySHA256 = Object.fromEntries(['darwin','linux'].map(target => [target,sha(fs.readFileSync(path.join(output,target+'-webmux')))]));
+  fs.writeFileSync(path.join(output,'tls-diagnostic.go'),tlsDiagnostic);
+  const diagnosticBuild=spawnSync('go',['build','-trimpath','-o',path.join(output,'tls-diagnostic'),path.join(output,'tls-diagnostic.go')],{env:{...process.env,GOOS:'linux',GOARCH:'arm64',CGO_ENABLED:'0'},encoding:'utf8',timeout:120_000});
+  fs.writeFileSync(path.join(output,'tls-diagnostic-build.log'),diagnosticBuild.stdout+diagnosticBuild.stderr);
+  if(diagnosticBuild.error)throw diagnosticBuild.error;
+  if(diagnosticBuild.status!==0)throw new Error('Native TLS diagnostic build failed; retain private log');
+  const diagnosticHash=sha(fs.readFileSync(path.join(output,'tls-diagnostic')));receipt.diagnosticSHA256=diagnosticHash;
   const prepared = JSON.parse(remote(`import os,tempfile,json,pathlib,socket
 base=pathlib.Path.home()/'.cache'/'webmux';base.mkdir(exist_ok=True)
 r=tempfile.mkdtemp(prefix='discovered-app-',dir=base);os.chmod(r,0o700)
@@ -128,6 +149,7 @@ print(json.dumps({'root':r,'port':port}))`)) as { root: string; port: number };
   if (!/^\/[A-Za-z0-9_./-]+\/discovered-app-[A-Za-z0-9_]+$/.test(remoteRoot)) throw new Error('Unexpected owned remote path');
   receipt.remoteRoot = remoteRoot;
   run('scp', ['-B', ...sshArgs, path.join(output, 'linux-webmux'), `${peer}:${remoteRoot}/webmux`]);
+  run('scp', ['-B', ...sshArgs, path.join(output, 'tls-diagnostic'), `${peer}:${remoteRoot}/tls-diagnostic`]);
   const httpPort = await freePort(localBind), tlsPort = await freePort(localBind), movedPort = await freePort(localBind), forward = await freePort('127.0.0.1');
   const password = randomBytes(24).toString('hex'), grant = randomBytes(32).toString('hex');
   const nodeID = randomBytes(16).toString('hex'), controllerID = randomBytes(16).toString('hex');
@@ -163,6 +185,12 @@ print(json.dumps({'root':r,'port':port}))`)) as { root: string; port: number };
   await expect.poll(async()=>{const r=await api('/discovered-nodes');expect(r.status).toBe(200);const view=await r.json() as {candidates:Candidate[]};observed=view.candidates.find(c=>c.claimed_id===nodeID&&c.port===tlsPort&&c.address===localBind&&c.tls);return !!observed;},{timeout:8000,intervals:[100,200,500]}).toBe(true);
   expect((await directory()).servers).toEqual([]);
   passed('actual Linux application discovers macOS HTTPS application without enrolling it');
+  const diagnostic=remote(`import os,sys,json,pathlib,subprocess,hashlib
+p=json.load(sys.stdin);r=pathlib.Path(p['root']);b=r/'tls-diagnostic';assert hashlib.sha256(b.read_bytes()).hexdigest()==p['sha256']
+env=dict(os.environ,SSL_CERT_FILE=str(r/'home'/'config'/'fixture-ca.pem'))
+result=subprocess.run([str(b),p['host'],p['address'],str(p['port'])],env=env,capture_output=True,text=True,timeout=12)
+sys.stdout.write(result.stdout);sys.stderr.write(result.stderr);sys.exit(result.returncode)`,{root:remoteRoot,sha256:diagnosticHash,host:observed!.host,address:localBind,port:tlsPort});
+  fs.writeFileSync(path.join(output,'transport-diagnostic.json'),diagnostic+'\n');receipt.transportDiagnostic=JSON.parse(diagnostic);
   browser=await chromium.launch({headless:true,...(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH?{executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH}:{})});
   const context=await browser.newContext({viewport:{width:1440,height:1000}});
   await context.addInitScript(token=>localStorage.setItem('webmux_token',token),token);
