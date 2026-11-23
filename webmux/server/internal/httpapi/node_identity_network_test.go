@@ -91,6 +91,13 @@ func TestNodeIdentityNativeNetworkServer(t *testing.T) {
 		t.Fatal(err)
 	}
 	template := x509.Certificate{SerialNumber: serial, Subject: pkix.Name{CommonName: "WebMux isolated node qualification"}, NotBefore: time.Now().Add(-time.Minute), NotAfter: time.Now().Add(10 * time.Minute), KeyUsage: x509.KeyUsageDigitalSignature, ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth}, DNSNames: []string{"webmux-node-qualification.local"}, IPAddresses: []net.IP{address}}
+	if os.Getenv("WEBMUX_NODE_NETWORK_DISCOVERY") == "1" {
+		hostname, err := os.Hostname()
+		if err != nil {
+			t.Fatal(err)
+		}
+		template.DNSNames = append(template.DNSNames, strings.TrimSuffix(hostname, ".local")+".local")
+	}
 	der, err := x509.CreateCertificate(rand.Reader, &template, &template, &key.PublicKey, key)
 	if err != nil {
 		t.Fatal(err)
@@ -107,6 +114,11 @@ func TestNodeIdentityNativeNetworkServer(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer moved.Close()
+	if os.Getenv("WEBMUX_NODE_NETWORK_DISCOVERY") == "1" {
+		if err := startNetworkDiscoveryAdvertiser(b, original.Addr().(*net.TCPAddr).Port); err != nil {
+			t.Fatal(err)
+		}
+	}
 	stopped := make(chan struct{})
 	var stop sync.Once
 	var mu sync.Mutex
@@ -162,6 +174,18 @@ func TestNodeIdentityNativeNetworkServer(t *testing.T) {
 			switch r.URL.Path {
 			case "/_qualification/move":
 				_ = original.Close()
+				if os.Getenv("WEBMUX_NODE_NETWORK_DISCOVERY") == "1" {
+					if err := b.nodes.Close(); err != nil {
+						t.Error(err)
+						w.WriteHeader(500)
+						return
+					}
+					if err := startNetworkDiscoveryAdvertiser(b, moved.Addr().(*net.TCPAddr).Port); err != nil {
+						t.Error(err)
+						w.WriteHeader(500)
+						return
+					}
+				}
 			case "/_qualification/share-coordination", "/_qualification/revoke-coordination":
 				if os.Getenv("WEBMUX_COORDINATION_PEER_NETWORK") != "1" {
 					w.WriteHeader(404)
@@ -484,6 +508,10 @@ func TestNodeIdentityNativeNetworkClient(t *testing.T) {
 	var manifest nodeNetworkManifest
 	if err = json.Unmarshal(data, &manifest); err != nil {
 		t.Fatal(err)
+	}
+	if os.Getenv("WEBMUX_NODE_NETWORK_DISCOVERY") == "1" {
+		qualifyDiscoveredEnrollment(t, secret, manifest)
+		return
 	}
 	a, h := fixture(t, "local")
 	federationAccounts(t, a)
