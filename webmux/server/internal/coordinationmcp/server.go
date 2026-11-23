@@ -9,7 +9,6 @@ import (
 	"errors"
 	"io"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/jordanhubbard/webmux/server/internal/coordination"
@@ -67,11 +66,15 @@ func request(ctx context.Context, method, path string, input, output any) error 
 	}
 	var in io.Reader
 	if input != nil {
-		data, err := json.Marshal(input)
-		if err != nil {
+		var data bytes.Buffer
+		encoder := json.NewEncoder(&data)
+		// This is an HTTP JSON body, not embedded HTML. Escaping markup can
+		// inflate valid message text past the scoped client's encoded-body cap.
+		encoder.SetEscapeHTML(false)
+		if err := encoder.Encode(input); err != nil {
 			return err
 		}
-		in = strings.NewReader(string(data))
+		in = bytes.NewReader(bytes.TrimSpace(data.Bytes()))
 	}
 	var out bytes.Buffer
 	if err := coordinationclient.Request(ctx, access, method, path, in, &out); err != nil {
