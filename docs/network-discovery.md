@@ -38,6 +38,15 @@ nodes, accounts or TLS keys fail closed. Requests also name the original node an
 account at admission, so reassignment between proof and use cannot expose a
 foreign account. The proof grants no additional configuration/coordinator access.
 
+When ordinary DNS cannot resolve a configured discovered hostname, initial
+identity verification may use fresh address hints from active, healthy browsing.
+The hint must match the configured HTTPS hostname and port. WebMux preserves
+that hostname for certificate verification and requires the existing TLS-bound
+grant proof and a matching proven node ID before retaining the address. It tries
+the existing endpoint first, then at most four distinct address/node hints within
+an eight-second operation bound. An announcement never supplies a trusted pin or
+changes the configured hostname.
+
 With network browsing enabled, the server reconciles enrolled HTTPS peers in the
 background. It prefers a reachable existing endpoint. When that endpoint is lost,
 it can try matching candidates and persist a new origin/address only after proof
@@ -149,6 +158,15 @@ The [reverse-role follow-up](validation/discovered-enrollment-2026-11-23/README.
 also qualifies the Linux ARM64 controller/macOS ARM64 receiver direction, with
 an independent proof/bearer witness and an explicit silent-advertiser refusal.
 Other platform and complete application/workflow acceptance remain open.
+
+The [actual application follow-up](validation/discovered-application-2026-11-23/README.md)
+qualifies standalone Linux ARM64-controller/macOS ARM64-receiver startup,
+browser-driven discovered HTTPS enrollment, background port migration with the
+browser closed, and identity retention through a real controller restart. The
+paired changed-node proof is refused without enrollment. It uses isolated
+protected homes and process-local Linux fixture certificate trust. Installed
+services, OS trust, other native platforms, and real-agent/MAC acceptance remain
+separate requirements; #631/#664 remain open.
 
 Deterministic tests cover malformed/foreign/self announcements, duplicate TXT
 keys, unrelated service/domain, credential metadata refusal, invalid endpoints,

@@ -1,0 +1,228 @@
+{
+  "schema": "webmux.discovered-application-qualification.v1",
+  "scope": "Actual isolated protected applications and macOS Chrome; not installed-service, OS trust, other platform, real-agent or MAC acceptance",
+  "cases": {
+    "7ce96e2": {
+      "passed": false,
+      "revision": "7ce96e2c3b5fc9d935052895f26b6f5fdf69076b",
+      "checks": [
+        "actual Linux application discovers macOS HTTPS application without enrolling it"
+      ],
+      "binarySHA256": {
+        "darwin": "5de551a21e27481074d2a1fed65f1c453aaeb506487566471fe3b2a27dfc2738",
+        "linux": "754e30d919a0e0fcc79f603142949bb423bf4c6ba3f0c85d8e5f25f1dcbc795a"
+      },
+      "cleanup": [
+        "completed",
+        "completed",
+        "completed"
+      ],
+      "sourcesUnchanged": true,
+      "source_inventory_sha256": "c811568eb1fc9f5c885f667d68f2bade98bea94e53c6c68398e15d699e5422f8",
+      "private_artifact_sha256": {
+        "controller-ssh.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "receiver.log": "b22912f3cb8f4e06c5131155e1578a7b795b68a8a091aab63c738a8398e486cf",
+        "tunnel.log": "a00fb15bd6a945618a315bbf68bdbae94f07099e60718c268abb0c69e6108e84",
+        "failure.png": "77a456295583547f7343cee7863dbf9fb3a87d9368dd59d33d9faaad73fa70b4",
+        "controller.log": "309de1fdb1d9d6611f172044288a9ddef21b95a1515ce15882378f6776f94d80",
+        "receipt.json": "d2ca9406dee3dc282d8384bef694992591162c8d78b6e68567e9ae5ad59851ce"
+      }
+    },
+    "61b5418": {
+      "passed": false,
+      "revision": "61b54187f5f8f3ea6530581efd89cc70182fde89",
+      "checks": [
+        "actual Linux application discovers macOS HTTPS application without enrolling it"
+      ],
+      "binarySHA256": {
+        "darwin": "11bdc8a226dc0d898323429f1db93700394a02e922019b4f8db50d1a2b46a560",
+        "linux": "6ef13b004bb63480ec15e8eedccbca58f3c4c1b62e85a03480d7a5e3c4912174"
+      },
+      "cleanup": [
+        "completed",
+        "completed",
+        "completed"
+      ],
+      "sourcesUnchanged": true,
+      "source_inventory_sha256": "ec31d87b60290f3ca8248eb35792f9178b321c5661721d84287c31aadb5b31cf",
+      "private_artifact_sha256": {
+        "controller-ssh.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "receiver.log": "b9d96d8ea37650b1ab0f04011176e3405d70b781b8e3a8fb799a70dbafd1187b",
+        "tunnel.log": "a00fb15bd6a945618a315bbf68bdbae94f07099e60718c268abb0c69e6108e84",
+        "failure.png": "296dd0e195c111f75f32ee9cc1ccd967d578c0472d5c506adc4d32d4d04eabfc",
+        "controller.log": "51a57d474cc5340f984e9c434c72effdf222e335dcf06bed50a15fed3484cb68",
+        "receipt.json": "4eaf9b7e0d3fc341abd4ae5d1126696617978b4b6f9ec4aed17aed1bb7a6db21"
+      }
+    },
+    "3d7a2e1": {
+      "passed": false,
+      "revision": "3d7a2e13ec0b2b35012d8b1d4fd867103fdeef78",
+      "checks": [
+        "actual Linux application discovers macOS HTTPS application without enrolling it"
+      ],
+      "binarySHA256": {
+        "darwin": "ec9f4823e9a1fe3225a8a4aa97749a6eca0371cae967f1b67778cbf24476cd8d",
+        "linux": "03ba69fba8816a88545cdf0844c4c46303d3a2657848f5c42c75ddb5048ef31d"
+      },
+      "cleanup": [
+        "completed",
+        "completed",
+        "completed"
+      ],
+      "sourcesUnchanged": true,
+      "source_inventory_sha256": "1606e789b5da7b5c1b0d665c1c6d69cff604548a0d21727bee559b44b878a399",
+      "private_artifact_sha256": {
+        "controller-ssh.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "transport-diagnostic.json": "5678fc77dc96618a8958500b4b2bfdd8a3502258dc61a50c9d5c5f24a18f3dcd",
+        "receiver.log": "b25ae5249a78bbff5c21bccf448f4e981d0635161261a0b6bd94b5dfa740f79e",
+        "tunnel.log": "a00fb15bd6a945618a315bbf68bdbae94f07099e60718c268abb0c69e6108e84",
+        "tls-diagnostic-build.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "failure.png": "e4b534fa44416bb337f39b9ba95eeb707720ac0c3f690fe4ed217af2dcc7e774",
+        "controller.log": "cde5a03188b08dec9ae7ab76a53501d78381a4894d8957d64a4487c505bb6913",
+        "receipt.json": "6902d8385c497846fdc9da1cc4f62e4b22f44bf9027c8492d531d27713e50f16"
+      },
+      "transport_diagnostic": {
+        "native_os": "linux",
+        "native_arch": "arm64",
+        "hostname_lookup_failed": true,
+        "direct_address_tls_validated": true
+      }
+    },
+    "9cc8afd": {
+      "passed": true,
+      "revision": "9cc8afd2cd61efecc4966e13d6485b348aeab750",
+      "checks": [
+        "actual Linux application discovers macOS HTTPS application without enrolling it",
+        "human browser configures the discovered HTTPS endpoint and explicitly verifies node/account identity",
+        "actual receiver restart and changed port migrate in the controller background without an open browser",
+        "actual controller restart retains verified peer identity and migrated endpoint"
+      ],
+      "binarySHA256": {
+        "darwin": "96e6198c44cd063a37d720a29acda8db542e6c7653366db37d4c663c75dd4943",
+        "linux": "2cc5139ef4dd265f3c84d9e7dd1db02b373f143bc517dc53f22fa3137eec3daf"
+      },
+      "cleanup": [
+        "completed",
+        "completed",
+        "completed"
+      ],
+      "sourcesUnchanged": true,
+      "source_inventory_sha256": "4faeb9dd271fd5ff9804d54f1a203eadd4dab770694a8e46889ae6d252a0b4c5",
+      "private_artifact_sha256": {
+        "controller-ssh.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "transport-diagnostic.json": "5678fc77dc96618a8958500b4b2bfdd8a3502258dc61a50c9d5c5f24a18f3dcd",
+        "receiver.log": "9fc803d3ea8716255e20e1062f85b5df10f314ecf5ee5056cd9aac4432f0157a",
+        "tunnel.log": "8c68e95e7348f3a94d98a4baa6dff010c03bd6d058c3c9dca19e349c3c3ee7a3",
+        "tls-diagnostic-build.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "controller.log": "bc5f123ea5cac9f6b594e247adef35c15564fff252677c82e7b3adb213dce721",
+        "enrolled.png": "6ff5055a846e38556177886f315f500c9c94cd72f278beae7c381713b265cae2",
+        "receipt.json": "3a0dde83c4c3c4b82e6b49ec45eb7b4ab5d59399da3e16e87e5963cf1b13536e"
+      },
+      "transport_diagnostic": {
+        "native_os": "linux",
+        "native_arch": "arm64",
+        "hostname_lookup_failed": true,
+        "direct_address_tls_validated": true
+      }
+    },
+    "67d5a76-changed-node": {
+      "passed": false,
+      "revision": "67d5a7641a94d806b858c40dc8990e97f37f01c5",
+      "checks": [
+        "actual Linux application discovers macOS HTTPS application without enrolling it"
+      ],
+      "binarySHA256": {
+        "darwin": "56bfe51d729555fec46f26a7341ac1cf960e2b403d9bf940b2bf8a5847cc4e68",
+        "linux": "07b6672d6265af6706e3111807068d8a300ff8247d8c06417485fb7e2edb400d"
+      },
+      "cleanup": [
+        "completed",
+        "completed",
+        "completed"
+      ],
+      "sourcesUnchanged": true,
+      "changedNodeProof": true,
+      "verificationStatus": 502,
+      "changedNodeRefusedWithoutPin": true,
+      "source_inventory_sha256": "71def66b74fed1bde4cb182005dd63f4f95f4e46f7e987dcc8f600d3bb677dee",
+      "private_artifact_sha256": {
+        "controller-ssh.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "transport-diagnostic.json": "5678fc77dc96618a8958500b4b2bfdd8a3502258dc61a50c9d5c5f24a18f3dcd",
+        "receiver.log": "f035fda48385eac6f5315710723cd75152c422b5409d65d1eeafe724b51c6b40",
+        "tunnel.log": "a00fb15bd6a945618a315bbf68bdbae94f07099e60718c268abb0c69e6108e84",
+        "tls-diagnostic-build.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "failure.png": "ab9adebb4232b1c6e5887d98b5e92984492b548ab5b7e3c64a6c083dfa25c087",
+        "controller.log": "1aedcb0edfff133d2f295fe51a55f6d0f57155b486193c30a3c1185ce2d4732e",
+        "receipt.json": "a27bdee3edf18ccf1c1197840c0494141d433a978bbc230f4d37df83c55f3804"
+      },
+      "transport_diagnostic": {
+        "native_os": "linux",
+        "native_arch": "arm64",
+        "hostname_lookup_failed": true,
+        "direct_address_tls_validated": true
+      }
+    },
+    "67d5a76-positive": {
+      "passed": true,
+      "revision": "67d5a7641a94d806b858c40dc8990e97f37f01c5",
+      "checks": [
+        "actual Linux application discovers macOS HTTPS application without enrolling it",
+        "human browser configures the discovered HTTPS endpoint and explicitly verifies node/account identity",
+        "actual receiver restart and changed port migrate in the controller background without an open browser",
+        "actual controller restart retains verified peer identity and migrated endpoint"
+      ],
+      "binarySHA256": {
+        "darwin": "56bfe51d729555fec46f26a7341ac1cf960e2b403d9bf940b2bf8a5847cc4e68",
+        "linux": "07b6672d6265af6706e3111807068d8a300ff8247d8c06417485fb7e2edb400d"
+      },
+      "cleanup": [
+        "completed",
+        "completed",
+        "completed"
+      ],
+      "sourcesUnchanged": true,
+      "changedNodeProof": false,
+      "verificationStatus": 204,
+      "controllerRestartRetainedIdentity": true,
+      "source_inventory_sha256": "71def66b74fed1bde4cb182005dd63f4f95f4e46f7e987dcc8f600d3bb677dee",
+      "private_artifact_sha256": {
+        "controller-ssh.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "transport-diagnostic.json": "5678fc77dc96618a8958500b4b2bfdd8a3502258dc61a50c9d5c5f24a18f3dcd",
+        "receiver.log": "54956611529b24a2cfd25b2f079ce9b97b5a21bb13fb7771f5a2cd09c4263f83",
+        "tunnel.log": "30d274b6d189eb49ceb5a755b5d38b382c52e156b33348f3dab47d40b80ce912",
+        "tls-diagnostic-build.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "controller.log": "7605edd543be776539afe68c0ceddbf4f7d0a721861b781ad16a5742f2ae8523",
+        "enrolled.png": "61c93b4f3ab4a76a969f8fa45e585040efde5077d2debc54a266a2a84c35baa3",
+        "receipt.json": "95c0f99748838efef53678038dde087fc3ecf0cf1a4aa62e219f3039548480ab"
+      },
+      "transport_diagnostic": {
+        "native_os": "linux",
+        "native_arch": "arm64",
+        "hostname_lookup_failed": true,
+        "direct_address_tls_validated": true
+      },
+      "verified_identity_preserved": true,
+      "verified_identity_sha256": "dd545f9da0e4c834d794092bc2e6fa293b29c670e176d97f05394da08d4cbc96"
+    }
+  },
+  "prelaunch_setup_failure": {
+    "revision": "8ffebf8a0de6ada9fa07a5a6e426882a33c790cb",
+    "passed": false,
+    "native_processes_started": false,
+    "cause": "tracked directory symlink was read as a file",
+    "log_sha256": "0fe9b89cd37c4e0fc91c4117ae235a509d1a8a424d8e0c412dbb2a03fc168065"
+  },
+  "api_race": {
+    "source_revision": "9cc8afd2cd61efecc4966e13d6485b348aeab750",
+    "exit_code": 0,
+    "passed_cases_and_subcases": 296,
+    "opt_in_skips": 9,
+    "elapsed_seconds": 391.222,
+    "log_sha256": "b664c5e356cddf053c10b356a271742a4425ca6d70dc7f991c313381f869d2c8"
+  },
+  "other_checks": {
+    "api_vet_exit_code": 0,
+    "all_five_typescript_projects_exit_code": 0,
+    "final_tools_project_exit_code": 0
+  }
+}
