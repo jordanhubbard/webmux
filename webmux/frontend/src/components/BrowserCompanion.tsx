@@ -30,8 +30,8 @@ function saveDownload(file: { name: string; data: string }) {
 }
 
 /** A normal browser workspace backed by Chromium on the terminal's host. */
-export function BrowserCompanion({ session, navigation, onHide, onAuthentication }: {
-  session: Session; navigation?: { url: string } | null; onHide: () => void; onAuthentication?: (url: string) => void;
+export function BrowserCompanion({ session, navigation, onHide, onAuthentication, onGridWheel }: {
+  session: Session; navigation?: { url: string } | null; onHide: () => void; onAuthentication?: (url: string) => void; onGridWheel?: (event: WheelEvent) => boolean;
 }) {
   const [profiles, setProfiles] = useState<BrowserProfile[]>([]);
   const [selectedProfile, setSelectedProfile] = useState('');
@@ -62,6 +62,7 @@ export function BrowserCompanion({ session, navigation, onHide, onAuthentication
   const queue = useRef<Promise<void>>(Promise.resolve());
   const coalesced = useRef<{ action: BrowserAction } | null>(null);
   const viewport = useRef<HTMLImageElement>(null);
+  const portal = useRef<HTMLDivElement>(null);
   const keyboard = useRef<HTMLTextAreaElement>(null);
   const composing = useRef(false);
   const viewportBox = useRef<HTMLDivElement>(null);
@@ -73,6 +74,15 @@ export function BrowserCompanion({ session, navigation, onHide, onAuthentication
   const lastClick = useRef({ time: 0, x: 0, y: 0, button: -1, count: 0 });
   const dragging = useRef<{ button: string; count: number } | null>(null);
   const lastMove = useRef(0);
+
+  useEffect(() => {
+    const layer = portal.current;
+    if (!layer || !onGridWheel) return;
+    // Portals bypass the grid's DOM capture listener. React's wheel listeners
+    // are passive, so cancellation needs a native listener on this layer.
+    layer.addEventListener('wheel', onGridWheel, { capture: true, passive: false });
+    return () => layer.removeEventListener('wheel', onGridWheel, true);
+  }, [onGridWheel]);
 
   const act = useCallback((action: BrowserAction) => {
     if (profileChoice.current.session !== session.id) { profileChoice.current = { session: session.id }; control.current = false; }
@@ -221,7 +231,7 @@ export function BrowserCompanion({ session, navigation, onHide, onAuthentication
   };
 
   return createPortal(
-    <div className="browser-companion-layer" style={{ zIndex: pane.active ? 902 : 901 }} onPointerDownCapture={pane.activate} onFocusCapture={pane.activate} onKeyDown={event => event.stopPropagation()}>
+    <div ref={portal} className="browser-companion-layer" style={{ zIndex: pane.active ? 902 : 901 }} onPointerDownCapture={pane.activate} onFocusCapture={pane.activate} onKeyDown={event => event.stopPropagation()}>
     <aside id={pane.id} className={`browser-companion${expanded ? ' browser-expanded' : ''}${pane.layout.mode === 'floating' ? ' browser-floating' : ''}`} style={pane.style} aria-label={`Browser for ${session.title}`}>
       <header>
         <div><strong>Browser · {session.title}</strong><small>Runs on {session.transport === 'local' || session.browser_local ? 'the WebMux server' : `${session.username ? `${session.username}@` : ''}${session.hostname}`} · {frame?.profileName ? `Saved profile: ${frame.profileName}` : 'Temporary profile'}</small></div>

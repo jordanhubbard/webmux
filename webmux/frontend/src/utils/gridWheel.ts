@@ -1,3 +1,18 @@
+const otherModifier = (event: WheelEvent) => event.ctrlKey || event.metaKey || event.altKey;
+
+// Shared by the grid and its portalled browser panes. The caller supplies the
+// owning grid; a document-wide lookup could pan another server's workspace.
+export function panGridWheel(root: HTMLElement, event: WheelEvent): boolean {
+  if (!event.shiftKey || otherModifier(event)) return false;
+  event.preventDefault();
+  event.stopImmediatePropagation();
+  const x = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? root.clientWidth : 1;
+  const y = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? root.clientHeight : 1;
+  root.scrollLeft += event.deltaX * x;
+  root.scrollTop += event.deltaY * y;
+  return true;
+}
+
 // Wheel ownership is decided before terminal/application mouse handlers run.
 // Ordinary browser scroll chaining happens after bubbling, so stop it there.
 export function installGridWheel(root: HTMLElement, selectedSession: () => string | null): () => void {
@@ -5,18 +20,9 @@ export function installGridWheel(root: HTMLElement, selectedSession: () => strin
   const nativeControl = (event: WheelEvent) => event.target instanceof Element
     && !event.target.closest('[data-terminal-session]')
     && Boolean(event.target.closest('input, textarea, select'));
-  const otherModifier = (event: WheelEvent) => event.ctrlKey || event.metaKey || event.altKey;
   const capture = (event: WheelEvent) => {
     if (forwarded.has(event) || otherModifier(event)) return;
-    if (event.shiftKey) {
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      const x = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? root.clientWidth : 1;
-      const y = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? root.clientHeight : 1;
-      root.scrollLeft += event.deltaX * x;
-      root.scrollTop += event.deltaY * y;
-      return;
-    }
+    if (panGridWheel(root, event)) return;
     if (nativeControl(event) || (event.target instanceof Element && event.target.closest('[data-wheel-native]'))) return;
     const id = selectedSession();
     const windows = root.querySelectorAll<HTMLElement>('[data-terminal-session], [data-desktop-session]');

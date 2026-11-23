@@ -261,6 +261,19 @@ func protocolAction[P, R any](command cdp.Command[P, R], params P) chromedp.Acti
 	})
 }
 
+// Chromium requires both delta fields for mouseWheel, even when an axis is
+// zero. The SDK's optional/omitzero fields omit that required wire value.
+type mouseWheelParams struct {
+	Type      input.DispatchMouseEventType `json:"type"`
+	X         float64                      `json:"x"`
+	Y         float64                      `json:"y"`
+	DeltaX    float64                      `json:"deltaX"`
+	DeltaY    float64                      `json:"deltaY"`
+	Modifiers int64                        `json:"modifiers,omitempty"`
+}
+
+var dispatchMouseWheel = cdp.Command[mouseWheelParams, cdp.Empty]{Method: input.DispatchMouseEvent.Method}
+
 func perform(ctx context.Context, req Request, width, height int64) error {
 	var actions []chromedp.Action[chromedp.Void]
 	switch req.Action {
@@ -344,7 +357,7 @@ func perform(ctx context.Context, req Request, width, height int64) error {
 			return errors.New("invalid pointer")
 		}
 		if req.Action == "scroll" {
-			actions = append(actions, protocolAction(input.DispatchMouseEvent, input.DispatchMouseEventParams{Type: input.DispatchMouseEventTypeMouseWheel, X: req.X, Y: req.Y, DeltaY: req.DeltaY, DeltaX: req.DeltaX, Modifiers: req.Modifiers}))
+			actions = append(actions, protocolAction(dispatchMouseWheel, mouseWheelParams{Type: input.DispatchMouseEventTypeMouseWheel, X: req.X, Y: req.Y, DeltaY: req.DeltaY, DeltaX: req.DeltaX, Modifiers: req.Modifiers}))
 		} else if req.Action != "click" {
 			button := input.MouseButton(req.Button)
 			if button != "left" && button != "right" && button != "middle" && button != "none" {
