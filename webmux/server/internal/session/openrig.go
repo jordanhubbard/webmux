@@ -50,6 +50,8 @@ func (b *Broker) EnsureOpenRig(owner, executable string) (Session, error) {
 // EnsureOpenRigView reuses one PTY per owner and view. argv comes from trusted
 // server handlers, never directly from the request.
 func (b *Broker) EnsureOpenRigView(owner, view, title string, argv []string) (Session, error) {
+	b.agentMu.Lock()
+	defer b.agentMu.Unlock()
 	return b.ensureRigView(owner, view, title, argv, false, nil)
 }
 
@@ -209,6 +211,12 @@ func (b *Broker) ensureRigViewAt(owner, view, title string, argv []string, grid 
 		}
 		selected.value.ExecArgv = append([]string(nil), argv...)
 		if err := b.startLocked(selected, "", ""); err != nil {
+			if b.closed {
+				return Session{}, ErrClosed
+			}
+			if b.entries[selected.value.ID] != selected {
+				return Session{}, ErrNotFound
+			}
 			if !created {
 				selected.value = oldValue
 			}

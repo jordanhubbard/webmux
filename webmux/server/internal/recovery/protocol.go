@@ -18,6 +18,7 @@ const MaxPacket = 32 << 10
 // Event is emitted by the shell/CLI helper on the execution host. It is
 // evidence for a recovery preview, never an instruction to execute a command.
 type Event struct {
+	Coordination   string               `json:"coordination,omitempty"`
 	Configuration  *NativeConfiguration `json:"configuration,omitempty"`
 	Mode           string               `json:"mode,omitempty"`
 	Endpoint       string               `json:"endpoint,omitempty"`
@@ -41,6 +42,11 @@ type Event struct {
 }
 
 func (e Event) Validate() error {
+	switch e.Coordination {
+	case "", "mcp-configured", "mcp-policy-preserved", "mcp-version-unqualified", "mcp-interface-unavailable", "ssh-stream-local-configured":
+	default:
+		return errors.New("unknown coordination interface evidence")
+	}
 	switch e.NativeEvidence {
 	case "", "launch-selector", "process-state", "native-hook", "unavailable":
 	default:
@@ -50,7 +56,7 @@ func (e Event) Validate() error {
 		return err
 	}
 	switch e.Kind {
-	case "shell", "command", "complete", "cli", "provider", "control":
+	case "shell", "command", "complete", "cli", "provider", "control", "coordination":
 	default:
 		return errors.New("unknown recovery event")
 	}

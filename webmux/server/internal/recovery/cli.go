@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"io"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -12,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/jordanhubbard/webmux/server/internal/coordinationclient"
 	"golang.org/x/term"
 )
 
@@ -148,6 +150,8 @@ func RunCLI(name string, args []string) error {
 			observations = observer.observations
 		}
 	}
+	helper, _ := os.Executable()
+	launchArgs, event.Coordination = coordinationclient.NativeLaunch(cli, version, helper, launchArgs)
 	cmd := exec.Command(binary, launchArgs...)
 	cmd.Dir = cwd
 	// Commands launched by a coding CLI do not own its terminal's foreground
@@ -159,6 +163,16 @@ func RunCLI(name string, args []string) error {
 	}
 	if observer != nil {
 		observer.start(cmd.Process.Pid)
+	}
+	var observeCodex func(string) (string, string)
+	if cli == "codex" {
+		// Pin the launched process before Wait can release its OS handle. A
+		// later process reusing this PID must never own this conversation.
+		var closer io.Closer
+		observeCodex, closer = newCodexProcessObserver(cmd.Process.Pid)
+		if closer != nil {
+			defer closer.Close()
+		}
 	}
 	completed := make(chan error, 1)
 	go func() { completed <- cmd.Wait() }()
@@ -212,7 +226,7 @@ func RunCLI(name string, args []string) error {
 				}
 			}
 			if cli == "codex" {
-				currentID, currentFile := codexSessionForProcess(cmd.Process.Pid, cwd)
+				currentID, currentFile := observeCodex(cwd)
 				observeProcessState(&event, currentID, currentFile)
 			}
 			if event.StateFile != "" {

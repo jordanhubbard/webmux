@@ -1,0 +1,280 @@
+{
+  "scope": "Two independently launched native Claude agents on real macOS/Linux hosts: authorized configured-node discovery, advisory conflict, busy shared worker, acknowledged handoff and actual guarded coding/verification job; explicit native tool permissions, not full roadmap acceptance",
+  "qualifiedAtUTC": "2026-11-22T09:12:59.501695+00:00",
+  "sourceBaseCommit": "623315a16c6c5a3247abe4c02b17194c16499bc4",
+  "sourceSha256": {
+    "scripts/audit-coordination-native-pair.py": "8de1d4b998c26fbf54a61080d8b607c5a906bd635ef04fcf52544ab1ee742b04",
+    "webmux/server/internal/coordinationclient/native.go": "f20b657c31ee185e04970b8bd00331f232bbc3d6923e8c3e2adc744c75983dfa",
+    "webmux/server/internal/coordinationclient/native_test.go": "e8a041b437bab0a3dcf5b5511f82945bd92df0fdfc71226cb869fb3986a6b3c3",
+    "webmux/server/internal/coordinationmcp/server.go": "42c34764a247f7bcbbe00081d7ea80f183843d2c489dc22766ea03c8482c629c",
+    "webmux/server/internal/coordinationmcp/server_test.go": "f7888e997c6de6157c450daead3cc6328969d9d409cc9999a7a5bd66a1dabaa1",
+    "webmux/server/internal/httpapi/coordination_native_pair_test.go": "6d4d2e4d1b0596244d864a07a09fb41b1ae853d254b126191534ff3b198bd334",
+    "webmux/server/internal/httpapi/session_coordination_native_test.go": "888705befb273f851a037fc5689b9a9bf06148f38ed8c2c6d5cb81d7b9089883"
+  },
+  "checks": [
+    {
+      "command": "Node 24.22.2 PATH go test -p 4 -count=1 ./...",
+      "exit_code": 0,
+      "evidence": {
+        "path": "_build/coordination-native-pair630/go-test-final.log",
+        "sha256": "a1819d7e79d55cb218435eb7a8bdd262a95650f2a0e5fc5710339f2483fca679"
+      }
+    },
+    {
+      "command": "go test -race ./internal/coordinationmcp ./internal/coordinationclient ./internal/httpapi -run '^TestMCP|^TestNative|^TestCoordinationNativePairHost$' -count=1",
+      "exit_code": 0,
+      "evidence": {
+        "path": "_build/coordination-native-pair630/race-final.log",
+        "sha256": "b0db6bcc099de2f74547a7fc4e4e84e32b949f3f4ec0429c5170bf185f85ab13"
+      }
+    },
+    {
+      "command": "go vet ./...",
+      "exit_code": 0,
+      "evidence": {
+        "path": "_build/coordination-native-pair630/go-vet-final.log",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "command": "Node 24.22.2 PATH npm run test:contract",
+      "exit_code": 0,
+      "evidence": {
+        "path": "_build/coordination-native-pair630/contract-final.log",
+        "sha256": "4afaaec2ed30914b0f3ae6416b681088a047b12f40a6691ac4d09432bf5d746f"
+      }
+    },
+    {
+      "command": "GOOS=windows GOARCH=arm64 go test -c ./internal/httpapi",
+      "exit_code": 0,
+      "scope": "compilation only"
+    },
+    {
+      "command": "python3 scripts/audit-coordination-native-pair.py <reviewer> <verifier> --native-transcripts",
+      "exit_code": 0,
+      "evidence": {
+        "path": "_build/coordination-native-pair630/pair2/native-audit.json",
+        "sha256": "4169db96e1b5bb251352def2e43567c937ba6ee348ce3939e65eef1e766b4ea7"
+      }
+    },
+    {
+      "command": "negative controls against copies of actual native artifacts: remove busy, alter job fence, remove handoff completion",
+      "exit_code": 0,
+      "evidence": {
+        "path": "_build/coordination-native-pair630/audit-negative-controls.json",
+        "sha256": "326b3f3250b5f06f3996c5477d5795ca0d3a90d4c4af4ac20ade53a7eb04fa01"
+      }
+    }
+  ],
+  "native": {
+    "reviewer": {
+      "platform": "darwin/arm64",
+      "cli": "Claude Code 2.1.327",
+      "policy": "explicit allowlist of only the generated session MCP view/act tools; original account policy/deny rules retained"
+    },
+    "verifier": {
+      "platform": "linux/arm64",
+      "cli": "Claude Code 2.1.319",
+      "policy": "explicit generated session MCP view/act, Read, Edit, Bash(python3 verify.py *); original account policy/deny rules retained"
+    },
+    "hostTest": "TestCoordinationNativePairHost",
+    "environment": "WEBMUX_NATIVE_PAIR_ROLE=reviewer|verifier WEBMUX_NATIVE_PAIR_DIR=<private> WEBMUX_NATIVE_PAIR_BIND=<non-loopback reachable address> WEBMUX_NATIVE_PAIR_HELPER=<production helper>",
+    "reviewerExit": 0,
+    "verifierExit": 0,
+    "topology": "Separate real hosts, independent Git roots/worktrees with canonical identity, pinned routed HTTPS and isolated fixture trust; configured enrolled peers, not mDNS/LAN or deployment TLS qualification",
+    "launch": "Two ordinary production browser-shell PTYs, one test-user native task command each, automatic alias/MCP/capability provisioning, no later terminal input or manual credential extraction",
+    "audit": {
+      "distinct_real_nodes": true,
+      "reviewer_native_scoped_view": true,
+      "reviewer_verified_project": true,
+      "reviewer_discovered_real_counterpart": true,
+      "reviewer_native_process_exited": true,
+      "reviewer_driver_unchanged": true,
+      "verifier_native_scoped_view": true,
+      "verifier_verified_project": true,
+      "verifier_discovered_real_counterpart": true,
+      "verifier_native_process_exited": true,
+      "verifier_driver_unchanged": true,
+      "reviewer_file_claim": true,
+      "verifier_file_claim": true,
+      "real_counterpart_overlap": true,
+      "reviewer_current_shared_grant": true,
+      "verifier_current_shared_grant": true,
+      "verifier_busy_before_handoff": true,
+      "authority_advanced_fence": {
+        "reviewer": 1,
+        "verifier": 2
+      },
+      "reviewer_released_original": true,
+      "verifier_released_original": true,
+      "guarded_actual_job": true,
+      "native_job_command_and_result": true,
+      "native_cross_host_handoff": true,
+      "reviewer_released_before_handoff": true,
+      "handoff_delivered": true,
+      "handoff_acknowledged": true,
+      "handoff_completed": true
+    },
+    "nativeToolCalls": [
+      23,
+      23
+    ],
+    "job": {
+      "cases": 201,
+      "computation": "20,000 SHA-256 iterations plus a bounded two-second interval, original lease verified/renewed before and after",
+      "sourceEdit": "score(x) changed from x+7 to x*x+7",
+      "driverUnchanged": true,
+      "evidence": {
+        "path": "_build/coordination-native-pair630/pair2-verifier/job.json",
+        "sha256": "95f04cfc6f6c38cb38f72e776a8bbf7f983c8cde7ae0630dba5d3e8fbaca25be"
+      }
+    },
+    "reviewerEvents": {
+      "path": "_build/coordination-native-pair630/pair2/native-transcript.jsonl",
+      "sha256": "1f309bd2172cfb032fdf4c47f7ac83a17054949e68771072f4808d7a5f0e8a5f"
+    },
+    "verifierEvents": {
+      "path": "_build/coordination-native-pair630/pair2-verifier/native-transcript.jsonl",
+      "sha256": "9b3bac720d3acc37b58ddf426a8224c08bcb4632d5ad88117d19213946a26573"
+    },
+    "reviewerStarted": {
+      "path": "_build/coordination-native-pair630/pair2/started.json",
+      "sha256": "4c0571eb909b8d62c577445765a81ac44d4ee6db0146eac8898a7a293e99f6b1"
+    },
+    "verifierStarted": {
+      "path": "_build/coordination-native-pair630/pair2-verifier/started.json",
+      "sha256": "3714ef94803bfc43d44ac2c9293216f065bd0c7789f148a93f269bf64e366f28"
+    },
+    "reviewerFinished": {
+      "path": "_build/coordination-native-pair630/pair2/finished.json",
+      "sha256": "5820a92328a44b5ce504417cfbef9d367ac9e36122f6398fe6cdc0c4202f7ab4"
+    },
+    "verifierFinished": {
+      "path": "_build/coordination-native-pair630/pair2-verifier/finished.json",
+      "sha256": "37bf9a600683edb8415257b5c5cbd952df6fb56afd2cfab07aa90923387457cc"
+    },
+    "reviewerHostLog": {
+      "path": "_build/coordination-native-pair630/pair2/test.log",
+      "sha256": "c7275c3bf7eb0b0127f844c82b8ee4fda79d9211463d014cec7974e9d4274624"
+    },
+    "verifierHostLog": {
+      "path": "_build/coordination-native-pair630/pair2-verifier/test.log",
+      "sha256": "afbe89743cb74a334a97d52f9b5f4bbea53319d882561f66f0cd63099331aefb"
+    },
+    "macProductionBinary": {
+      "path": "_build/coordination-native-pair630/webmux-darwin",
+      "sha256": "2fb49f93de83a8ff377022401031310bae6983c84d281732df6fb8ccfd9ef6f9"
+    },
+    "linuxProductionBinary": {
+      "path": "_build/coordination-native-pair630/webmux-linux",
+      "sha256": "6f53a9368faf9b74f88d9cf5f4d8347892c6d3adb140191209d160a1ab1f2dbe"
+    },
+    "macHostTestBinary": {
+      "path": "_build/coordination-native-pair630/httpapi-darwin.test",
+      "sha256": "09c52d99a209f2840d56a077b5064fac0fbda0d916923d7c844bcb1a6bbc5257"
+    },
+    "linuxHostTestBinary": {
+      "path": "_build/coordination-native-pair630/httpapi-linux.test",
+      "sha256": "3b323464517510d588c5b85f32bfcded638b6d6a7ed244247da3f238f2e606d5"
+    },
+    "linuxTransferSha256Verified": true,
+    "harnessInput": {
+      "path": "webmux/server/internal/httpapi/coordination_native_pair_test.go",
+      "sha256": "ceaba93176ba15f3c69b7b173e2290f2e298c50e0afd998f392ed1868d25a43a"
+    },
+    "captureBoundary": "The native run predates the passive incremental-scrollback capture fix. Complete exact selected native conversation JSONL supplies the audit; bounded stdout audit remains failed. No missing event was inferred from model prose.",
+    "boundedStdoutFailedAudit": {
+      "path": "_build/coordination-native-pair630/pair2/audit.json",
+      "sha256": "f037ce95482076ce91898be8cd386246ed87a1cbb2ec0ac6fe236d789d25cf7b"
+    },
+    "credentialsRemoved": true,
+    "fixtureProcessesExited": true,
+    "installedServicesOrExistingAgentsChanged": false,
+    "nativeAccountConfigurationChanged": false,
+    "rawArtifacts": "private retained files, not committed conversation content"
+  },
+  "linuxInterface": {
+    "cli": "Claude Code 2.1.319",
+    "platform": "linux/arm64",
+    "explicitScopedToolProfileExit": 0,
+    "evidence": {
+      "path": "_build/coordination-native-pair630/linux-approved/test.log",
+      "sha256": "b176ca7be01afac1ee3126c0aa4876d82da441c03044d0b5f66d7fffe7cb552f"
+    },
+    "nativeOutput": {
+      "path": "_build/coordination-native-pair630/linux-approved/native-output.log",
+      "sha256": "d9750ba5568015495436652ca7c0c23f70e003eeafde001169bf129852b66a32"
+    },
+    "proven": [
+      "ordinary alias MCP provisioning",
+      "verified same-project view",
+      "advisory claim",
+      "current local lease",
+      "same original record/fence release"
+    ],
+    "defaultPolicyFailure": {
+      "outcome": "native tool discovered but permission refused, no coordination action accepted",
+      "evidence": {
+        "path": "_build/coordination-native-pair630/linux-interface-test.log",
+        "sha256": "74ee3ba7a9784aa7a156a113f313200be16b548b1ff1a4c42e7fb72b1dbf0fa6"
+      },
+      "output": {
+        "path": "_build/coordination-native-pair630/linux-interface-output.log",
+        "sha256": "57b88b03dc65d8fa6fa91e4d949d86ddc276f12e9be8fe973cf7e7a9f78e6e3b"
+      }
+    }
+  },
+  "failedFirstPair": {
+    "reviewer": "Codex 0.171.0 explicit read-only/never",
+    "verifier": "Claude Code 2.1.319 explicit scoped tools",
+    "outcome": "real counterpart discovery only; Codex mutation refused by never policy; verifier had no permitted wait; no coding job or handoff acceptance",
+    "audit": {
+      "path": "_build/coordination-native-pair630/pair1/audit.json",
+      "sha256": "1ccf04fbf45175f80e4c9887d429e2667716458ba5a34471b012718f3e19036d"
+    },
+    "reviewerOutput": {
+      "path": "_build/coordination-native-pair630/pair1/native-output.log",
+      "sha256": "e0c3fe80e8588b91b2b8835a40bb26ed4676149bc0a2188b828e274880041375"
+    },
+    "verifierOutput": {
+      "path": "_build/coordination-native-pair630/pair1-verifier/native-output.log",
+      "sha256": "2b60cc0dec63427f8b990ca79f2bc30d0a50d46a123d2eb6fe43fc53efcbd2d4"
+    },
+    "policyBypassed": false,
+    "credentialsRemoved": true,
+    "fixtureProcessesExited": true
+  },
+  "inboxWait": {
+    "optionalField": "wait_seconds",
+    "min": 0,
+    "max": 30,
+    "intervalMilliseconds": 500,
+    "bound": "deadline plus at most one bounded scoped view request",
+    "semantics": "read-only cursor wait; access reloaded and live capability checked on every poll; cancellation/refusal propagates; no automatic receipts/terminal input"
+  },
+  "unrelatedSuiteFailure": {
+    "issue": 642,
+    "originalOutcome": "unchanged Rig change-wait child startup failure; cause unproven",
+    "evidence": {
+      "path": "_build/coordination-native-pair630/go-test-first-failed.log",
+      "sha256": "7c8d2a1ec5d20b671181eeb754e492483f5a2fff7332e5f0eb6c74a078b345b5"
+    },
+    "focusedRepetitions": 5,
+    "focusedExit": 0,
+    "focusedEvidence": {
+      "path": "_build/coordination-native-pair630/rig-cancellation-control.log",
+      "sha256": "c79802a6a5dc155d4c6b711abfe969e1797213974a8658f95d593e1d5f6299ab"
+    },
+    "productionOrTestDeadlinesChanged": false
+  },
+  "remaining": [
+    "complete mDNS/LAN discovery and authenticated enrollment",
+    "managed-provider and SSH execution-host onboarding",
+    "existing running and absolute-path bypass agent awareness",
+    "restart/reconnect and stale identity negative workflow qualification",
+    "additional native policies/versions/platform custody",
+    "explicit project mappings",
+    "scale/pagination/retention/backoff",
+    "whole roadmap integration/review and applicable hosted gates"
+  ]
+}

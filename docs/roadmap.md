@@ -3,6 +3,143 @@
 Reviewed 2026-11-19 against the implementation, qualification receipts and GitHub
 issue states. GitHub issues track implementation and remaining acceptance work.
 
+## Trackpad scrolling
+
+- [ ] **Scroll the selected window with two fingers** under
+  [#661](https://github.com/jordanhubbard/webmux/issues/661). On a gesture-capable
+  trackpad, two-finger scrolling with no modifiers applies to the selected
+  window. Holding **Shift** while two-finger scrolling pans the entire 2D grid.
+  A gesture must scroll its intended target without also scrolling the other.
+
+The [terminal and desktop implementation checkpoint](validation/trackpad-scroll-2026-11-22/README.md)
+passes automated browser wheel, mouse, tmux and keyboard-broadcast isolation
+controls, plus selected VNC/RDP protocol-input isolation and Shift grid panning. Physical trackpad and remaining platform/surface acceptance are still
+open; this does not complete #661.
+
+## Automatic session coordination and network discovery
+
+Owner requirement added 2026-11-21. These are planned capabilities; the current
+inventory, terminal messaging and optional integrations do not establish them.
+Every session running under WebMux should participate in coordination without
+per-session opt-in, including agents independently started on different WebMux
+nodes. WebMux should discover other WebMux nodes on the local network through
+mDNS/DNS-SD rather than requiring their addresses to be entered individually.
+
+The [provider comparison](coordination-architecture.md) records Agent Deck/Rig
+interfaces and deployment costs. The #664 authority amendment converges the
+interactive surface with MAC's existing worker pool: projects retain roadmap and
+Literate AI delivery authority; MAC-connected projects use MAC for execution;
+WebMux provides human/agent access to that same authority. Standalone WebMux
+remains explicit. The [convergence contract](mac-project-coordination.md) records
+required bindings, limits and ordered acceptance. This integration is unfinished.
+Issue #630 is closed in the tracker; its historical component evidence does not
+complete the unchecked workflow requirements below. #664 tracks the clarified
+project-authority outcome and reconciliation of those remaining requirements.
+
+Ordered implementation and acceptance:
+
+- [ ] **Converge project coordination with MAC** under
+  [#664](https://github.com/jordanhubbard/webmux/issues/664). Bind source roadmap
+  items and revisions to canonical MAC projects, tasks, attempts, leases and
+  WebMux sessions. Show local and remote activity, duplicate/conflicting scopes
+  and priority/dependency reasons through the same authority. Deliver read-only
+  visibility, interactive participant admission, authority-side scope/priority
+  gates and project-native review/publication integration in that order. Qualify
+  real agents and a human view across three hosts, including stale/offline
+  participants and lost-lease publication refusal. Preserve conversations and
+  lifecycle owners; do not create another independently editable backlog.
+- [x] **Compare provider coordination interfaces** under
+  [#630](https://github.com/jordanhubbard/webmux/issues/630). Explain what Agent
+  Deck and Rig actually contribute, inspect and test their relevant interfaces,
+  and compare them with a built-in approach. Record capabilities, gaps,
+  supported runtimes/platforms, maintenance and deployment costs, and the
+  evidence-backed selection. Preserve existing agents and their lifecycle
+  ownership during any migration.
+- [ ] **Discover network nodes** under
+  [#631](https://github.com/jordanhubbard/webmux/issues/631). Advertise and browse
+  WebMux services through mDNS/DNS-SD, reconcile discovered and configured peers
+  by verified node identity, and handle address changes, multiple interfaces,
+  duplicate names and departing nodes. Provide server-wide policy controls and
+  a manual-peer fallback when multicast is unavailable. Discovering a node does
+  not authorize it: retain authenticated enrollment and expose no credentials
+  in advertisements. This is separate from known `.local` hostname resolution
+  completed under #208.
+- [ ] **Coordinate sessions automatically** under
+  [#630](https://github.com/jordanhubbard/webmux/issues/630). Provision agent
+  awareness and an agent-facing coordination interface for ordinary and managed
+  sessions across authorized nodes, without special launch forms or manual
+  session setup. Support project/peer discovery, task/branch/file ownership,
+  overlap notifications, acknowledged handoffs and shared heavy-worker
+  reservations. Preserve server/account/session identity and use verified
+  repository identity or explicit mappings across worktrees and hosts. Keep
+  coordination active without an open browser, retain state through reconnects
+  and restart, and distinguish message admission, delivery, acknowledgment and
+  completion. Do not inject unsolicited text into arbitrary terminal prompts.
+- [ ] **Qualify the complete workflow** under #630/#631 with independently
+  started real agents on two real WebMux hosts: discover nodes, authenticate
+  enrollment, discover project peers without per-session opt-in, detect an
+  overlapping claim, acknowledge a handoff and honor a shared worker reservation.
+  Cover ordinary and managed sessions, restart/reconnect, stale identities,
+  unrelated projects, foreign accounts, untrusted advertisements, unavailable
+  multicast/peers and duplicate or uncertain delivery. Publish supported
+  boundaries and evidence before marking either requirement complete.
+
+The [architecture decision](coordination-architecture.md) includes source-bound
+native provider-interface comparison and lifecycle-preservation rules. Architecture
+comparison is complete within its original scope; MAC convergence,
+managed/existing-agent onboarding and full workflow acceptance remain open. The
+[node discovery implementation checkpoint](network-discovery.md) adds a server-owned DNS-SD candidate browser and server-management visibility. It keeps
+announcements untrusted and retains manual enrollment. Authenticated HTTPS node/
+account identity and address migration now have a native macOS/Linux component
+result; complete discovered two-host acceptance and automatic coordination remain
+open; this checkpoint does not complete any of the requirements above. The
+[built-in coordination checkpoint](session-coordination.md) adds a durable
+node-local ledger and scoped ordinary-session CLI. Real-agent onboarding,
+managed/SSH interfaces and cross-node coordination still require implementation
+and acceptance. The native MCP extension now attaches startup guidance through
+qualified ordinary Codex/Claude aliases; [single-host native startup evidence](validation/agent-coordination-2026-11-21/README.md)
+does not complete the cross-host or managed-agent workflow. The
+[authorized peer-context extension](session-coordination.md#authorized-peer-discovery)
+now has native macOS/Linux background project-discovery and revocation evidence.
+The [durable inbox and claim extensions](session-coordination.md#durable-messages-across-nodes)
+add separate message permissions, explicit receipts, cross-node advisory conflicts
+and stable overlap events, with ordinary PTY protocol qualification. The [shared reservation extension](session-coordination.md#shared-heavy-worker-reservations)
+adds single-node authority and explicit remote permissions. A
+[two-host native Claude workflow](validation/coordination-native-pair-2026-11-22/README.md)
+now proves discovery, overlap/busy behavior, acknowledged handoff and an actual
+guarded fixture job on configured macOS/Linux nodes with explicit scoped-tool
+permissions. Its failed policy/capture attempts remain separate. Managed/SSH,
+existing-agent onboarding, native discovery/enrollment, restart/reconnect and the
+complete workflow gates remain open.
+
+The [SSH project-context extension](validation/coordination-ssh-project-2026-11-22/README.md)
+now verifies ordinary SSH/mosh repository context through the authenticated
+execution-host RPC, with destination/run revalidation and expiring observations.
+Native macOS-to-Linux production RPC qualification passes. Remote agent access
+and managed-provider onboarding remain open; verified project context does not
+establish those capabilities.
+
+The [private SSH channel checkpoint](validation/coordination-ssh-channel-2026-11-22/README.md)
+adds automatic scoped startup through an authenticated private socket forward.
+Native ordinary SSH shell/CLI startup, first-use trust, same-provider reconnect,
+refused forwarding and owned-master shutdown pass between macOS and Linux.
+The [native SSH agent checkpoint](validation/coordination-ssh-agent-2026-11-22/README.md)
+adds independently audited real Claude view/work calls through the ordinary SSH
+alias under an explicit two-tool native approval profile. A
+[persistent native SSH reconnect](validation/coordination-ssh-native-reconnect-2026-11-22/README.md)
+now preserves the actual Claude/MCP processes and conversation across planned
+reconnect, stops the old master and verifies new scoped calls. The
+[corrected-stack reconnect result](validation/coordination-ssh-reconnect-integration-2026-11-22/README.md)
+adds completed-turn process evidence and stale project-cache regression controls. A
+[production controller restart](validation/coordination-controller-restart-2026-11-22/README.md)
+also retains the same native processes, task, claim ID/expiry and history epoch;
+the native agent releases its retained claim after startup restore. The
+[corrected-stack restart result](validation/coordination-controller-restart-integration-2026-11-22/README.md)
+extends that evidence through completion of the post-restart turn. Broader coding-agent
+adoption, managed/password/Mosh/Windows paths and the complete
+restart/durable-work lifecycle remain open under #630; this does not complete a
+roadmap checkbox.
+
 ## Current reliability work
 
 **First priority: [#318](https://github.com/jordanhubbard/webmux/issues/318).**

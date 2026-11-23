@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httputil"
+	"net/netip"
 	"net/url"
 	"os"
 	"regexp"
@@ -16,24 +17,35 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/jordanhubbard/webmux/server/internal/auth"
+	plane "github.com/jordanhubbard/webmux/server/internal/coordination"
 	"github.com/jordanhubbard/webmux/server/internal/session"
 )
 
 // Federation configuration is administrator-managed. Read APIs never return
 // credentials. Each inbound credential selects exactly one local session owner.
 type serverPeer struct {
-	ID         string `yaml:"id" json:"id"`
-	Name       string `yaml:"name" json:"name"`
-	URL        string `yaml:"url" json:"-"`
-	TokenEnv   string `yaml:"token_env,omitempty" json:"-"`
-	Credential string `yaml:"credential,omitempty" json:"-"`
-	AllowHTTP  bool   `yaml:"allow_http" json:"-"`
+	CoordinationReservations bool         `yaml:"coordination_reservations,omitempty" json:"coordination_reservations,omitempty"`
+	CoordinationMessages     bool         `yaml:"coordination_messages,omitempty" json:"coordination_messages,omitempty"`
+	CoordinationOwner        string       `yaml:"coordination_owner,omitempty" json:"coordination_owner,omitempty"`
+	ID                       string       `yaml:"id" json:"id"`
+	Name                     string       `yaml:"name" json:"name"`
+	URL                      string       `yaml:"url" json:"-"`
+	TokenEnv                 string       `yaml:"token_env,omitempty" json:"-"`
+	Credential               string       `yaml:"credential,omitempty" json:"-"`
+	AllowHTTP                bool         `yaml:"allow_http" json:"-"`
+	Identity                 nodeIdentity `yaml:"identity,omitempty" json:"identity"`
+	DiscoveredAddress        string       `yaml:"discovered_address,omitempty" json:"-"`
 }
 type serverGrant struct {
-	ID         string `yaml:"id"`
-	Owner      string `yaml:"owner"`
-	TokenEnv   string `yaml:"token_env,omitempty"`
-	Credential string `yaml:"credential,omitempty" json:"-"`
+	CoordinationReservations bool   `yaml:"coordination_reservations,omitempty" json:"coordination_reservations,omitempty"`
+	CoordinationMessages     bool   `yaml:"coordination_messages,omitempty" json:"coordination_messages,omitempty"`
+	SourceNode               string `yaml:"source_node_id,omitempty" json:"source_node_id,omitempty"`
+	SourceOwner              string `yaml:"source_owner,omitempty" json:"source_owner,omitempty"`
+	Coordination             bool   `yaml:"coordination,omitempty" json:"coordination,omitempty"`
+	ID                       string `yaml:"id"`
+	Owner                    string `yaml:"owner"`
+	TokenEnv                 string `yaml:"token_env,omitempty"`
+	Credential               string `yaml:"credential,omitempty" json:"-"`
 }
 type serverDirectory struct {
 	Version int           `yaml:"version"`
@@ -63,16 +75,43 @@ func validateServerDirectory(d serverDirectory) error {
 		return errors.New("server directory permits at most 32 peers and 32 grants")
 	}
 	seen := map[string]bool{"local": true, "all": true}
+	identities := map[nodeIdentity]bool{}
 	for _, p := range d.Servers {
 		u, err := url.Parse(p.URL)
 		if !federationID.MatchString(p.ID) || seen[p.ID] || p.Name == "" || !validServerCredential(p.TokenEnv, p.Credential) || err != nil || u.Host == "" || u.User != nil || u.RawQuery != "" || u.Fragment != "" || (u.Path != "" && u.Path != "/") || (u.Scheme != "https" && !(u.Scheme == "http" && p.AllowHTTP)) {
 			return errors.New("invalid server directory entry (unique ID, name, origin URL and credential or token_env required; HTTP requires allow_http)")
+		}
+		if (p.CoordinationMessages || p.CoordinationReservations) && p.CoordinationOwner == "" {
+			return errors.New("coordination messages require a local coordination account mapping")
+		}
+		if p.CoordinationOwner != "" && (len(p.CoordinationOwner) > 256 || strings.ContainsFunc(p.CoordinationOwner, unicode.IsControl) || p.Identity == (nodeIdentity{}) || u.Scheme != "https") {
+			return errors.New("coordination requires an enrolled HTTPS peer and a local account mapping")
+		}
+		if p.Identity != (nodeIdentity{}) && (!validNodePin(p.Identity) || u.Scheme != "https") {
+			return errors.New("invalid pinned server identity; HTTPS is required")
+		}
+		if p.Identity != (nodeIdentity{}) {
+			// Certificate renewals do not create a second node/account identity.
+			for enrolled := range identities {
+				if enrolled.NodeID == p.Identity.NodeID && enrolled.Owner == p.Identity.Owner {
+					return errors.New("duplicate verified node and receiving account")
+				}
+			}
+			identities[p.Identity] = true
+		}
+		if p.DiscoveredAddress != "" {
+			if address, err := netip.ParseAddr(p.DiscoveredAddress); err != nil || !address.IsValid() || p.Identity == (nodeIdentity{}) {
+				return errors.New("invalid discovered peer address")
+			}
 		}
 		seen[p.ID] = true
 	}
 	seen = map[string]bool{}
 	tokens := map[string]bool{}
 	for _, g := range d.Grants {
+		if (g.CoordinationMessages || g.CoordinationReservations) && (!g.Coordination || !plane.ValidSenderScope(g.SourceNode, g.SourceOwner)) {
+			return errors.New("coordination messages require summary permission and a source node/account binding")
+		}
 		token := serverCredential(g.TokenEnv, g.Credential)
 		if !federationID.MatchString(g.ID) || seen[g.ID] || g.Owner == "" || !validServerCredential(g.TokenEnv, g.Credential) || (token != "" && tokens[token]) {
 			return errors.New("invalid or duplicate server grant")
@@ -98,7 +137,10 @@ func (s *Server) federationAccess(w http.ResponseWriter, owner string) bool {
 }
 func (s *Server) federationOwnerAllowed(owner string) bool {
 	c, err := auth.LoadConfig(s.store)
-	return err == nil && ((c.Auth.Mode == "none" && owner == "anonymous") || (c.Auth.Mode == "local" && c.HasUser(owner)))
+	return err == nil && federationAccountAllowed(c, owner)
+}
+func federationAccountAllowed(c auth.Config, owner string) bool {
+	return (c.Auth.Mode == "none" && owner == "anonymous") || (c.Auth.Mode == "local" && c.HasUser(owner))
 }
 func (s *Server) federationGrant(r *http.Request) (serverGrant, bool) {
 	d, err := s.serverDirectory()
@@ -111,7 +153,7 @@ func (s *Server) federationGrant(r *http.Request) (serverGrant, bool) {
 	}
 	for _, g := range d.Grants {
 		expected := serverCredential(g.TokenEnv, g.Credential)
-		if len(expected) >= 32 && subtle.ConstantTimeCompare([]byte(token), []byte(expected)) == 1 && s.federationOwnerAllowed(g.Owner) {
+		if len(expected) >= 32 && subtle.ConstantTimeCompare([]byte(token), []byte(expected)) == 1 && s.federationOwnerAllowed(g.Owner) && s.nodeRequestScope(r, g) {
 			return g, true
 		}
 	}
@@ -196,13 +238,22 @@ func (s *Server) proxyServer(w http.ResponseWriter, r *http.Request, owner strin
 	defer cancel()
 	r = r.Clone(ctx)
 	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
+	var transport *http.Transport
+	if peer.Identity != (nodeIdentity{}) {
+		transport = http.DefaultTransport.(*http.Transport).Clone()
+		transport.Proxy = nil // Identity binding requires a direct end-to-end TLS connection.
+		transport.ForceAttemptHTTP2 = false
+		transport.DialTLSContext = s.nodePeerDialer(peer, token)
+		defer transport.CloseIdleConnections()
+	}
 	proxy := &httputil.ReverseProxy{
 		Rewrite: func(p *httputil.ProxyRequest) {
 			p.SetURL(target)
 			p.Out.URL.Path = path
 			p.Out.URL.RawPath = ""
 			p.Out.URL.RawQuery = ""
-			p.Out.Header = http.Header{"Authorization": {"Bearer " + token}, "Content-Type": {"application/json"}}
+			p.Out.Header = nodeScopeHeaders(peer, token)
+			p.Out.Header.Set("Content-Type", "application/json")
 		},
 		ErrorHandler: func(w http.ResponseWriter, r *http.Request, err error) {
 			writeError(w, 502, "Connected server is unavailable")
@@ -222,6 +273,9 @@ func (s *Server) proxyServer(w http.ResponseWriter, r *http.Request, owner strin
 			r.Header = http.Header{"Content-Type": {"application/json"}}
 			return nil
 		},
+	}
+	if transport != nil {
+		proxy.Transport = transport
 	}
 	proxy.ServeHTTP(w, r)
 }
@@ -274,6 +328,9 @@ func (s *Server) federationMessage(w http.ResponseWriter, r *http.Request, owner
 	writeJSON(w, 202, map[string]any{"queued": true, "processed": false, "session_id": current.ID, "source": source})
 }
 func (s *Server) registerFederation(mux *http.ServeMux) {
+	mux.Handle("POST "+coordinationMessagesPath, s.federationInbound(s.exchangeCoordinationMessage))
+	mux.Handle("POST "+coordinationReservationsPath, s.federationInbound(s.exchangeCoordinationReservation))
+	mux.Handle("POST "+coordinationSnapshotPath, s.federationInbound(s.exportCoordinationSnapshot))
 	mux.Handle("GET /api/servers", s.protected(false, s.listServers))
 	mux.Handle("GET /api/server-directory", s.protected(false, s.getServerDirectory))
 	mux.Handle("PUT /api/servers/{server}", s.protected(false, s.saveServerPeer))
@@ -326,7 +383,11 @@ func (s *Server) serverTerminal(w http.ResponseWriter, r *http.Request) {
 	if profile := r.URL.Query().Get("snapshot_profile"); profile != "" {
 		target.RawQuery = url.Values{"snapshot_profile": {profile}}.Encode()
 	}
-	upstream, _, err := (&websocket.Dialer{HandshakeTimeout: 5 * time.Second}).DialContext(r.Context(), target.String(), http.Header{"Authorization": {"Bearer " + token}})
+	dialer := &websocket.Dialer{HandshakeTimeout: 5 * time.Second}
+	if peer.Identity != (nodeIdentity{}) {
+		dialer.NetDialTLSContext = s.nodePeerDialer(peer, token)
+	}
+	upstream, _, err := dialer.DialContext(r.Context(), target.String(), nodeScopeHeaders(peer, token))
 	if err != nil {
 		writeError(w, 502, "Connected server terminal is unavailable")
 		return

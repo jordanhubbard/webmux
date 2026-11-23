@@ -233,6 +233,14 @@ func (b *Broker) ensureAgent(owner, id, role, name string, cols, rows int, argv 
 	if relaunch && selected.run == nil {
 		launchErr = b.startLocked(selected, "", "")
 	}
+	if b.closed {
+		b.mu.Unlock()
+		return Session{}, false, ErrClosed
+	}
+	if b.entries[selected.value.ID] != selected {
+		b.mu.Unlock()
+		return Session{}, false, ErrNotFound
+	}
 	b.markAttachReadyLocked(selected)
 	if err := b.persistLocked(); err != nil {
 		current := selected.run

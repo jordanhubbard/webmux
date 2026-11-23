@@ -1,0 +1,68 @@
+=== RUN   TestChooseAdvertisedPortAndSecurity
+=== RUN   TestChooseAdvertisedPortAndSecurity/secure_by_default
+=== RUN   TestChooseAdvertisedPortAndSecurity/explicit_cleartext
+=== RUN   TestChooseAdvertisedPortAndSecurity/secure_only
+=== RUN   TestChooseAdvertisedPortAndSecurity/cleartext_rejected
+--- PASS: TestChooseAdvertisedPortAndSecurity (0.00s)
+    --- PASS: TestChooseAdvertisedPortAndSecurity/secure_by_default (0.00s)
+    --- PASS: TestChooseAdvertisedPortAndSecurity/explicit_cleartext (0.00s)
+    --- PASS: TestChooseAdvertisedPortAndSecurity/secure_only (0.00s)
+    --- PASS: TestChooseAdvertisedPortAndSecurity/cleartext_rejected (0.00s)
+=== RUN   TestIPLiteralUsesDocumentedPort
+--- PASS: TestIPLiteralUsesDocumentedPort (0.00s)
+=== RUN   TestDNSRecordsSelectConfiguredPort
+--- PASS: TestDNSRecordsSelectConfiguredPort (0.00s)
+=== RUN   TestMulticastAdvertisementRoundTrip
+--- PASS: TestMulticastAdvertisementRoundTrip (0.01s)
+=== RUN   TestNodeCandidateValidation
+=== RUN   TestNodeCandidateValidation/invalid_tls
+=== RUN   TestNodeCandidateValidation/zero_port
+=== RUN   TestNodeCandidateValidation/external_hostname
+=== RUN   TestNodeCandidateValidation/control_display
+=== RUN   TestNodeCandidateValidation/multicast
+=== RUN   TestNodeCandidateValidation/other_domain
+=== RUN   TestNodeCandidateValidation/userinfo
+=== RUN   TestNodeCandidateValidation/bad_version
+=== RUN   TestNodeCandidateValidation/missing_identity
+=== RUN   TestNodeCandidateValidation/invalid_identity
+=== RUN   TestNodeCandidateValidation/duplicate_keys
+=== RUN   TestNodeCandidateValidation/unspecified
+=== RUN   TestNodeCandidateValidation/unscoped_link_local
+=== RUN   TestNodeCandidateValidation/other_service
+=== RUN   TestNodeCandidateValidation/self
+=== RUN   TestNodeCandidateValidation/extra_secret
+=== RUN   TestNodeCandidateValidation/path
+=== RUN   TestNodeCandidateValidation/loopback
+--- PASS: TestNodeCandidateValidation (0.00s)
+    --- PASS: TestNodeCandidateValidation/invalid_tls (0.00s)
+    --- PASS: TestNodeCandidateValidation/zero_port (0.00s)
+    --- PASS: TestNodeCandidateValidation/external_hostname (0.00s)
+    --- PASS: TestNodeCandidateValidation/control_display (0.00s)
+    --- PASS: TestNodeCandidateValidation/multicast (0.00s)
+    --- PASS: TestNodeCandidateValidation/other_domain (0.00s)
+    --- PASS: TestNodeCandidateValidation/userinfo (0.00s)
+    --- PASS: TestNodeCandidateValidation/bad_version (0.00s)
+    --- PASS: TestNodeCandidateValidation/missing_identity (0.00s)
+    --- PASS: TestNodeCandidateValidation/invalid_identity (0.00s)
+    --- PASS: TestNodeCandidateValidation/duplicate_keys (0.00s)
+    --- PASS: TestNodeCandidateValidation/unspecified (0.00s)
+    --- PASS: TestNodeCandidateValidation/unscoped_link_local (0.00s)
+    --- PASS: TestNodeCandidateValidation/other_service (0.00s)
+    --- PASS: TestNodeCandidateValidation/self (0.00s)
+    --- PASS: TestNodeCandidateValidation/extra_secret (0.00s)
+    --- PASS: TestNodeCandidateValidation/path (0.00s)
+    --- PASS: TestNodeCandidateValidation/loopback (0.00s)
+=== RUN   TestNodeCandidateRefreshExpiryAndSpoofIsolation
+--- PASS: TestNodeCandidateRefreshExpiryAndSpoofIsolation (0.00s)
+=== RUN   TestNodeCandidateBoundAndConcurrency
+--- PASS: TestNodeCandidateBoundAndConcurrency (0.03s)
+=== RUN   TestNodePolicyIdentityAndRefusal
+--- PASS: TestNodePolicyIdentityAndRefusal (0.02s)
+=== RUN   TestNodeServicePolicyAndCancellation
+--- PASS: TestNodeServicePolicyAndCancellation (0.00s)
+=== RUN   TestNodeMulticastRoundTrip
+--- PASS: TestNodeMulticastRoundTrip (0.03s)
+=== RUN   TestMulticastTransportControl
+    transport_control_test.go:25: set WEBMUX_TEST_MDNS_CONTROL to at most four comma-separated native interfaces
+--- SKIP: TestMulticastTransportControl (0.00s)
+PASS

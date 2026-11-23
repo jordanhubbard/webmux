@@ -1,0 +1,146 @@
+{
+  "version": 1,
+  "date": "2026-11-22",
+  "scope": "Current-source remote native Claude adoption and independent audit; no reconnect/restart or complete roadmap claim",
+  "parent_head": "1d72a4ad18464670b6a7d6faeb7e9af87dbffe64",
+  "original_native_agent_head": "be89ac30a90436bf856117ac4cd38584457df64b",
+  "source_sha256": {
+    "webmux/server/internal/httpapi/coordination_ssh_native_test.go": "c08fc4215b6d93656857a02f3f41d75c4e64b060c6c5d033069947affb3ab65c",
+    "scripts/audit-coordination-ssh-agent.py": "fbef8f09dede65c1f7d5579da4051a1172b2eff7717fd16949a741c7af80b941",
+    "scripts/audit-coordination-native-pair.py": "8de1d4b998c26fbf54a61080d8b607c5a906bd635ef04fcf52544ab1ee742b04",
+    "webmux/server/internal/httpapi/session_coordination.go": "664c76a8053c685751508f1c79ab832b835736b31691c9eeaebbfadaab455115",
+    "webmux/server/internal/coordinationclient/native.go": "51bf3676835935c4d8b083644cb11993c724742705c43bc081063f6931329244",
+    "webmux/server/internal/coordinationclient/socket.go": "2e576dd114bbccfcecfba785185dbe1afdef16aad947e98af3e0795bbe58ea6a",
+    "webmux/server/internal/terminal/coordination.go": "c8b45ca0d61c735dd5024db7fec84542f316f51b87e833ff92bf9256a872271f",
+    "webmux/server/internal/recovery/rpc.go": "1cfcb3a907123ae138fae06ea713a0bb6cfb0410df4a95dd4e6d0c84ad416eb9"
+  },
+  "evidence": [
+    {
+      "private_path": "_build/integrate-coordination-ssh-agent630/go-test.log",
+      "exit_code": 0,
+      "sha256": "169c1faa8f2ad23cc33d54f050763f865a262ba1e9b4f0b470b52b7cdfc5a675"
+    },
+    {
+      "private_path": "_build/integrate-coordination-ssh-agent630/vet.log",
+      "exit_code": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "private_path": "_build/integrate-coordination-ssh-agent630/native-test-build.log",
+      "exit_code": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "private_path": "_build/integrate-coordination-ssh-agent630/linux-build.log",
+      "exit_code": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "private_path": "_build/integrate-coordination-ssh-agent630/unchanged-production.json",
+      "exit_code": 0,
+      "sha256": "0579c5607bd874cefa1384826484156547180d90183952555be28f28e8d7c126"
+    },
+    {
+      "private_path": "_build/integrate-coordination-ssh-agent630/native-manifest.json",
+      "exit_code": 0,
+      "sha256": "a5f98da3291acc4aa115aefd55eb075676ace981c5b91528d4684d0122ef5bdf"
+    },
+    {
+      "private_path": "_build/integrate-coordination-ssh-agent630/audit-negative-controls.json",
+      "exit_code": 0,
+      "sha256": "5d72222f76ce83d6812e691c76b7655db42e8ae7e2791b02ed68f7b300f22a50"
+    },
+    {
+      "private_path": "_build/integrate-coordination-ssh-agent630/native-1/test.log",
+      "exit_code": 0,
+      "sha256": "79264c65978f8cf357eb1cdd960affe8eb2a0383416494d67b8904e07b6abd87"
+    },
+    {
+      "private_path": "_build/integrate-coordination-ssh-agent630/native-1/audit.json",
+      "exit_code": 0,
+      "sha256": "7e42b42e52ba9d0808c00869554831c68b6ee2cde7402432eb72822d80e4d09a"
+    },
+    {
+      "private_path": "_build/integrate-coordination-ssh-agent630/native-2/test.log",
+      "exit_code": 0,
+      "sha256": "9b05f819ebb1de5a9bc99617e6d3105b14007bdf4c3b9a8f23320da3d9b72263"
+    },
+    {
+      "private_path": "_build/integrate-coordination-ssh-agent630/native-2/audit.json",
+      "exit_code": 0,
+      "sha256": "4dba8ee0660259493c1eb7b3785d2e70d9dd768acdda0ebf2d6fb9a3a359fadf"
+    }
+  ],
+  "native_binaries": {
+    "_build/integrate-coordination-ssh-agent630/webmux-linux-arm64": "24d80441d10822ecf2cea2840cf0904b4af4f21f3248a9b28e67ad0487a181cd",
+    "_build/integrate-coordination-ssh-agent630/httpapi-darwin-race.test": "fb00fc7452e0d1c4d846c3700cb9a9840b95bc0423016b0b3290c844323473ac"
+  },
+  "native_runs": [
+    {
+      "run": 1,
+      "passed": true,
+      "audit": {
+        "passed": true,
+        "evidence": {
+          "native_connected_dynamic_server": true,
+          "native_scoped_verified_view": true,
+          "native_work_after_view": true,
+          "source_ledger_confirms_task": true,
+          "only_approved_tools_and_discovery": true,
+          "all_tool_calls_completed": true,
+          "native_success": true,
+          "capability_not_in_output": true
+        },
+        "failures": [],
+        "native_tool_call_count": 3,
+        "source_hashes": {
+          "expected.json": "23b34c240924e284596d5d6693840b94650228ead3d285fc305c1911ec8b28ab",
+          "native.jsonl": "aa016461b26e9074e5fe99ede97c260ae266a6aef9087a4382bc3c04b60cd4d5",
+          "view.json": "172c7a59fc37e6dd2b8f66d7b9c59c1af2f940d74c3a203b58af5f6eb516ed15",
+          "terminal.log": "8789ba698f564fa2d67ead82f05f8ade00e85a5e565dd6d572db3bdfb03aaa71",
+          "native.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      }
+    },
+    {
+      "run": 2,
+      "passed": true,
+      "audit": {
+        "passed": true,
+        "evidence": {
+          "native_connected_dynamic_server": true,
+          "native_scoped_verified_view": true,
+          "native_work_after_view": true,
+          "source_ledger_confirms_task": true,
+          "only_approved_tools_and_discovery": true,
+          "all_tool_calls_completed": true,
+          "native_success": true,
+          "capability_not_in_output": true
+        },
+        "failures": [],
+        "native_tool_call_count": 3,
+        "source_hashes": {
+          "expected.json": "55f2004a19a64ab411af5791a5a5b5cee611a0e975725b122847a58b72d552ba",
+          "native.jsonl": "f90f598223d424bc66dfd3c52b441a575d3900a907962a37554abbcd933598c1",
+          "view.json": "cba9908fb1c58b4cef19b6f382e1a6ef7101c4149dab049a66c2bbb301d2ca07",
+          "terminal.log": "0b414477d5dbca3d49e9d067d6cb5ee93eb68a2cdd9ac14e004228b2e2555a24",
+          "native.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      }
+    }
+  ],
+  "commands": {
+    "full_go": "go test -p 4 -count=1 ./...",
+    "vet": "go vet ./...",
+    "native": "Race-instrumented httpapi test executable -test.run=^TestCoordinationSSHNativeBootstrap$ -test.v with explicit isolated SSH fixture and WEBMUX_SSH_COORD_NATIVE_CLAUDE=1",
+    "audit": "python3 scripts/audit-coordination-ssh-agent.py <native-output> --output <audit-output>",
+    "negative_controls": "Run the auditor against six copies with wrong subject/task, missing view/action result, unapproved tool or false success flag; require each specific failure"
+  },
+  "unchanged_component_validation": "Qualified #647 core/channel/API race, TypeScript, production CLI/MCP contract and Windows test compilation remain applicable to unchanged production sources; no new production files changed in this layer.",
+  "limitations": [
+    "Exact native Claude 2.1.319 with explicit approval only for the two scoped tools; no policy override or credential copy.",
+    "Ordinary SSH native adoption only, not native reconnect or full production-controller restart.",
+    "No managed/existing-agent, password/Mosh/Windows or discovered two-controller acceptance.",
+    "Fresh hosted checks and parent delivery remain merge gates; wider roadmap remains open."
+  ]
+}

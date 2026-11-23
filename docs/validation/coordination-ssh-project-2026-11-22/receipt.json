@@ -1,0 +1,93 @@
+{
+  "version": 1,
+  "scope": "production read-only repository RPC over SSH; no agent onboarding",
+  "repository_id": "8ca023dda28733b449f4b6672ea2802f155bf49157b62e9156eda67089b66b4a",
+  "repository": "example.test/team/native-ssh-project",
+  "recording": false,
+  "initial_branch": "rpc-original",
+  "changed_branch": "rpc-changed",
+  "same_project_after_branch_change": true,
+  "controls": [
+    {
+      "control": "foreign-key",
+      "result": "refused"
+    },
+    {
+      "control": "foreign-session",
+      "result": "refused"
+    },
+    {
+      "control": "missing-path",
+      "result": "refused"
+    },
+    {
+      "control": "relative-path",
+      "result": "refused"
+    },
+    {
+      "control": "non-repository",
+      "result": "refused"
+    }
+  ],
+  "qualifier_sha256": "98685440d67bde06d507dc474bf9163dfe543fef229013bbc9da5fa2188ed446",
+  "date": "2026-11-22",
+  "transport": "authenticated OpenSSH stdin",
+  "controller": "macOS ARM64",
+  "execution_host": "Linux ARM64",
+  "source_sha256": {
+    "scripts/qualify-coordination-ssh-project.py": "98685440d67bde06d507dc474bf9163dfe543fef229013bbc9da5fa2188ed446",
+    "webmux/server/internal/recovery/rpc.go": "d9de8cb55e476a12d670fd87009015ea293ed11f866764bf2186c4651df0d046",
+    "webmux/server/internal/recovery/coordination_test.go": "84dda4f1932c0ee53581ba2852579a750da0bfd251500442ecbd124f3ef6ad41",
+    "webmux/server/internal/session/model.go": "5a2830c97e5a67cdd43eaea5cd002332acf0f26c0d55bcb5fabc73cde99622b6",
+    "webmux/server/internal/session/coordination.go": "bde50477609f8c65e2e632a0a42dc74fc241417df366dd70c8a4981651bee12f",
+    "webmux/server/internal/session/coordination_test.go": "e05c6e9856890e8e89d88ed5413ac3a2a85f49e4fa8e196de80760568d7a806e",
+    "webmux/server/internal/session/recovery.go": "cd00a6c2fd7e26a95bb885a9ec725fa76deaaf0e28e47b9d7178a6f4b36445a5",
+    "webmux/server/internal/httpapi/server.go": "95d4da56763489ce45f8fe2ec8e9035b7c72a658e0ff5f06cfb2a73b458c279b",
+    "webmux/server/internal/httpapi/session_coordination.go": "9b9d960762f8548ee1e17e193896cee945240044b0ea7250495e580fee5e36ae",
+    "webmux/server/internal/httpapi/session_coordination_remote_test.go": "953a87dfca399114abeb380689745470d7e5cf634d68805ffc6147459c9cb63d",
+    "webmux/server/internal/coordination/repository.go": "05cf55d21e735fa428b1efb2f8606e9a7067e57df020866df0dffe4a951d0abc",
+    "webmux/server/go.mod": "2f76dbb6ea1fe15260d271fb8bf6593d986d5ab83c08f7d4627e5a6c12a1a12d",
+    "webmux/server/go.sum": "ee6a5eeea5cf2a0b2768348d078eb8d941ba3229896169cedf8185d35a2d690f",
+    "webmux/server/internal/coordination/members.go": "2570d8fb634267bb8275cfc975c320bc28de1d54fb3b57ebae2fa6460c9a73d2"
+  },
+  "binary_sha256": {
+    "webmux-linux-arm64": "19d9e56530a447110c408338f5a39b1526133f657258a97f057076255f9b0cf8",
+    "recovery-linux-arm64.test": "28537a2c96404ad29cbe78b8b542ba1752af3f7dd39f240e42ceb0bed0e7d1a3",
+    "httpapi-windows-arm64.test.exe": "a193d1e7788278c5aa57683238f9b542f18733a045d5e4aaf691d3fe9d8841ce"
+  },
+  "native_exit_code": 0,
+  "gates": {
+    "focused_race": {
+      "exit_code": 0,
+      "log_sha256": "89a38b3c044dd5ec6b0f19cca3112507263e623d9704b0f0f7af24f4b0cc79ae",
+      "scope": "HTTP API, broker, host RPC, policy, owner-cache isolation and coordination admission controls"
+    },
+    "vet": "pass",
+    "windows_arm64": "test compilation only; no native acceptance",
+    "full_go_before_rig_marker_fix": {
+      "exit_code": 1,
+      "failure": "TestChangeWaitCancellationTerminatesHungCLIChild: native CLI child did not start (0.41s)",
+      "log_sha256": "11c8724c6b61b5becb1909916ebb66fa9b0d2cc579e8f9c91e0a07b398da00bb",
+      "follow_up": "#633; independent fixture publication fix PR #645"
+    },
+    "full_go_reviewed_source": {
+      "command": "Node 24 PATH; go test -p 4 -count=1 ./...",
+      "exit_code": 0,
+      "log_sha256": "51758653a6ad0a9529dbfd973edf2a38f9f01b12b72e8be60a1b74fbb7603d4a",
+      "rig_marker_publication": "includes identical fixture fix independently submitted as #645"
+    }
+  },
+  "initial_fixture_failure": {
+    "outcome": "first broker race-test invocation terminated after replaced-run fixture discarded the original cleanup handle",
+    "resolution": "retain and restore original handle in cleanup; focused race controls pass; production deadlines unchanged",
+    "observed_summary": "signal: terminated\nFAIL github.com/jordanhubbard/webmux/server/internal/session 31.380s"
+  },
+  "remaining": [
+    "remote scoped capability transport and MCP onboarding",
+    "managed-provider onboarding and stable ownership",
+    "complete broker/provider native SSH and mosh workflows",
+    "Windows native acceptance",
+    "existing-agent awareness and restart/reconnect acceptance",
+    "native multicast discovery/enrollment and complete #630/#631 workflow"
+  ]
+}

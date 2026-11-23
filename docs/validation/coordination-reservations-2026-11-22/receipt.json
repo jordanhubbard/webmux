@@ -1,0 +1,188 @@
+{
+  "scope": "Shared heavy-worker reservation authority across nodes with durable uncertainty, original-fence renewal/release and verified current leases; native macOS/Linux ordinary PTY/API fixtures, not coding-agent job execution acceptance",
+  "qualifiedAtUTC": "2026-11-22T08:43:48.503920+00:00",
+  "sourceBaseCommit": "6f065aae880b7a15cb566a4d7e7408736f31999a",
+  "sourceSha256": {
+    "tests/frontend/ServersDialog.test.tsx": "5b9514512b20a3ce91564367456618caf16caa8c71eb7312cbd1e219cd7ca4a5",
+    "webmux/frontend/src/components/ServersDialog.tsx": "3448e52da602193f64860526dddde059739e6cafb42c335253d1c2ff96595323",
+    "webmux/frontend/src/utils/api.ts": "bfd2b61fa107f3be6dc457cb566f781e80af10ad2feaf7e5c27c11c085fda0fe",
+    "webmux/server/internal/coordination/members.go": "c4c3ce7d35c42ed344d2aca0538bf5a45ffeaccfe0aaa62e11c0d259fcc4d812",
+    "webmux/server/internal/coordination/model.go": "f45b34ab014a4895b9079cfbadb666ea697d0b9ca9ae7e20e0b974593d0520cb",
+    "webmux/server/internal/coordination/operations.go": "dd9600140ee5e368b10751b98dae97f0d07ee903713c90e3e3dd0db54999e4e9",
+    "webmux/server/internal/coordination/remote.go": "cfccdcf1f40cd82ca432f3d9c89db9dd2f6f29c471705d683b9f9bd63dc0a358",
+    "webmux/server/internal/coordination/shared_reservations.go": "c0b84684d54537613752c4c53497fade03b1e815d37c3be0e6d3193d3ce298d2",
+    "webmux/server/internal/coordination/shared_reservations_test.go": "46640835f8d117673b1bfb8cb88e755dc62168f8af5e43aefffba149f1cf5cd6",
+    "webmux/server/internal/coordination/snapshot.go": "6657e8848a5e0d3a06e072b4d095046ba9b93bc338583f3c60cd81c249d3cd20",
+    "webmux/server/internal/coordination/store.go": "635ecf93e9cf57d1ca076156d3b148e5949716056b6d634aba16ed05acb7bf21",
+    "webmux/server/internal/coordinationclient/client.go": "0a4746db3634346bc75424f1a3e4e594c2cf921b9c92220242fba893a3594330",
+    "webmux/server/internal/coordinationclient/client_test.go": "5a743798cb721d1a6c56c17ea1ad32a9025fd7719211fad93f990f59d273ac3f",
+    "webmux/server/internal/coordinationmcp/server.go": "2f0f36740460dc799a1603dc2462ab80c6049d4cfb772724d41f6f1f318e8a57",
+    "webmux/server/internal/coordinationmcp/server_test.go": "96f299dbddf0418b3e422b7ea959b98dd6f40aefb9cdae17055957fbf92b8e39",
+    "webmux/server/internal/httpapi/coordination_peers.go": "e787668e5d29ed1745e5bb6e52ff74df8171fcb1a0bf34cee5ccdbbb12a2e388",
+    "webmux/server/internal/httpapi/coordination_peers_network_test.go": "0db820797de4090ffe0db8ddf5bebbcaa64939a02665056811e4aea9c41a882b",
+    "webmux/server/internal/httpapi/coordination_reservations.go": "dc05851b75c261c54539c8759ca5a1aff27e0c1638f336ccc9783196ff9ff543",
+    "webmux/server/internal/httpapi/coordination_reservations_test.go": "3bcc2cd5aee6ec541b21994e99702e340e57bd057b4901ffefc4ad261a2f7ce2",
+    "webmux/server/internal/httpapi/federation.go": "0de0ca6ef1b7f13809f5b72bc9dcbbde441883b6ada269260cb26f8349a058df",
+    "webmux/server/internal/httpapi/node_identity_network_test.go": "3cb701e9fa8581ba5208063ad194e0c9a52bc6cdbd5690dede71c127fa7b4990",
+    "webmux/server/internal/httpapi/server_directory.go": "d02a923c73d3f473f0d0d7fd508672ff8dc8f4056e4bd9f480f6546733e55fd3",
+    "webmux/server/internal/httpapi/server_test.go": "70d6b9c3ce29ade4a3372ec1902fccabae614e01f5292d88f56c928dcf2eec5f",
+    "webmux/server/internal/httpapi/session_coordination.go": "d5bf7da146eb245e8e201591e5c5c2aa66bbd286551efb4a339e43ecc0b278f4"
+  },
+  "checks": [
+    {
+      "command": "Node 24.22.2 PATH go test -p 4 -count=1 ./...",
+      "exit_code": 0,
+      "evidence": {
+        "path": "_build/coordination-reservations630/go-test-final.log",
+        "sha256": "238e5b9b40cfb5158c234e3a0380dcbff5f156f4d77367572f721acc6e1171e9"
+      },
+      "scope": "complete runtime change and legacy protocol guard; later new test bodies also qualified by focused/race checks"
+    },
+    {
+      "command": "go test -race ./internal/coordination ./internal/coordinationclient ./internal/coordinationmcp ./internal/httpapi -run 'TestShared|TestLocalReservation|TestReservationSchema|TestWorkerReservations|TestCoordinationSharedReservation|TestCoordinationReservationRequires|TestAdmissionError|TestMCP' -count=1",
+      "exit_code": 0,
+      "evidence": {
+        "path": "_build/coordination-reservations630/race-final.log",
+        "sha256": "da3ef11fdbba8a18123392fd0db2647361850f5508b582f89311e5e7edaf478a"
+      }
+    },
+    {
+      "command": "go vet ./...",
+      "exit_code": 0,
+      "evidence": {
+        "path": "_build/coordination-reservations630/go-vet-final.log",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "command": "Node 24.22.2 PATH npm run test:contract",
+      "exit_code": 0,
+      "evidence": {
+        "path": "_build/coordination-reservations630/contract-final.log",
+        "sha256": "4afaaec2ed30914b0f3ae6416b681088a047b12f40a6691ac4d09432bf5d746f"
+      }
+    },
+    {
+      "command": "Node 24.22.2 PATH npm run typecheck",
+      "exit_code": 0,
+      "evidence": {
+        "path": "_build/coordination-reservations630/typecheck-final.log",
+        "sha256": "a4b9d0bbbc3660d4798d15f01182907929f23dfb9c9fceb96fbbeeb6b9b182b1"
+      }
+    },
+    {
+      "command": "Node 24.22.2 PATH npm run test --workspace=frontend",
+      "exit_code": 0,
+      "files": 44,
+      "tests": 481,
+      "evidence": {
+        "path": "_build/coordination-reservations630/frontend-test.log",
+        "sha256": "2980e8fa684ae0222efaf3f5cdfe079894744523e5828dde2d830c03c32791c0"
+      }
+    },
+    {
+      "command": "Node 24.22.2 PATH npm run lint --workspace=frontend",
+      "exit_code": 0,
+      "evidence": {
+        "path": "_build/coordination-reservations630/frontend-lint.log",
+        "sha256": "24a11fdad2b0d766a9f66f2eb9e8a43887f1839736354248c6384ffd4975da9b"
+      }
+    },
+    {
+      "command": "Node 24.22.2 PATH npm run build --workspace=frontend",
+      "exit_code": 0,
+      "evidence": {
+        "path": "_build/coordination-reservations630/frontend-build.log",
+        "sha256": "8935a66db03ab4b321dd087709ac8139f9576a211a702fe1db972c8f863b974d"
+      },
+      "warning": "Existing bundle chunk size warning"
+    },
+    {
+      "command": "GOOS=windows GOARCH=arm64 go test -c ./internal/httpapi",
+      "exit_code": 0,
+      "scope": "cross-compilation only"
+    }
+  ],
+  "native": {
+    "controller": "darwin/arm64",
+    "authority": "linux/arm64",
+    "clientExit": 0,
+    "receiverExit": 0,
+    "roles": "TestCoordinationPeerNativeNetworkClient / TestNodeIdentityNativeNetworkServer",
+    "environment": "WEBMUX_NODE_NETWORK_ROLE=client|server WEBMUX_COORDINATION_PEER_NETWORK=1 WEBMUX_COORDINATION_MESSAGE_NETWORK=1 WEBMUX_COORDINATION_RESERVATION_NETWORK=1; private fixture directories and explicit routed receiver bind",
+    "scope": "Independent real Git repositories/linked worktrees, ordinary broker-owned PTY/API children; routed end-to-end pinned HTTPS; isolated fixture trust; no browser/manual maintenance calls; no heavy job executed",
+    "reservationAdmitRequests": 4,
+    "reservationStatusRequests": 2,
+    "deliberatelyLostCommittedGrantReplies": 1,
+    "steps": [
+      "summary/message permissions refuse reservation",
+      "separate source-bound reservation permissions enabled",
+      "lost committed grant reply leaves source uncertain",
+      "exact intent status recovers remote fence 1 without another reserve admission",
+      "local authority caller busy under remote grant",
+      "original record/fence renewal succeeds",
+      "release succeeds",
+      "old positive receipt is not a current lease",
+      "new local holder acquires fence 2",
+      "old remote fence renewal refused"
+    ],
+    "parentMessageControl": {
+      "admitRequests": 1,
+      "statusRequests": 2,
+      "lostCommittedReplies": 1
+    },
+    "connectionProofs": 23,
+    "credentialRequests": 22,
+    "controllerBinary": {
+      "path": "_build/coordination-reservations630/httpapi-darwin.test",
+      "sha256": "3d49ccb549ae5eccab5f74408db236aa16c554cefdaf8b4ef436126f3614127d"
+    },
+    "authorityBinary": {
+      "path": "_build/coordination-reservations630/httpapi-linux.test",
+      "sha256": "bfeceec4edf47fe90ef1c5553056d7288fe1c4e3cd34414a9a6cd4718e82f325"
+    },
+    "transferSha256Verified": true,
+    "clientLog": {
+      "path": "_build/coordination-reservations630/run-final/client.log",
+      "sha256": "5207dd39eeda77f4115f3b9cfddf7afeeae5d9d27833b3ec5ff20eb788b14f08"
+    },
+    "authorityLog": {
+      "path": "_build/coordination-reservations630/run-final/server.log",
+      "sha256": "7b611acc7eb2104d26c7f56ac65ed751229dc3228b59d792f3d687c9732967fd"
+    },
+    "authorityArtifacts": "/home/jkh/.cache/webmux/qualification/coordination-reservations630/run-final",
+    "fixtureCredentialsRemoved": true,
+    "fixtureProcessesExited": true,
+    "installedServicesChanged": false
+  },
+  "semantics": {
+    "authority": "One node ledger/resource/fence counter for local and all authorized remote contenders; receiving-account custody controls foreign-holder visibility",
+    "admission": "Source intent and uncertainty durable before wire mutation; receiver outcomes atomically frozen including denials; same-history status-before-replay after interruption",
+    "clock": "Remaining authority duration anchored before request gives conservative frozen local expiry; status never extends original grant",
+    "currentLease": "Original success is historical; requires lease.current and unexpired local expires; release/replacement/project change/uncertainty cannot authorize work",
+    "compatibility": "Lease protocol 1 explicitly declared by updated CLI/MCP; legacy private reservation calls receive HTTP 428; newer clients reject unverified legacy success",
+    "schema": "Atomic version 1/2 to version 3 upgrade preserves key/history/receipts/fences; downgrade interpretation refused",
+    "boundary": "No job execution or provider lifecycle ownership; workers must stop before expiry/release and honor epoch/original fence; live authority rollback/reset forbidden"
+  },
+  "limits": {
+    "wireBytes": 32768,
+    "sourceInspectionSeconds": 4,
+    "exchangeSeconds": 6,
+    "reservationClientSeconds": 12,
+    "ordinaryClientSeconds": 5,
+    "privateWriteSeconds": 10,
+    "leaseSecondsMin": 15,
+    "leaseSecondsDefault": 120,
+    "leaseSecondsMax": 900
+  },
+  "hostedNativeStatus": "pending on publication; cross-compilation is not Windows native acceptance",
+  "remaining": [
+    "two independently started real coding agents performing work while honoring shared reservations",
+    "live notifications and existing-agent onboarding",
+    "managed/SSH execution-host provisioning",
+    "explicit repository mappings",
+    "scale, pagination, retention and backoff qualification",
+    "native platform custody/sandbox/distribution acceptance",
+    "complete discovered LAN enrollment and restart/reconnect workflow"
+  ]
+}

@@ -1,0 +1,166 @@
+{
+  "scope": "Cross-node advisory claim conflict checks and durable overlap events; native macOS/Linux ordinary PTY fixtures, not real coding-agent collaboration or shared reservations",
+  "qualifiedAtUTC": "2026-11-22T08:17:12.041821+00:00",
+  "sourceBaseCommit": "af35f7676a371f128e63c242e02fe05f2ebb3201",
+  "sourceSha256": {
+    "webmux/server/internal/coordination/members.go": "3c900d6577652220168157fa54389c12601399a27d78c64c28ea81401cb37bac",
+    "webmux/server/internal/coordination/model.go": "bd09eec75244761a8035fe9c28cfd49238ab7a436aefd6c04692bfb5bdf4d7c0",
+    "webmux/server/internal/coordination/operations.go": "e894cf113be8a15ba9f39e2bbb0cb0d2bb26369009fcdfb63372e3a15621ffd6",
+    "webmux/server/internal/coordination/peer_claims.go": "b8bfc7fdec6634447b033eeb0c71cde194b06433afb4cbc8241ba14df626e123",
+    "webmux/server/internal/coordination/peer_claims_test.go": "b732a6cc6fdacba79664c18f212e10a0bb959a6121040b67626b4ac939c2f9d3",
+    "webmux/server/internal/coordination/remote.go": "4fc6d5fb47182940d10e1cbd41f18b8d35cebfcb7ef1a02742eb38ecbf65be0f",
+    "webmux/server/internal/coordination/snapshot.go": "9408ff8c0804e3d7982700f74668bb6edd74e6a88925f1474e61c9c7e7ce35a5",
+    "webmux/server/internal/coordinationclient/client.go": "7eebfe40c44df9bd94789cda54cb1ab51bd63dc1c227723d3b8b994b520a5f70",
+    "webmux/server/internal/coordinationclient/client_test.go": "0925af85c4edecbbb89497032e16fb5c4399e5a7c6c8d5351d0691c493c2c8cb",
+    "webmux/server/internal/coordinationmcp/server.go": "57b4a4b1dabf3ad1952fd139c1d3a90e6410d58fc431950086fdae6da4441051",
+    "webmux/server/internal/coordinationmcp/server_test.go": "f04ae65b5e1e30990bd8e0d5ec892573134bdb91d283681bd6f631bbd3b9e274",
+    "webmux/server/internal/httpapi/coordination_claims_test.go": "daa3200d5d13289a83934d4a3dfd586532c93e675dee5ba3f4e0e1634559c54a",
+    "webmux/server/internal/httpapi/coordination_peers.go": "94363a8c55ccc5e7a16d17a6d25373578aaa461cc18745270651d0bfcdb11d18",
+    "webmux/server/internal/httpapi/coordination_peers_network_test.go": "e6ed2eaef4d688cdd23109fd8009422bb78b751ba9d529160a69a6ba7747aad5",
+    "webmux/server/internal/httpapi/node_identity_network_test.go": "021846f96ab2a58d4019c19f5bfdb4fe73d662f3cef29d2973346b4fdcc49104",
+    "webmux/server/internal/httpapi/session_coordination.go": "60f52278796be9eafb916428a7860cb90b1bde40d5844131e239b3d6bfc44d59"
+  },
+  "checks": [
+    {
+      "command": "Node 24.22.2 PATH go test -p 4 -count=1 ./...",
+      "exit_code": 0,
+      "evidence": {
+        "path": "_build/coordination-claims630/go-test-final.log",
+        "sha256": "352cec665d34679f35e35057e527085796cf8c7227f69cbe54b9930c89dba4d4"
+      }
+    },
+    {
+      "command": "go test -race ./internal/coordination ./internal/coordinationclient ./internal/coordinationmcp ./internal/httpapi -run 'TestPeerClaim|TestPeerOverlap|TestProjectSnapshot|TestRemote|TestCoordinationPeerClaim|TestCoordinationRemoteMessage|TestAdmissionErrorRequires|TestMCP' -count=1",
+      "exit_code": 0,
+      "evidence": {
+        "path": "_build/coordination-claims630/race-final.log",
+        "sha256": "b0ffd9cf20770966f65638e6ae996f1ca29b41d0cb55b9a5f34b1ec621cdb819"
+      }
+    },
+    {
+      "command": "go vet ./...",
+      "exit_code": 0,
+      "evidence": {
+        "path": "_build/coordination-claims630/go-vet-final.log",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "command": "Node 24.22.2 PATH npm run test:contract",
+      "exit_code": 0,
+      "evidence": {
+        "path": "_build/coordination-claims630/contract-final.log",
+        "sha256": "4afaaec2ed30914b0f3ae6416b681088a047b12f40a6691ac4d09432bf5d746f"
+      }
+    },
+    {
+      "command": "GOOS=windows GOARCH=arm64 go test -c ./internal/httpapi",
+      "exit_code": 0,
+      "scope": "cross-compilation only; not Windows native acceptance"
+    }
+  ],
+  "native": {
+    "controller": "darwin/arm64",
+    "receiver": "linux/arm64",
+    "clientExit": 0,
+    "receiverExit": 0,
+    "sourceBaseCommit": "db8ab2c8238c760f028f6b356f317505531471b4",
+    "sourceRuntimeSha256": {
+      "webmux/server/internal/coordination/members.go": "3c900d6577652220168157fa54389c12601399a27d78c64c28ea81401cb37bac",
+      "webmux/server/internal/coordination/model.go": "bd09eec75244761a8035fe9c28cfd49238ab7a436aefd6c04692bfb5bdf4d7c0",
+      "webmux/server/internal/coordination/operations.go": "e894cf113be8a15ba9f39e2bbb0cb0d2bb26369009fcdfb63372e3a15621ffd6",
+      "webmux/server/internal/coordination/peer_claims.go": "b8bfc7fdec6634447b033eeb0c71cde194b06433afb4cbc8241ba14df626e123",
+      "webmux/server/internal/coordination/remote.go": "4fc6d5fb47182940d10e1cbd41f18b8d35cebfcb7ef1a02742eb38ecbf65be0f",
+      "webmux/server/internal/coordination/snapshot.go": "9408ff8c0804e3d7982700f74668bb6edd74e6a88925f1474e61c9c7e7ce35a5",
+      "webmux/server/internal/coordinationclient/client.go": "7eebfe40c44df9bd94789cda54cb1ab51bd63dc1c227723d3b8b994b520a5f70",
+      "webmux/server/internal/coordinationmcp/server.go": "57b4a4b1dabf3ad1952fd139c1d3a90e6410d58fc431950086fdae6da4441051",
+      "webmux/server/internal/httpapi/coordination_peers.go": "94363a8c55ccc5e7a16d17a6d25373578aaa461cc18745270651d0bfcdb11d18",
+      "webmux/server/internal/httpapi/session_coordination.go": "60f52278796be9eafb916428a7860cb90b1bde40d5844131e239b3d6bfc44d59"
+    },
+    "testInputNote": "The native binary predates af35f76, whose only Go change moves an unrelated revocation fixture cancellation before setup. It contains the claim HTTP/network fixtures at their recorded hashes; subsequent edits only add coordination-package and MCP-package unit tests, which are not linked into the HTTP test binary. Final full/race suites use af35f76 plus all recorded claim changes.",
+    "originalParentTestInput": {
+      "path": "webmux/server/internal/httpapi/coordination_messages_test.go",
+      "sha256": "abb4a7eb2a7f9a649c69c7c2ead2c39161128a36f6dac628fc8130dcc9492f32"
+    },
+    "httpFixtureSha256": {
+      "webmux/server/internal/httpapi/coordination_claims_test.go": "daa3200d5d13289a83934d4a3dfd586532c93e675dee5ba3f4e0e1634559c54a",
+      "webmux/server/internal/httpapi/coordination_peers_network_test.go": "e6ed2eaef4d688cdd23109fd8009422bb78b751ba9d529160a69a6ba7747aad5",
+      "webmux/server/internal/httpapi/node_identity_network_test.go": "021846f96ab2a58d4019c19f5bfdb4fe73d662f3cef29d2973346b4fdcc49104"
+    },
+    "roles": "TestCoordinationPeerNativeNetworkClient / TestNodeIdentityNativeNetworkServer",
+    "environment": "WEBMUX_NODE_NETWORK_ROLE=client|server WEBMUX_COORDINATION_PEER_NETWORK=1 WEBMUX_COORDINATION_MESSAGE_NETWORK=1 WEBMUX_COORDINATION_CLAIM_NETWORK=1; private directories and explicit non-loopback receiver bind",
+    "scope": "independent real Git repositories and linked worktrees; ordinary broker-owned PTY children; routed pinned HTTPS, isolated fixture certificate trust; no browser or manual maintenance calls",
+    "overlapAdmitRequests": 1,
+    "overlapReceiptStatusRequests": 1,
+    "sequence": [
+      "source file claim before receiving directory claim",
+      "background peer refresh discovers concurrent overlap",
+      "durable local observation and one remote inbox notice",
+      "recipient explicitly records delivered, acknowledged and completed",
+      "source observes remote completion",
+      "fresh check returns original remote claimant; exact retry freezes result"
+    ],
+    "parentMessagingControl": {
+      "admitRequests": 1,
+      "receiptStatusRequests": 2,
+      "deliberatelyDroppedCommittedReplies": 1
+    },
+    "connectionProofs": 18,
+    "credentialRequests": 17,
+    "localBinary": {
+      "path": "_build/coordination-claims630/httpapi-darwin.test",
+      "sha256": "8478be2c0de4c4ad54505bb5f39df7ff6c14f2173425837581ae544fc9079b7f"
+    },
+    "receiverBinary": {
+      "path": "_build/coordination-claims630/httpapi-linux.test",
+      "sha256": "0c8558837c45779e6143f65dcb1053461a6ea1d6624126c33fb425798d41ebcf"
+    },
+    "receiverTransferSha256Verified": true,
+    "clientLog": {
+      "path": "_build/coordination-claims630/run-final/client.log",
+      "sha256": "1d10d46c5b60b291e9ac61008afdd267c04d8e5fe2e2468acfbd08bc8f7eb7ba"
+    },
+    "serverLog": {
+      "path": "_build/coordination-claims630/run-final/server.log",
+      "sha256": "78177bc85cb4837149263031dc6704af778a6b6bb609ffaa91b02a32b7b8a299"
+    },
+    "receiverArtifacts": "/home/jkh/.cache/webmux/qualification/coordination-claims630/run-final",
+    "fixtureCredentialsRemoved": true,
+    "fixtureProcessesExited": true,
+    "installedServicesChanged": false
+  },
+  "parentHostedFailure": {
+    "url": "https://github.com/jordanhubbard/webmux/actions/runs/45000609614/job/137141101284",
+    "test": "TestCoordinationRemoteMessagePermissionsAndRevocation",
+    "originalOutcome": "failed before expected pending outbox: peer-unavailable",
+    "correctionCommit": "af35f7676a371f128e63c242e02fe05f2ebb3201",
+    "correction": "stop and join isolated maintenance before establishing snapshots, preserving production freshness and revocation assertions",
+    "localCheck": {
+      "command": "go test -race ./internal/httpapi -run '^TestCoordinationRemoteMessagePermissionsAndRevocation$' -count=10",
+      "exit_code": 0,
+      "evidence": {
+        "path": "_build/coordination-claims630/parent-revocation-fix.log",
+        "sha256": "39ddb79df7e7b46e892c80d6078ce83d3b0bb324dde114c769fa809dab0ca043"
+      }
+    },
+    "newHostedStatus": "pending; original failure remains failed"
+  },
+  "semantics": {
+    "ownership": "advisory, local originating ledger remains authority; remote conflicts retain full node/account/session identity",
+    "freshness": "remaining remote lease anchored before request plus snapshot TTL; inactive owners retain unexpired claims; incomplete/clockless peers never establish absence",
+    "concurrency": "background reconciliation catches claims registered between snapshots; no distributed file lock",
+    "notification": "one recipient event per original claim pair, coalescing peer-observation with authenticated remote-inbox admission while retaining explicit event receipts",
+    "permissions": "summary-only scope creates local observations; outgoing/incoming message permissions and overlap capability required for network delivery",
+    "retention": "no new bucket/schema; durable message/outbox history and stable claim-cycle IDs prevent repeated events across reconstruction"
+  },
+  "remaining": [
+    "shared remote worker reservation authority",
+    "real independently started coding agents negotiating work across hosts",
+    "live notifications and existing-agent onboarding",
+    "managed/SSH execution-host provisioning",
+    "explicit repository mappings",
+    "scale, pagination, retention and backoff qualification",
+    "platform custody/sandbox/distribution",
+    "complete LAN discovery/reconnect workflow"
+  ]
+}

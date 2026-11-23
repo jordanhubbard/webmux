@@ -6,6 +6,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -13,6 +14,39 @@ import (
 	"github.com/jordanhubbard/webmux/server/internal/screenstate"
 	"github.com/jordanhubbard/webmux/server/internal/terminal"
 )
+
+func TestRemoteCoordinationBootstrapEvidenceIsLiveAndPrivate(t *testing.T) {
+	b, store, launched := fixture(t)
+	if err := store.WriteConfig("app.yaml", map[string]any{"app": map[string]any{"session_logging": map[string]any{"enabled": false}}}); err != nil {
+		t.Fatal(err)
+	}
+	s, err := b.Create("owner", CreateRequest{Transport: "ssh", Hostname: "execution.example.test", Username: "worker"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	p := <-launched
+	directory := filepath.Join(t.TempDir(), "live-directory-only")
+	sendRecovery(t, b, s.ID, p, recovery.Event{Kind: "coordination", Coordination: "ssh-stream-local-configured", Platform: runtime.GOOS, Cwd: directory})
+	eventually(t, func() bool {
+		v, _ := b.Get("owner", s.ID)
+		return v.CoordinationChannel == "ssh-stream-local-configured" && v.CoordinationActivity != nil && v.CoordinationActivity.Directory == directory
+	})
+	v, _ := b.Get("owner", s.ID)
+	if v.Recovery != nil {
+		t.Fatal("coordination bootstrap enabled recovery history")
+	}
+	title := "bootstrap observed"
+	if _, err := b.Patch("owner", s.ID, Patch{Title: &title}); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(filepath.Join(store.Home, "data", "sessions", "sessions.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(data), "live-directory-only") || strings.Contains(string(data), "ssh-stream-local-configured") {
+		t.Fatal("live bootstrap routing became persisted capture history")
+	}
+}
 
 func sendRecovery(t *testing.T, b *Broker, id string, p *fakeProcess, value recovery.Event) {
 	t.Helper()
@@ -202,5 +236,42 @@ func TestWindowsNativeHistoryPrecedesSnapshotAndViewerReset(t *testing.T) {
 		if err = os.WriteFile(target, data, 0600); err != nil {
 			t.Fatal(err)
 		}
+	}
+}
+
+func TestCoordinationRoutingWithoutTranscriptRecording(t *testing.T) {
+	b, store, launched := fixture(t)
+	if err := store.WriteConfig("app.yaml", map[string]any{"app": map[string]any{"session_logging": map[string]any{"enabled": false}}}); err != nil {
+		t.Fatal(err)
+	}
+	directory := filepath.Join(t.TempDir(), "live-coordination-project")
+	s := create(t, b, "owner")
+	p := <-launched
+	sendRecovery(t, b, s.ID, p, recovery.Event{Kind: "cli", Instance: "current", Cwd: directory, CLI: "codex", Version: "codex-cli 0.171.0", Coordination: "mcp-configured", Argv: []string{"codex", "private-unrecorded-prompt"}})
+	eventually(t, func() bool {
+		v, _ := b.Get("owner", s.ID)
+		return v.CoordinationActivity != nil && v.CoordinationActivity.Interface == "mcp-configured"
+	})
+	current, _ := b.Get("owner", s.ID)
+	if current.CoordinationActivity.Directory != directory || current.Recovery != nil {
+		t.Fatal("minimal routing depended on transcript capture")
+	}
+	current.CoordinationActivity.Directory = "changed-clone"
+	again, _ := b.Get("owner", s.ID)
+	if again.CoordinationActivity.Directory != directory {
+		t.Fatal("snapshot mutated live observation")
+	}
+	// Force an ordinary persistence transition and verify the private live routing
+	// metadata has not become transcript/recovery history.
+	title := "Updated"
+	if _, err := b.Patch("owner", s.ID, Patch{Title: &title}); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(filepath.Join(store.Home, "data", "sessions", "sessions.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(data), "live-coordination-project") || strings.Contains(string(data), "private-unrecorded-prompt") || strings.Contains(string(data), "mcp-configured") {
+		t.Fatal("live routing leaked into saved broker history")
 	}
 }

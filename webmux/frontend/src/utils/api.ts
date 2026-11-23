@@ -128,8 +128,10 @@ export interface MacSetup {
 
 export interface ConnectedServer { id: string; name: string }
 
-export interface ManagedServer extends ConnectedServer { url: string; allow_http: boolean; token_env: string; credential_ready: boolean }
-export interface ServerGrant { id: string; owner: string; token_env: string; credential_ready: boolean }
+export interface ManagedServer extends ConnectedServer { coordination_reservations?: boolean; coordination_messages?: boolean; coordination_owner?: string; url: string; allow_http: boolean; token_env: string; credential_ready: boolean; identity?: { node_id: string; owner: string; tls_key_sha256: string } }
+export interface ServerGrant { coordination_reservations?: boolean; coordination_messages?: boolean; source_node_id?: string; source_owner?: string; coordination?: boolean; id: string; owner: string; token_env: string; credential_ready: boolean }
+export interface DiscoveredNode { instance: string; claimed_id: string; host: string; address: string; port: number; tls: boolean; last_seen: string; expires: string }
+export interface NodeDiscovery { contract: string; started: boolean; error: string; policy: { version: number; id: string; browse: boolean; advertise: boolean; interfaces: string[] | null }; candidates: DiscoveredNode[] }
 export interface ServerDirectory { servers: ManagedServer[]; grants: ServerGrant[] }
 export interface ServerCredentialInput { token_env: string; credential: string }
 
@@ -198,7 +200,18 @@ async function createCoordinatedAgent(input: CoordinationCreateRequest): Promise
   }
 }
 
+export interface SessionCoordinationPolicy { contract: 'webmux-session-coordination-policy/v1'; enabled: boolean }
+async function getSessionCoordinationPolicy(signal?: AbortSignal): Promise<SessionCoordinationPolicy> {
+  const value = await request<Partial<SessionCoordinationPolicy> | null>('/session-coordination/policy', { signal, cache: 'no-store' });
+  if (value?.contract !== 'webmux-session-coordination-policy/v1' || typeof value.enabled !== 'boolean') {
+    throw new Error('The server returned an invalid coordination policy');
+  }
+  return { contract: value.contract, enabled: value.enabled };
+}
+
 export const api = {
+  getSessionCoordinationPolicy,
+  setSessionCoordinationPolicy: (enabled: boolean, signal?: AbortSignal) => request<void>('/session-coordination/policy', { method: 'PUT', signal, body: JSON.stringify({ enabled }) }),
   getUSBForwardings: (signal?: AbortSignal) => request<USBForwardingLease[]>('/usb-forwardings', { signal, cache: 'no-store' }),
   createUSBForwarding: (spec: USBForwardingSpec) => request<USBForwardingTicket>('/usb-forwardings', { method: 'POST', body: JSON.stringify(spec) }),
   stopUSBForwarding: (id: string) => request<USBForwardingLease>(`/usb-forwardings/${encodeURIComponent(id)}/stop`, { method: 'POST' }),
@@ -206,10 +219,12 @@ export const api = {
   getSessionRecovery: (id: string, signal?: AbortSignal) => request<SessionRecovery>(`/session-recovery/${encodeURIComponent(id)}`, { signal, cache: 'no-store' }),
   recoverSession: (id: string, input: RecoveryRequest) => request<{ outcome: string; code?: string }>(`/session-recovery/${encodeURIComponent(id)}`, { method: 'POST', body: JSON.stringify(input) }),
   setAutoRecovery: (id: string, enabled: boolean) => request<{ auto_resume: boolean }>(`/session-recovery/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify({ auto_resume: enabled }) }),
+  verifyServerIdentity: (id: string) => request<void>(`/servers/${encodeURIComponent(id)}/verify-identity`, { method: 'POST', body: '{}' }),
+  getDiscoveredNodes: () => request<NodeDiscovery>('/discovered-nodes'),
   getServerDirectory: () => request<ServerDirectory>('/server-directory'),
-  saveServer: (id: string, input: ServerCredentialInput & { name: string; url: string; allow_http: boolean }) => request<void>(`/servers/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(input) }),
+  saveServer: (id: string, input: ServerCredentialInput & { name: string; url: string; allow_http: boolean; coordination_owner?: string; coordination_messages?: boolean; coordination_reservations?: boolean }) => request<void>(`/servers/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(input) }),
   deleteServer: (id: string) => request<void>(`/servers/${encodeURIComponent(id)}`, { method: 'DELETE' }),
-  saveServerGrant: (id: string, input: ServerCredentialInput & { owner: string }) => request<void>(`/server-grants/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(input) }),
+  saveServerGrant: (id: string, input: ServerCredentialInput & { owner: string; coordination?: boolean; coordination_reservations?: boolean; coordination_messages?: boolean; source_node_id?: string; source_owner?: string }) => request<void>(`/server-grants/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(input) }),
   deleteServerGrant: (id: string) => request<void>(`/server-grants/${encodeURIComponent(id)}`, { method: 'DELETE' }),
   getServers: () => request<{ version: number; servers: ConnectedServer[] }>('/servers'),
   getServerSessions: (server: string) => request<Session[]>(`/servers/${encodeURIComponent(server)}/sessions`),

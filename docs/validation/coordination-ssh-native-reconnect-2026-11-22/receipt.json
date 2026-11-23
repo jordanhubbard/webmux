@@ -1,0 +1,243 @@
+{
+  "version": 1,
+  "date": "2026-11-22",
+  "scope": "One persistent native Claude/MCP process pair across a planned ordinary SSH reconnect, explicit two-tool native permission profile; not full restart or complete roadmap acceptance",
+  "parent_commit": "be89ac30a90436bf856117ac4cd38584457df64b",
+  "native_cli": "Claude Code 2.1.319, Linux ARM64",
+  "source_sha256": {
+    "webmux/server/internal/httpapi/coordination_ssh_native_test.go": "30f47d3dcdf7dd4b4bb3cc595d6f09cbbb3d997f280d09da259d79f65460a51d",
+    "scripts/audit-coordination-ssh-agent.py": "74eea4dd3de98eade38fcbad48580ea7a839ff09f48cb90478c044ea70eafa3e",
+    "scripts/audit-coordination-native-pair.py": "8de1d4b998c26fbf54a61080d8b607c5a906bd635ef04fcf52544ab1ee742b04"
+  },
+  "executable_sha256": {
+    "webmux-linux-arm64": "1e95af9da64dfebeb7d5846f5016210773f946706623800aa8f2539c8f9bb081"
+  },
+  "runs": [
+    {
+      "name": "run1",
+      "private_log": "_build/coordination-ssh-native-reconnect630/native-run1.log",
+      "sha256": "856266a1009426268a52cb538ca16a6d4d7f9c240dbbc2f16d942b39ecdf5c83",
+      "native_test_exit_code": 1,
+      "result": "Failed original process identity gate before reconnect: wrapper and native process share comm=claude; failure retained."
+    },
+    {
+      "name": "run2",
+      "private_log": "_build/coordination-ssh-native-reconnect630/native-run2.log",
+      "sha256": "66885721784bafc234deb6e26c5e06ead791f0f5f31d5132438549e84f707863",
+      "native_test_exit_code": 1,
+      "result": "Failed original process identity gate before reconnect: wrapper and native process share comm=claude; failure retained."
+    },
+    {
+      "name": "run3",
+      "private_log": "_build/coordination-ssh-native-reconnect630/native-run3.log",
+      "sha256": "8598d76128ab80d66f1d4756fc716824b939c889f537ecaae5774b343a237105",
+      "native_test_exit_code": 0,
+      "source_scope": "Earlier harness/auditor before old-master termination gate; does not establish the final stronger assertion.",
+      "earlier_audit": {
+        "passed": true,
+        "evidence": {
+          "native_connected_dynamic_server": true,
+          "native_scoped_verified_view": true,
+          "native_work_after_view": true,
+          "source_ledger_confirms_task": true,
+          "only_approved_tools_and_discovery": true,
+          "all_tool_calls_completed": true,
+          "native_success": true,
+          "capability_not_in_output": true,
+          "same_live_cli_and_mcp_processes": true,
+          "same_provider_new_control": true,
+          "one_native_conversation_two_successful_turns": true,
+          "fresh_view_and_action_after_reconnect": true,
+          "source_confirms_reconnected_task": true
+        },
+        "failures": [],
+        "native_tool_call_count": 5,
+        "source_hashes": {
+          "expected.json": "d85e147317aa5afb39616772a69a004863ca3100c7507753397d8978c70a5d8d",
+          "native.jsonl": "e7f3b1138858b44d335a821990a5229330f45e9daf9a6fa7a9922dd98d663e1b",
+          "view.json": "e97c66827703209739c5daceb48dbe8dd69c98725e91102bf0ebe112b0b79c46",
+          "terminal.log": "2355df87a4e4f89dc68ac370cbc2cb20b79ed0f1e8be2cb9e75334100749213d",
+          "native.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "reconnect.json": "cd9b9e2e5972da65b4be44c4d745e9fced9a118bc755c1fdb85896a193a08540",
+          "view-reconnected.json": "f158cb408dfce4a734f708a28e3f6a044c6592e963526fca086b1b733d286106"
+        }
+      }
+    },
+    {
+      "name": "run4",
+      "private_log": "_build/coordination-ssh-native-reconnect630/native-run4.log",
+      "sha256": "bb8ee9102c9359a6d3bb87dfaf84d40d69c428c1eaad61df35a357e28915eb15",
+      "native_test_exit_code": 0,
+      "source_scope": "Earlier harness/auditor before old-master termination gate; does not establish the final stronger assertion.",
+      "earlier_audit": {
+        "passed": true,
+        "evidence": {
+          "native_connected_dynamic_server": true,
+          "native_scoped_verified_view": true,
+          "native_work_after_view": true,
+          "source_ledger_confirms_task": true,
+          "only_approved_tools_and_discovery": true,
+          "all_tool_calls_completed": true,
+          "native_success": true,
+          "capability_not_in_output": true,
+          "same_live_cli_and_mcp_processes": true,
+          "same_provider_new_control": true,
+          "one_native_conversation_two_successful_turns": true,
+          "fresh_view_and_action_after_reconnect": true,
+          "source_confirms_reconnected_task": true
+        },
+        "failures": [],
+        "native_tool_call_count": 5,
+        "source_hashes": {
+          "expected.json": "2d4979a19036c45e740d39aa2d353a8bb803b71789e7c082cdd322eb0b6378df",
+          "native.jsonl": "41f807430380ae8e5a6a0ab8e95b0b77ce488a9e83a4759d03bb71b135b7bd4a",
+          "view.json": "6b1ac696e78a47e8e059c0b0aac52f300d49871c56f72afb6743bb25d900cb8f",
+          "terminal.log": "9220a1d68301c4bad1d70a10e9511e1b5a6f3cbb7e051aee5fe377c9abbe21f8",
+          "native.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "reconnect.json": "6cf1dbf66f60d15f5c6fd9df032a2088850794ee562b7bcba8c881d4a9cf6528",
+          "view-reconnected.json": "f07a862d0529cf2ebdfb777c0f37edec670b33202a0d3029bba08cacf578dfee"
+        }
+      }
+    },
+    {
+      "name": "run5",
+      "private_log": "_build/coordination-ssh-native-reconnect630/native-run5.log",
+      "sha256": "15fa8393a8a3ffb1af084ff943605e75ea8a3fabdd31f055d2f09f590e7c4650",
+      "native_test_exit_code": 0,
+      "source_scope": "Final source",
+      "audit": {
+        "passed": true,
+        "evidence": {
+          "native_connected_dynamic_server": true,
+          "native_scoped_verified_view": true,
+          "native_work_after_view": true,
+          "source_ledger_confirms_task": true,
+          "only_approved_tools_and_discovery": true,
+          "all_tool_calls_completed": true,
+          "native_success": true,
+          "capability_not_in_output": true,
+          "same_live_cli_and_mcp_processes": true,
+          "same_provider_new_control": true,
+          "one_native_conversation_two_successful_turns": true,
+          "fresh_view_and_action_after_reconnect": true,
+          "source_confirms_reconnected_task": true
+        },
+        "failures": [],
+        "native_tool_call_count": 5,
+        "source_hashes": {
+          "expected.json": "05f6e26e1b82393f8d70bccab80dad821bd62fcd5e2352a7a62882c9cdc8b4a5",
+          "native.jsonl": "7519074d35962153c641a5f34d2f6170340508da2eea34fa268dea0aa6113410",
+          "view.json": "bcf1271fb04c0efe681be7c2aa20190348317dc4afad62f3179902290afd5a76",
+          "terminal.log": "715da8dfb4e15e63589049bf4bd94ed5fea901bee984e59ad7d1a05cffaaeacb",
+          "native.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "reconnect.json": "bf732cec2a429fe35e8ba5fad6744b5ce13a1c06893514b513d31403642e1a5b",
+          "view-reconnected.json": "76ea5783c603c08a617472b91198492dd4167e18a89c50ebf181e17f7e9ca5c1"
+        }
+      }
+    }
+  ],
+  "negative_controls": {
+    "changed_claude_pid": [
+      "same_live_cli_and_mcp_processes"
+    ],
+    "changed_mcp_start": [
+      "same_live_cli_and_mcp_processes"
+    ],
+    "changed_launcher_start": [
+      "same_live_cli_and_mcp_processes"
+    ],
+    "same_control": [
+      "same_provider_new_control"
+    ],
+    "old_master_alive": [
+      "same_provider_new_control"
+    ],
+    "changed_pane": [
+      "same_provider_new_control"
+    ],
+    "new_conversation": [
+      "one_native_conversation_two_successful_turns"
+    ],
+    "missing_second_view": [
+      "all_tool_calls_completed",
+      "fresh_view_and_action_after_reconnect"
+    ],
+    "missing_second_action": [
+      "all_tool_calls_completed",
+      "fresh_view_and_action_after_reconnect"
+    ],
+    "false_second_success": [
+      "one_native_conversation_two_successful_turns"
+    ],
+    "duplicate_request_id": [
+      "fresh_view_and_action_after_reconnect"
+    ],
+    "lost_reconnected_task": [
+      "source_confirms_reconnected_task"
+    ],
+    "calls_before_second_turn": [
+      "fresh_view_and_action_after_reconnect"
+    ]
+  },
+  "validation": {
+    "go_suite": {
+      "command": "PATH=<Node24>/bin:$PATH go test -p 4 -count=1 ./...",
+      "working_directory": "webmux/server",
+      "exit_code": 0,
+      "sha256": "3607f3aad9e5ae5a47af6712aee43d88219bfb1ac6a5a9aa73b85ad53bcc617b",
+      "private_path": "_build/coordination-ssh-native-reconnect630/go-test.log",
+      "source_scope": "Before final fixture-only failure-capture refactor and added old-master termination assertion; final test body additionally exercised by real native run 5."
+    },
+    "vet": {
+      "command": "go vet ./internal/httpapi",
+      "exit_code": 0,
+      "source_scope": "final source"
+    },
+    "python_compile_exit_code": 0,
+    "negative_control_count": 13
+  },
+  "remaining": [
+    "controller restart and full durable coordination lifecycle",
+    "uncertain in-flight delivery and unexpected tunnel loss",
+    "managed/existing-agent onboarding",
+    "password SSH, native Mosh and Windows",
+    "discovered/enrolled complete two-real-host workflow"
+  ],
+  "original_failed_run3_audit": {
+    "private_path": "_build/coordination-ssh-native-reconnect630/run3-initial-audit.json",
+    "sha256": "8bb190f6bce8e483052ebc5bb5ac74a5d41d999583ae8e0274447733d2fd2743",
+    "result": {
+      "passed": false,
+      "evidence": {
+        "native_connected_dynamic_server": true,
+        "native_scoped_verified_view": true,
+        "native_work_after_view": true,
+        "source_ledger_confirms_task": true,
+        "only_approved_tools_and_discovery": true,
+        "all_tool_calls_completed": true,
+        "native_success": true,
+        "capability_not_in_output": true,
+        "same_live_cli_and_mcp_processes": true,
+        "same_provider_new_control": true,
+        "one_native_conversation_two_successful_turns": false,
+        "fresh_view_and_action_after_reconnect": true,
+        "source_confirms_reconnected_task": true
+      },
+      "failures": [
+        "one_native_conversation_two_successful_turns"
+      ],
+      "native_tool_call_count": 5,
+      "source_hashes": {
+        "expected.json": "d85e147317aa5afb39616772a69a004863ca3100c7507753397d8978c70a5d8d",
+        "native.jsonl": "e7f3b1138858b44d335a821990a5229330f45e9daf9a6fa7a9922dd98d663e1b",
+        "view.json": "e97c66827703209739c5daceb48dbe8dd69c98725e91102bf0ebe112b0b79c46",
+        "terminal.log": "2355df87a4e4f89dc68ac370cbc2cb20b79ed0f1e8be2cb9e75334100749213d",
+        "native.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "reconnect.json": "cd9b9e2e5972da65b4be44c4d745e9fced9a118bc755c1fdb85896a193a08540",
+        "view-reconnected.json": "f158cb408dfce4a734f708a28e3f6a044c6592e963526fca086b1b733d286106"
+      }
+    },
+    "audit_source_sha256": "334c274b90b7124115b3014360ec7d8e342f743151d08bd6410604e9b96e7390",
+    "reason": "Incorrect single-init assumption; native stream input emits init per turn with the same conversation ID."
+  }
+}

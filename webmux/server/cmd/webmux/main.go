@@ -26,7 +26,8 @@ import (
 	"github.com/jordanhubbard/webmux/server/internal/browser"
 	"github.com/jordanhubbard/webmux/server/internal/browseropen"
 	appconfig "github.com/jordanhubbard/webmux/server/internal/config"
-	"github.com/jordanhubbard/webmux/server/internal/discovery"
+	"github.com/jordanhubbard/webmux/server/internal/coordinationclient"
+	"github.com/jordanhubbard/webmux/server/internal/coordinationmcp"
 	"github.com/jordanhubbard/webmux/server/internal/httpapi"
 	"github.com/jordanhubbard/webmux/server/internal/macsetup"
 	"github.com/jordanhubbard/webmux/server/internal/nativeobserve"
@@ -62,6 +63,17 @@ func main() {
 }
 
 func run() (resultErr error) {
+	if len(os.Args) == 3 && os.Args[1] == "coordinate" && os.Args[2] == "mcp" {
+		ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+		defer stop()
+		return coordinationmcp.Run(ctx)
+	}
+	if len(os.Args) >= 2 && os.Args[1] == "coordinate" {
+		return coordinationclient.Run(os.Args[2:], os.Stdin, os.Stdout)
+	}
+	if len(os.Args) == 2 && os.Args[1] == recovery.CodexFilesHelper {
+		return recovery.RunCodexFilesHelper()
+	}
 	if len(os.Args) >= 2 && os.Args[1] == nativeobserve.Helper {
 		return nativeobserve.Run(os.Args[2:])
 	}
@@ -259,15 +271,14 @@ func run() (resultErr error) {
 		defer listener.Close()
 		listeners = append(listeners, tls.NewListener(listener, &tls.Config{MinVersion: tls.VersionTLS12, Certificates: []tls.Certificate{*certificate}}))
 	}
+	// Private/loopback listeners do not participate in network discovery.
 	if *listen == "" && config.App.ListenHost != "127.0.0.1" && config.App.ListenHost != "::1" && config.App.ListenHost != "localhost" {
-		host, hostErr := os.Hostname()
-		if hostErr == nil {
-			advertisement, advertiseErr := discovery.Advertise(host, httpPort, httpsPort, certificate != nil)
-			if advertiseErr == nil {
-				defer advertisement.Close()
-			} else {
-				slog.Warn("WebMux port advertisement unavailable", "error", advertiseErr)
+		if host, err := os.Hostname(); err == nil {
+			tlsPort := 0
+			if certificate != nil {
+				tlsPort = listeners[1].Addr().(*net.TCPAddr).Port
 			}
+			api.StartNodeDiscovery(host, httpListener.Addr().(*net.TCPAddr).Port, tlsPort)
 		}
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -276,9 +287,30 @@ func run() (resultErr error) {
 	maintenanceDone := make(chan struct{})
 	go func() { defer close(maintenanceDone); api.MaintainUploads(maintenanceCtx) }()
 	defer func() { cancelMaintenance(); <-maintenanceDone }()
+	var agentServer *http.Server
+	agentListener, agentErr := net.Listen("tcp", "127.0.0.1:0")
+	if agentErr != nil {
+		slog.Warn("local session coordination interface unavailable", "error", agentErr)
+	} else {
+		defer agentListener.Close()
+		api.EnableSessionCoordination("http://" + agentListener.Addr().String())
+		agentServer = &http.Server{Handler: api.CoordinationAgentHandler(), ReadHeaderTimeout: 3 * time.Second, ReadTimeout: 5 * time.Second, WriteTimeout: 10 * time.Second, IdleTimeout: 30 * time.Second}
+		defer agentServer.Close()
+	}
+	// Serve before restoration: an ordinary child may use its interface as soon
+	// as it starts, even while another provider is still restoring. Admission
+	// checks the broker's observed live run, never a saved connected flag.
+	if agentServer != nil {
+		go func() {
+			if err := agentServer.Serve(agentListener); err != nil && !errors.Is(err, http.ErrServerClosed) {
+				slog.Warn("local coordination interface stopped", "error", err)
+			}
+		}()
+	}
 	if err := api.RestoreSessions(); err != nil {
 		return fmt.Errorf("restore sessions: %w", err)
 	}
+	api.StartSessionCoordination()
 	if slaveHost != "" {
 		if err := api.StartSlave(slaveHost, slavePort); err != nil {
 			return fmt.Errorf("initialize slave session: %w", err)

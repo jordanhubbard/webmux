@@ -1,0 +1,103 @@
+{
+  "scope": "Authenticated HTTPS node/account identity and explicit candidate address migration component; full #630/#631 acceptance remains open",
+  "qualifiedAtUTC": "2026-11-22T05:22:29.152536+00:00",
+  "baseCommit": "01cf83ba41ad84232532acd271f96c685d58c222",
+  "sourceSha256": {
+    "webmux/server/internal/httpapi/node_identity.go": "5ec5a973b306664f09ac133ce47a629c1efc933edc9bd994880c1ac0366a015f",
+    "webmux/server/internal/httpapi/node_enrollment.go": "02ebdfac270f741eb221b84cee5348f8ccbbcfb1548fd7e6285549389311df22",
+    "webmux/server/internal/httpapi/node_identity_test.go": "c8243eccec540df4bce70ac92079c24f1da0fa466793f2798e570b8878828193",
+    "webmux/server/internal/httpapi/node_identity_network_test.go": "047a1441fe24ed86caffea435cf394bb964f038afe6c41a490e0a6d5de38623e",
+    "webmux/server/internal/httpapi/node_discovery.go": "122333b9f63afaaf8407a7bb9cb0a16c6de9ccb51567aebf3c7921c5998df2f0",
+    "webmux/server/internal/httpapi/server.go": "0b827c0c2570c7830be0137a8374f420141ebf6bc44774f87de413bfe121a3ce",
+    "webmux/server/internal/httpapi/server_directory.go": "18de1242ecc1432f81c37712480e61df5faf34fb251c7a9e89367ebe762114df",
+    "webmux/server/internal/httpapi/federation.go": "f4dd6937140b065951b3ed07c2bcaf70e8c2e088dc9b7c7a795fd920fe7049f7",
+    "webmux/frontend/src/components/ServersDialog.tsx": "331cb39f0a5f030976ba762b9b7f3c1fd56bf8e28a8ed7ca80c4a5a7e5c1656f",
+    "webmux/frontend/src/utils/api.ts": "325007876b3975a08eb1efbde6c01cb0e08a635188a7b7a4c10790cbd814edd3",
+    "tests/frontend/ServersDialog.test.tsx": "93d15accc827abaa2cd57ed9793d9b94f5b7058e11e4624607a38014b8b6a514"
+  },
+  "checks": [
+    {
+      "command": "Node 24.22.2 PATH go test -count=1 ./...",
+      "exit_code": 0,
+      "evidence": "_build/node-identity631/go-test-admitted.log"
+    },
+    {
+      "command": "go vet ./...",
+      "exit_code": 0
+    },
+    {
+      "command": "go test -race ./internal/httpapi -run 'Test(Node|Federation)' -count=1",
+      "exit_code": 0,
+      "evidence": "_build/node-identity631/race-admitted.log"
+    },
+    {
+      "command": "npm run test:contract with Node 24 PATH",
+      "exit_code": 0,
+      "evidence": "_build/node-identity631/contract.log"
+    },
+    {
+      "command": "npm run typecheck; frontend lint, test and production build",
+      "exit_code": 0,
+      "frontendTests": 476,
+      "frontendFiles": 44
+    },
+    {
+      "command": "GOOS=windows GOARCH=arm64 CGO_ENABLED=0 go test -c ./internal/httpapi",
+      "exit_code": 0,
+      "scope": "cross-compilation only"
+    }
+  ],
+  "native": {
+    "client_exit": 0,
+    "server_exit": 0,
+    "linux_binary_sha256": "42c4f8d2fc8aa55be306de7d14338f2d0368ac2cc87eb0124439c1cf47907716",
+    "darwin_binary_sha256": "12f7f08e33c2517f0d6c9b9b1fa80aca4af82e4e0da7c998a1c22f0d7cf70665",
+    "scope": "two native hosts; isolated real API/TLS protocol and explicit candidate migration; no mDNS or native coding-agent acceptance",
+    "clientPlatform": "darwin/arm64",
+    "receiverPlatform": "linux/arm64",
+    "transport": "routed network; direct end-to-end TLS; explicitly trusted isolated fixture certificate",
+    "candidateInput": "supplied explicitly; no mDNS or background timer acceptance",
+    "successfulProofs": 7,
+    "bearerRequests": 5,
+    "connectionWitness": "exact accepted net.Conn; proof response must succeed before bearer request",
+    "temporaryGrantRemoved": true,
+    "clientOutput": "=== RUN   TestNodeIdentityNativeNetworkClient\n    node_identity_network_test.go:272: native two-host TLS enrollment, same-connection HTTP, endpoint loss, authenticated address migration and controller reconstruction passed; identity binding digest=bec5b5d0ce7841756a25d9d6a6904fcde4bdfc14e9f1a5254339574d1f8fff09 migrated port=46433\n--- PASS: TestNodeIdentityNativeNetworkClient (0.20s)\nPASS\n",
+    "receiverOutput": "=== RUN   TestNodeIdentityNativeNetworkServer\n    node_identity_network_test.go:191: native receiver observed 7 proofs and 5 requests with bearer credentials, all on proven TLS connections\n--- PASS: TestNodeIdentityNativeNetworkServer (4.36s)\nPASS\n"
+  },
+  "retainedEvidenceSha256": {
+    "_build/node-identity631/go-test-admitted.log": "9740de866452b889b96f1ca683365550fe501dd4068cdca2ca1b760fbef8ea5c",
+    "_build/node-identity631/race-admitted.log": "46ad9688578a777d015e66b7ec6d90c97691df7445ee250ee740e37189c20331",
+    "_build/node-identity631/contract.log": "2109f50727ec01af0acd55d8e6d41ab3ec28d6ceb14ba1ae08cd280279411288",
+    "_build/node-identity631/run-20261121-212136/client.log": "d10450c1177aa828b7d701d217f2114a12d892be099adc88bfb8a2bf78c05d31",
+    "_build/node-identity631/run-20261121-212136/server.log": "fd505e18b01e6344e8566a0c300d566c462f17484577eeca733447593f24e172"
+  },
+  "failedExperiment": {
+    "case": "run-20261121-211652",
+    "client_exit": 1,
+    "receiver_exit": 1,
+    "outcome": "Intermediate on-link-prefix guard refused a valid routed enrolled peer; receiver reached its unchanged 90-second timeout. Guard removed; direct TLS, original node/account/key and channel proof retained. Failed evidence is not admitted as passing.",
+    "sourceSha256": {
+      "_build/node-identity631/experimental-onlink-node_enrollment.go.txt": "a76c03f9135d8b96b8fa64f53841d5307dda23aec9a50c5614cb43ddbfe7ff30",
+      "_build/node-identity631/experimental-onlink-node_identity_test.go.txt": "224496d5b2e0b19a0a0700fd915a621f95482f3532fd5af2af1dfaf944e732a3"
+    },
+    "binaryResults": {
+      "client_exit": 1,
+      "server_exit": 1,
+      "linux_binary_sha256": "5bb3c9a016d301cc7b0607cc437312a76ff8fa72a1e5816add4d180ccc53e860",
+      "darwin_binary_sha256": "66ec110ee91ec044b49d2eed4c4bd6a232f8445aacd4e597b5520e7c806055d2",
+      "scope": "two native hosts; isolated real API/TLS protocol and explicit candidate migration; no mDNS or native coding-agent acceptance"
+    },
+    "outputSha256": {
+      "client.log": "2ae0a15bb82dee825c2527ac6572a527567a88493f101509363269fddf0c9986",
+      "server.log": "6b3c3f013eb65a0c6522a472eeb0abdb2fb49f8f342a9d6cab076e8e123acbbd"
+    }
+  },
+  "remaining": [
+    "macOS native mDNS",
+    "Windows native node networking",
+    "complete discovered two-host enrollment and reconnect",
+    "background lifecycle with real discovery events",
+    "deployment/OS trust-store and package acceptance",
+    "real independently started ordinary/managed agents and durable coordination workflow"
+  ]
+}

@@ -1,0 +1,73 @@
+{
+  "version": 1,
+  "date": "2026-11-22",
+  "scope": "Advisory claim integration with corrected parent; no new native/two-host acceptance",
+  "parent_head": "f3b09cdfff7fd82e1b2d15c13c6fbbf2cb099e55",
+  "original_claim_head": "6f065aae880b7a15cb566a4d7e7408736f31999a",
+  "source_sha256": {
+    "webmux/server/internal/httpapi/coordination_peers.go": "c9270fd7473a83391b3842c62acf273e84c1ed5a0ac3660534f78aff1fc02f29",
+    "webmux/server/internal/httpapi/coordination_claims_test.go": "daa3200d5d13289a83934d4a3dfd586532c93e675dee5ba3f4e0e1634559c54a",
+    "webmux/server/internal/coordination/peer_claims.go": "b8bfc7fdec6634447b033eeb0c71cde194b06433afb4cbc8241ba14df626e123",
+    "webmux/server/internal/coordination/peer_claims_test.go": "b732a6cc6fdacba79664c18f212e10a0bb959a6121040b67626b4ac939c2f9d3",
+    "webmux/server/internal/httpapi/coordination_messages.go": "ea69ef0596d99f46e8721f62b32721a430ea4941c2e82cccb2ed54a22a08e9ed",
+    "webmux/server/internal/httpapi/coordination_messages_test.go": "20ab045995137e9ee38feefa193192ff934d9d965820362eddfac00c10646622"
+  },
+  "evidence": [
+    {
+      "private_path": "_build/integrate-coordination-claims630/integration-before.log",
+      "exit_code": 1,
+      "sha256": "e1989496ae5656bb12b7409d05ac9ac66585dace63095ad745f26cc8fb7e49f8",
+      "source_scope": "automatic source merge before restoring the lease timing observation"
+    },
+    {
+      "private_path": "_build/integrate-coordination-claims630/go-test.log",
+      "exit_code": 0,
+      "sha256": "b2eac61e4f8cabe298ec405ebf108ba90a011ab6f59f135268f22eace6ef8dd0",
+      "source_scope": "corrected combined source"
+    },
+    {
+      "private_path": "_build/integrate-coordination-claims630/core-race.log",
+      "exit_code": 0,
+      "sha256": "08581643a1a6d9dc1c634b576210ce0ff7ff70b28d40faecb6b0d8a631fa41bc",
+      "source_scope": "corrected combined source"
+    },
+    {
+      "private_path": "_build/integrate-coordination-claims630/api-race.log",
+      "exit_code": 0,
+      "sha256": "952e724e958c07f998daccf09981420e96207a6f5b48ddd341080e5692a2b15d",
+      "source_scope": "corrected combined source"
+    },
+    {
+      "private_path": "_build/integrate-coordination-claims630/vet.log",
+      "exit_code": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source_scope": "corrected combined source"
+    },
+    {
+      "private_path": "_build/integrate-coordination-claims630/typecheck.log",
+      "exit_code": 0,
+      "sha256": "a4b9d0bbbc3660d4798d15f01182907929f23dfb9c9fceb96fbbeeb6b9b182b1",
+      "source_scope": "corrected combined source"
+    },
+    {
+      "private_path": "_build/integrate-coordination-claims630/server-contract.log",
+      "exit_code": 0,
+      "sha256": "4afaaec2ed30914b0f3ae6416b681088a047b12f40a6691ac4d09432bf5d746f",
+      "source_scope": "corrected combined source"
+    }
+  ],
+  "commands": {
+    "full_go": "go test -p 4 -count=1 ./...",
+    "core_race": "go test -race -count=1 ./internal/coordination ./internal/coordinationclient ./internal/coordinationmcp",
+    "api_race": "go test -race -count=1 -run 'TestCoordination(PeerClaim|PeerClaims|RemoteMessage|MessageRevocation|LateSnapshot|DeletedAccount)' ./internal/httpapi",
+    "vet": "go vet ./...",
+    "typecheck": "npm run typecheck",
+    "contract": "npm run test:contract"
+  },
+  "limitations": [
+    "Original native claims evidence remains bound to its earlier binaries.",
+    "No new independently started coding-agent, two-host or LAN acceptance.",
+    "Fresh hosted checks and parent delivery are required before merge.",
+    "Full roadmap acceptance remains open."
+  ]
+}

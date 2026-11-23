@@ -1,0 +1,147 @@
+{
+  "schema": "webmux.integration_investigation_sources.v1",
+  "observed_at": "2026-11-22T17:11:27.390485+00:00",
+  "scope": "Read-only source/interface investigation; not native integration acceptance",
+  "mac": {
+    "head": "99925eaff54076310b58f15e0fb4ba9079746673",
+    "inspected_paths_dirty": false,
+    "sha256": {
+      "src/mac/services.py": "1874db38334d386cb8b52e0485952ed247cff5712a109344eeb0817e522dcc55",
+      "src/mac/review_service.py": "9026c3c55968096f846391c3a91516fe77ba33f894e485f4aa8cce783dbcc9e1",
+      "docs/integration-authority-contract.md": "9d66c6716973de74e20cdfcf22a9bfb854a4fff9c6c7755a8dec6461893f0172",
+      "docs/task-dependency-semantics.md": "3c336fdeb8c480e94030d23a1624159253ba89c160fb1de891ab64d205b65147",
+      "docs/repository-runtime-contract.md": "72f96500312a3bcde47d9e11c90469b29c8ba85d71c5168f078cc6f1341edccc",
+      "docs/client-bootstrap-contract.md": "59e88a86b17f0ac074c3a29bef3035d0d855a0a949977c4c8d311d3411fcec10",
+      "docs/book/01-system.md": "97438b149e0e146d680a60ab22933707acb96a68cebad022ecf3f5f38690005b",
+      "docs/book/03-projects-and-tasks.md": "4011fe818d861524f879231df81cc453a7932e8791f031e44d7264003ae95cfc",
+      "docs/book/04-machines-and-agents.md": "94856adbdeb421e21faec26596dcbf308e8c2151ccdd2be7b1dad709f89100f8",
+      "docs/book/05-evidence-review-completion.md": "ccc1141a7604bf43c9cfd02f0a37ca0c88c00b218fa2bc04a12e1fa669359074",
+      "docs/book/06-hermes-and-ide.md": "9c043da388291fe142a1887aa60a40ed4a6159d463c92036f88d1e9859776960",
+      "docs/book/08-plans-and-dags.md": "e9209e8b920cc9e22877985186e9344ff86113864a29d222995c1a645910f074",
+      "docs/book/11-publication-and-refs.md": "13093c419f58f982dc2a7e8201cac7047f81d663f9e98cebcd2fdd8ba0f4b7e3",
+      "docs/book/16-apis-and-integrations.md": "7cbb7aaa9ab26f164154d97d64ba9b758b562107abce0ac6ad7c645480c631b1",
+      "docs/adr/0025-the-hub-ui-is-the-observability-console.md": "055da30dddf772371ba7633724b64515ad7652e5c599aa6e52caefaf3b37b5ac",
+      "docs/adr/0034-project-mission-control.md": "a633e8fa142edd2353e821df9475a772ebfebab4c4e322543dc21668ac96ab90"
+    }
+  },
+  "literate_ai": {
+    "head": "ebf88985be10f733dd64f469b7cd4aa685ce9083",
+    "inspected_paths_dirty": false,
+    "sha256": {
+      ".mac/project.yaml": "3d6baf34581b0d528725956dd1f969575ef616d52d291cc7558e2468f8c73cce"
+    }
+  },
+  "webmux": {
+    "head": "86911d0828ca35f27bd4f108ad6ee6ca26265970",
+    "inspected_paths_dirty": false,
+    "sha256": {
+      "README.md": "6bb3f9442923a102f3790437af6f879c180cfa1d55b97f193024edf66d9ea588",
+      "docs/openrig.md": "ead94058c4e1891f196fe277f9df8cdcd9f61c33cb616c95015717b9f45672ed",
+      "docs/session-coordination.md": "f0ce5e67d998d109438008837d7d30ce2154df27937ae2a97d532914ad5f5f01",
+      "docs/session-recovery.md": "25a25e8650cdd4fb14d04617ba86d0e79aea00a0516eba3f4f3ad1c254d9b0dc",
+      "webmux/server/internal/httpapi/coordination_providers.go": "d0bb43c1710736f3432e2af025ccda67df0e7e4119d8d2bec41104a18ab2b2af"
+    }
+  },
+  "rig_installed": {
+    "revision": "9d0200f39c1e1e62ac98e6995744cf8efb301a30",
+    "sha256": {
+      "queue-repository.js": "835765bb8751ae1b221f41189b7ed90db7e4a39a3f91a4fbc5ccf88b9bf1736f",
+      "workflow-runtime.js": "d78cffa16503c026459cf16e29203243503cdee931c9a134ee9c9e50aa6987e9",
+      "workflow-validator.js": "76c86793343a6961add9ce352271594c7ae3dbdb904dd31597c47d574be8ae8f",
+      "workflow-projector.js": "65b35dc5ad5f4b2bbbe0b7453c02e8cf0de26a91949afaffdc34942e99415c0c",
+      "claim-service.js": "9f34a3d806d5632e4c2448de5bf5ad4827bb3944bbc78bbde03bede8d40746d9"
+    }
+  },
+  "fetched_sources_sha256": {
+    "agent-deck-remote.md": "f019a7069bcacb871a1d7698996c73845a846db951ac7683d824197fced1c53b",
+    "agent-deck-watchers.md": "39564d795786b241aecca769a60f1548f9b2a8af132f7260591b1c782b75fc1b",
+    "rig-coordination.md": "2bac374a1c4031ab6e00c1d8c0bda2ab47051cfc5bf0539b371a04ba64caaffc",
+    "rig-workflow.md": "0dc1602250350b7b8b64077f9b4a466d8bd5abd42e09caa738ae3aca58c4135c",
+    "agent-deck-conductor.md": "a79d8f08e82c4061d0659fcc3a4b01de8991ede0c6266e81c89750bcd90f2ade",
+    "rig-mission.md": "657b9ae52cb2c01ae2b9040633782c3f71aa47ee639b6149dcdd058c3bcd7be7"
+  },
+  "native_versions": {
+    "mac": {
+      "exit_code": 0,
+      "output": "mac 1.5.0"
+    },
+    "rig": {
+      "exit_code": 0,
+      "output": "0.6.14 (9d0200f3)"
+    },
+    "agent-deck": {
+      "exit_code": 0,
+      "output": "Agent Deck v1.16.34"
+    }
+  },
+  "upstream_heads_consulted": {
+    "agent_deck": "19794eb803749a12ce2371de0ff7ae1dc3d65392",
+    "rig": "2b73674c99ab003a82f487cc1396426dcc3706f9"
+  },
+  "authorization_audit": {
+    "observed_at": "2026-11-22T19:43:06.776433+00:00",
+    "revision": "99925eaff54076310b58f15e0fb4ba9079746673",
+    "path": "src/mac/api.py",
+    "git_blob": "c3a2800b71cd346f6a3cfec1c0d87598814b13f8",
+    "sha256": "9d995b8f1c62ca4153b910dc526f47ae650e67ff907299fc0f16ff75dfa3efc2",
+    "retrieval": "GitHub pinned source; no local MAC/NAS filesystem accessed",
+    "line_ranges": {
+      "tenant_read_contract": [
+        91,
+        104
+      ],
+      "ordinary_get_scope": [
+        2037,
+        2038
+      ],
+      "project_graph": [
+        4549,
+        4565
+      ],
+      "task_filter": [
+        4907,
+        4941
+      ],
+      "empty_token_map_bypass": [
+        2113,
+        2126
+      ]
+    },
+    "scope": "Pinned source/authorization audit only; no native adapter or live credential qualification",
+    "findings": [
+      "MAC intentionally returns fleet-wide reads; tenant binding constrains writes",
+      "Caller project/tenant filters are selection, not receiving-account authorization",
+      "WebMux requires trusted server projection and per-account canonical project bindings"
+    ],
+    "native_authorization_acceptance": false,
+    "mac_or_fleet_mutations": false
+  },
+  "project_graph_wire_audit": {
+    "observed_at": "2026-11-22T19:52:23.845247+00:00",
+    "revision": "99925eaff54076310b58f15e0fb4ba9079746673",
+    "path": "src/mac/observability_console.py",
+    "sha256": "ec11c5ebd1aae742071135e45e0ad2aa06d27826fd8eeaeb3aa4a43cf3667ee2",
+    "line_ranges": {
+      "graph_builder": [
+        584,
+        752
+      ],
+      "project_name_and_found": [
+        601,
+        611
+      ],
+      "cross_project_edges": [
+        676,
+        722
+      ]
+    },
+    "retrieval": "GitHub pinned source; no local MAC/NAS filesystem accessed",
+    "findings": [
+      "found is bool(nonempty project name), not project/repository verification",
+      "Dependency SQL join can return foreign project identifiers, titles and states",
+      "Bounded graph is missing attempt/lease, machine/session, source-roadmap and write-scope facts"
+    ],
+    "native_acceptance": false,
+    "mac_or_fleet_mutations": false
+  }
+}

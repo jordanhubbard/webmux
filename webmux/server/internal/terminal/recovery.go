@@ -28,7 +28,11 @@ func (l Launcher) Recovery(ctx context.Context, launch LaunchRequest, local bool
 		return recovery.HostRPC(ctx, request)
 	}
 	response := recovery.RPCResponse{Protocol: 1}
-	args, err := recoverySSHArgs(launch, SSHControlPath(l.ControlDir, launch.SessionID))
+	controlPath := launch.controlPath
+	if controlPath == "" {
+		controlPath = SSHControlPath(l.ControlDir, launch.SessionID)
+	}
+	args, err := recoverySSHArgs(launch, controlPath)
 	if err != nil {
 		response.Error = err.Error()
 		return response
@@ -121,13 +125,26 @@ func prepareRemoteRecovery(value *browserConnect) bool {
 	if value.KeyPath != "" {
 		args = append([]string{"-i", value.KeyPath}, args...)
 	}
+	if value.ControlPath != "" && os.Getenv("WEBMUX_COORDINATION_FILE") != "" {
+		// The capability probe establishes this backend's private master before
+		// installing its stream-local forward. Subsequent terminal/recovery
+		// channels reuse that authenticated connection. Normal shells still
+		// fall back when the platform or host does not support multiplexing.
+		n := len(args) - 3
+		args = append(append(append([]string{}, args[:n]...), "-o", "ControlMaster=auto", "-o", "ControlPersist=60"), args[n:]...)
+	}
 	probeArgs := append([]string(nil), args...)
+	probeArgs = recoveryBootstrapTrust(value.Args, probeArgs)
 	probeArgs[len(probeArgs)-1] = "webmux --recovery-capabilities"
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	output, err := exec.CommandContext(ctx, "ssh", probeArgs...).Output()
 	cancel()
 	if err != nil || strings.TrimSpace(string(output)) != "1" {
 		return false
+	}
+	coordinationConfigured, coordinationError := prepareRemoteCoordination(value, args)
+	if coordinationError != nil {
+		fmt.Fprintln(os.Stderr, "[WebMux] Session coordination is unavailable on this host:", coordinationError)
 	}
 	seed, err := recoveryLaunchEvidence()
 	if err != nil {
@@ -148,12 +165,48 @@ func prepareRemoteRecovery(value *browserConnect) bool {
 			}
 		}
 	}
+	if os.Getenv("WEBMUX_COORDINATION_FILE") != "" {
+		event := recovery.Event{Kind: "coordination"}
+		if coordinationConfigured {
+			event.Coordination = "ssh-stream-local-configured"
+		}
+		observe, finish := context.WithTimeout(context.Background(), 3*time.Second)
+		observed := remoteRecoveryRPC(observe, args, recovery.RPCRequest{Protocol: 1, SessionID: value.Request.SessionID, Key: key, Operation: "coordination-observe"})
+		finish()
+		if observed.Error == "" {
+			event.Cwd, event.Platform = observed.CoordinationDirectory, observed.CoordinationPlatform
+		}
+		if packet, err := recovery.SignedPacket(event, key); err == nil {
+			fmt.Fprint(os.Stdout, packet)
+		}
+	}
 	if value.Request.Transport == "mosh" {
 		value.Args = append(value.Args, "webmux", "--session-attach", value.Request.SessionID)
 	} else {
 		value.Args = append(value.Args, "webmux --session-attach "+shellQuote(value.Request.SessionID))
 	}
 	return true
+}
+
+// Match the original SSH connection's explicitly selected first-use policy.
+// Fixed background RPCs retain StrictHostKeyChecking=yes; changed keys remain
+// refused. A bootstrap must not impose a second, different enrollment flow.
+func recoveryBootstrapTrust(original, probe []string) []string {
+	selected := false
+	for _, arg := range original {
+		if arg == "StrictHostKeyChecking=accept-new" {
+			selected = true
+		}
+	}
+	out := append([]string(nil), probe...)
+	if selected {
+		for i, arg := range out {
+			if arg == "StrictHostKeyChecking=yes" {
+				out[i] = "StrictHostKeyChecking=accept-new"
+			}
+		}
+	}
+	return out
 }
 
 // SessionShell creates or reattaches a stable provider, then replaces itself

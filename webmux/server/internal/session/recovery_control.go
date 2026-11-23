@@ -149,6 +149,7 @@ func (b *Broker) applyRecoverySnapshotLocked(e *entry, r *run, response recovery
 		}
 		if native != nil {
 			a.CLI, a.CLIVersion, a.NativeSessionID, a.NativeStateFile = native.CLI, native.Version, native.SessionID, native.StateFile
+			a.Coordination = native.Coordination
 			a.NativeEvidence = native.NativeEvidence
 			a.Configuration = native.Configuration.Clone()
 			a.Cwd, a.ShellInstance, a.Platform = native.Cwd, native.Instance, native.Platform

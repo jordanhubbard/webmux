@@ -69,6 +69,7 @@ func (r *run) stop() {
 }
 
 type entry struct {
+	launchDone       chan struct{}
 	localStopBusy    bool
 	requiredRenderer string
 	rendererToken    string
@@ -97,26 +98,28 @@ type entry struct {
 // not hold it. A run pointer is a generation token: old output and exit events
 // can never mutate a reconnected or deleted session.
 type Broker struct {
-	localOwners     bool
-	localOwnerScope string
-	stopLocal       terminal.LocalOwnerOperation
-	inspectLocal    terminal.LocalOwnerOperation
-	controlDir      string
-	mu              sync.Mutex
-	store           *storage.Store
-	logger          *slog.Logger
-	launch          launchFunc
-	entries         map[string]*entry
-	order           []string
-	closed          bool
-	workers         sync.WaitGroup
-	openLog         func(string, string, bool) (transcriptSink, error)
-	agents          *agent.Service
-	agentMu         sync.Mutex
-	policyStop      chan struct{}
-	policyStarted   bool
-	activity        map[agentActivityKey]pendingAgentActivity
-	activityWake    chan struct{}
+	provisionMu        sync.Mutex
+	coordinationLaunch func([]Session, Session) (*terminal.CoordinationAccess, error)
+	localOwners        bool
+	localOwnerScope    string
+	stopLocal          terminal.LocalOwnerOperation
+	inspectLocal       terminal.LocalOwnerOperation
+	controlDir         string
+	mu                 sync.Mutex
+	store              *storage.Store
+	logger             *slog.Logger
+	launch             launchFunc
+	entries            map[string]*entry
+	order              []string
+	closed             bool
+	workers            sync.WaitGroup
+	openLog            func(string, string, bool) (transcriptSink, error)
+	agents             *agent.Service
+	agentMu            sync.Mutex
+	policyStop         chan struct{}
+	policyStarted      bool
+	activity           map[agentActivityKey]pendingAgentActivity
+	activityWake       chan struct{}
 
 	nativeRecoveryJobs map[string]*nativeRecoveryJob
 }
@@ -198,8 +201,14 @@ func (b *Broker) Restore() error {
 		return ErrClosed
 	}
 	b.startPolicyLocked()
-	for _, id := range b.order {
+	for _, id := range append([]string(nil), b.order...) {
+		if b.closed {
+			return ErrClosed
+		}
 		e := b.entries[id]
+		if e == nil {
+			continue
+		}
 		if e.value.LocalOwnerManaged && (!e.value.LocalOwnerAvailable || e.value.LocalStop != nil) {
 			continue
 		}
@@ -378,6 +387,12 @@ func (b *Broker) Create(owner string, request CreateRequest) (Session, error) {
 		}
 	}
 	_ = b.startLocked(e, request.Password, initial)
+	if b.closed {
+		return Session{}, ErrClosed
+	}
+	if b.entries[id] != e {
+		return Session{}, ErrNotFound
+	}
 	if err := b.persistLocked(); err != nil {
 		if e.value.LocalOwnerManaged {
 			// The pre-launch entry/key remains recoverable on disk. Keep its
@@ -404,6 +419,11 @@ func (b *Broker) startLocked(e *entry, password, initial string) error {
 }
 
 func (b *Broker) startWithTranscriptLocked(e *entry, password, initial string, transcript *transcriptLog) error {
+	if e.launchDone != nil {
+		return ErrRecoveryConflict
+	}
+	e.value.CoordinationActivity = nil
+	e.value.CoordinationChannel = ""
 	if e.value.LocalStop != nil {
 		return ErrLocalStopRequired
 	}
@@ -448,9 +468,72 @@ func (b *Broker) startWithTranscriptLocked(e *entry, password, initial string, t
 		// owner: the attempted launch may have discovered a replacement.
 		e.value.LocalOwner = nil
 	}
-	p, err := b.launch(e.value.launchRequest(), password)
+	request := e.value.launchRequest()
+	coordinationLaunch := b.coordinationLaunch
+	launch := b.launch
+	// Both coordination provisioning and native provider startup can perform
+	// blocking I/O. Reserve this generation before releasing the broker lock.
+	generation := e.generation
+	done := make(chan struct{})
+	e.launchDone = done
+	b.workers.Add(1) // Shutdown also waits for unpublished launches.
+	defer func() {
+		e.launchDone = nil
+		close(done)
+		b.workers.Done()
+	}()
+	b.mu.Unlock()
+	var access *terminal.CoordinationAccess
+	var provisionErr error
+	if coordinationLaunch != nil {
+		access, provisionErr = b.provisionCoordinationLaunch(e, generation, coordinationLaunch)
+	}
+	b.mu.Lock()
+	// Deletion/shutdown during provisioning must not start a late provider.
+	if b.closed {
+		return ErrClosed
+	}
+	if b.entries[e.value.ID] != e || e.generation != generation {
+		return ErrRecoveryConflict
+	}
+	if e.value.Agent() {
+		if _, denied := b.agents.Access(e.value.AgentID); denied != nil {
+			e.value.State = "error"
+			e.value.UpdatedAt = now()
+			return denied
+		}
+	}
+	if provisionErr != nil {
+		b.logger.Warn("session coordination interface unavailable", "session_id", e.value.ID, "error", provisionErr)
+	} else {
+		request.Coordination = access
+	}
+	b.mu.Unlock()
+	p, err := launch(request, password)
+	b.mu.Lock()
+	if b.closed || b.entries[e.value.ID] != e || e.generation != generation {
+		// A late provider cannot resurrect a deleted or closed session.
+		b.mu.Unlock()
+		if p != nil {
+			_ = p.Close()
+		}
+		b.mu.Lock()
+		if b.closed {
+			return ErrClosed
+		}
+		return ErrRecoveryConflict
+	}
+	if err == nil && e.value.Agent() {
+		if _, denied := b.agents.Access(e.value.AgentID); denied != nil {
+			b.mu.Unlock()
+			_ = p.Close()
+			b.mu.Lock()
+			return denied
+		}
+	}
 	if err != nil {
 		b.logger.Warn("terminal launch failed", "session_id", e.value.ID, "error", err)
+		e.launchDone = nil // Failed launch ended; fallback may reserve a new generation.
 		if attempted, fallbackErr := b.fallbackLocked(e, password, initial); attempted {
 			return fallbackErr
 		}
@@ -466,6 +549,11 @@ func (b *Broker) startWithTranscriptLocked(e *entry, password, initial string, t
 				e.value.LocalOwner = target
 			}
 		}
+	}
+	// A viewer may resize while provider startup is outside the lock. Apply
+	// that saved geometry before publishing the process as the current run.
+	if request.Cols != e.value.Cols || request.Rows != e.value.Rows {
+		_ = p.Resize(e.value.Cols, e.value.Rows)
 	}
 	renderer, token := "", ""
 	if source, ok := p.(interface{ SnapshotProfile() (string, string) }); ok {
@@ -610,6 +698,12 @@ func (b *Broker) reconnect(owner, id, password string, expected *RigIdentity, ar
 		}
 	}
 	err = b.startWithTranscriptLocked(e, password, "", transcript)
+	if b.closed {
+		return Session{}, ErrClosed
+	}
+	if b.entries[id] != e {
+		return Session{}, ErrNotFound
+	}
 	if err == nil {
 		b.markAttachReadyLocked(e)
 		if expected != nil {
@@ -1092,7 +1186,16 @@ func (b *Broker) audit(event map[string]any) {
 }
 
 // SSHControlPath identifies this backend's private multiplexed connection.
-func (b *Broker) SSHControlPath(id string) string { return terminal.SSHControlPath(b.controlDir, id) }
+func (b *Broker) SSHControlPath(id string) string {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	if e := b.entries[id]; e != nil && e.run != nil {
+		if p, ok := e.run.process.(interface{ SSHControlPath() string }); ok && p.SSHControlPath() != "" {
+			return p.SSHControlPath()
+		}
+	}
+	return terminal.SSHControlPath(b.controlDir, id)
+}
 
 func (b *Broker) Close() error {
 	b.mu.Lock()
@@ -1130,4 +1233,33 @@ func (b *Broker) Close() error {
 		err = errors.Join(err, os.RemoveAll(b.controlDir))
 	}
 	return err
+}
+
+// WithCoordinationSnapshot linearizes coordination admission against session
+// mutations. The callback may persist coordination state, but must not call the
+// broker or perform network/provider/repository subprocess work.
+func (b *Broker) WithCoordinationSnapshot(fn func([]Session) error) error {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	if b.closed {
+		return ErrClosed
+	}
+	return fn(b.coordinationSnapshotLocked())
+}
+func (b *Broker) coordinationSnapshotLocked() []Session {
+	out := make([]Session, 0, len(b.order))
+	for _, id := range b.order {
+		value := b.entries[id].value.clone()
+		if run := b.entries[id].run; run != nil {
+			value.CoordinationRun = run.generation
+		}
+		value.CoordinationLive = b.entries[id].run != nil && (value.State == "connected" || value.State == "connecting")
+		out = append(out, value)
+	}
+	return out
+}
+func (b *Broker) SetCoordinationLaunch(fn func([]Session, Session) (*terminal.CoordinationAccess, error)) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.coordinationLaunch = fn
 }

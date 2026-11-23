@@ -1,0 +1,99 @@
+{
+  "observed_at": "2026-11-23T04:10:36.075964+00:00",
+  "scope": "Automated selected-window wheel routing for local terminal and VNC/RDP grids; physical trackpad and broader platform acceptance remain open",
+  "base_revision": "8174fdb9ca42f74679fafed5c60c9a609591ab9f",
+  "integrated_startup_fix": "2d118a247e22358a51fc172364dd0724d00744bb",
+  "runtime": {
+    "os": "Darwin",
+    "arch": "arm64",
+    "browser": "Google Chrome 158.0.8127.36",
+    "node": "24.22.2"
+  },
+  "source_sha256": {
+    "webmux/frontend/src/utils/gridWheel.ts": "a695c27b69ec19f2265649686b6b58294c1a776668558c2ac91fc70615375412",
+    "webmux/frontend/src/components/GraphicsWorkspace.tsx": "f7c0c72b885698e2df9f80f47edac839e87451ff7a88f1926ab98e9260b540c1",
+    "webmux/frontend/src/components/VncTile.tsx": "ba830254bd6a0029cc708a4b7bd95f02d7cc9505836f72e75a767e90fb8fe360",
+    "webmux/frontend/src/components/RdpTile.tsx": "e4d769d9b536937837ad0cc5b046a4086fc1190732bfb0b86355648456d1dd1c",
+    "webmux/frontend/src/components/VncViewer.tsx": "5cd281bcd8f8e137558bddbc34f74b59a4d7fb365fa114c6517f769dd5c54379",
+    "webmux/frontend/src/components/RdpViewer.tsx": "392ff7c3906c2c05174344d7e25ccb92979bec87b93ade99adafff1695f6e16e",
+    "tests/frontend/gridWheel.test.ts": "a4a020469a84dc323c0b2e70e0ef5bd5d2a4baec83a545f024a2bafa8037b7f3",
+    "tests/e2e/visual.spec.ts": "4a460a2213a2a6c92c95ca996bb3ac3e1715f98d6cc51231227b8ef0da4a886d"
+  },
+  "bundle_sha256": {
+    "novnc-CDzVFeD5.js": "1f10fed97e30fb6b3968c3d71e619daa9714fa12433d8be1a205805061250e88",
+    "index-z9Mgy5SZ.js": "0c13a6c19ce70db164c48ed634b2d1603a84def0b66f1b1de3d721f3969c0d22",
+    "xterm-DZ21y8cg.js": "23e6994e053079dc65387a0b49ad497780884d9d4e6ddf38fb782f8df0daa04a"
+  },
+  "browser_server_sha256": "2c288d001d169a0383fe1e23467d21a739253da020190e7aafff02ed7ddee586",
+  "checks": [
+    {
+      "name": "frontend tests",
+      "passed": 490,
+      "files": 45,
+      "exit_code": 0,
+      "log": "frontend-final.log"
+    },
+    {
+      "name": "strict maintained TypeScript",
+      "exit_code": 0,
+      "log": "typecheck-final.log"
+    },
+    {
+      "name": "frontend lint",
+      "exit_code": 0,
+      "log": "lint-final.log"
+    },
+    {
+      "name": "frontend production build",
+      "exit_code": 0,
+      "evidence": "Observed tsc/vite exit0 after final runtime change; build stdout retained in session"
+    },
+    {
+      "name": "terminal Go/PTY/browser regressions",
+      "passed": 7,
+      "exit_code": 0,
+      "log": "terminal-regressions.log"
+    },
+    {
+      "name": "actual noVNC/Guacamole clients with controlled protocol peers",
+      "passed": 1,
+      "exit_code": 0,
+      "log": "browser-button-routing.log"
+    }
+  ],
+  "log_sha256": {
+    "browser-fixture-identity.log": "e39f7b5890b071fdca878b52273bf7eddabc57b71782c6995974d428dd62c5a4",
+    "frontend-all.log": "116766e378989b23024b6baa6ad0ee73ec9cc319ba0cd9519f088b1a604da5fa",
+    "typecheck-final.log": "a532da0999acc78f26f553c132bbbc45d6dc20d51ae61e6a19ddd9e04d0d7f94",
+    "terminal-regressions.log": "6a1d62bdc98930e9f638a9c3394d6bca857f0e99e4b0b7d483385fd8efad1d50",
+    "browser-chrome.log": "6c6c0691a0400e52452fae8df4df6acbb7828f21475e5b5f9c8637a2054a6bb7",
+    "typecheck.log": "a532da0999acc78f26f553c132bbbc45d6dc20d51ae61e6a19ddd9e04d0d7f94",
+    "browser-first.log": "9423d6554d10caf8d5c5aa28633e00edaab1eeaafd895b1ad340e5c0fb39abd6",
+    "lint-final.log": "24a11fdad2b0d766a9f66f2eb9e8a43887f1839736354248c6384ffd4975da9b",
+    "frontend-final.log": "ea37b232035f8c34d479690b27d267b779c8bb3705e60caa470f591e3172e68f",
+    "browser-button-routing.log": "8365f14c221e5b425ed5d9706fa929dadae69b312c79ddd09324b1c59eab048c"
+  },
+  "retained_failures": [
+    {
+      "log": "browser-first.log",
+      "boundary": "Expected Playwright cache browser absent; browser did not launch"
+    },
+    {
+      "log": "browser-chrome.log",
+      "boundary": "New case used a username refused by strict RDP fixture; corrected case to existing required identity"
+    },
+    {
+      "log": "browser-fixture-identity.log",
+      "boundary": "Reproduced add-session button exemption bypassing selected-window routing"
+    }
+  ],
+  "limitations": [
+    "Physical gesture-capable trackpad not exercised",
+    "Controlled protocol peers are not native remote desktop servers",
+    "Other browsers/platforms and native connected-server gestures remain unqualified",
+    "Guacamole mouse adapter provides existing vertical wheel input; no horizontal RDP capability added",
+    "Current-head full CI and main integration of this extension remain pending"
+  ],
+  "installed_service_changes": false,
+  "nas_operations": false
+}

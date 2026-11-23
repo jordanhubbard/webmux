@@ -6,9 +6,11 @@ project bindings and persistence. A browser connected to one server can select
 workspace keeps its existing terminal grid. Administrators can open **Manage
 servers** from the toolbar even before any peers exist. The server selector appears after the first peer is configured.
 
-Connections are opened on demand. There is no distributed mesh, shared home
-directory, automatic discovery, or requirement for Rig or Agent Deck. Those
-coordinators remain optional for task assignment and provider lifecycle work.
+Terminal connections are opened on demand. Authorized coordination summaries refresh in the server without a browser. [Network discovery](network-discovery.md)
+shows unverified candidate nodes in Manage servers; authenticated connections
+still require explicit configuration. There is no distributed mesh or shared
+home directory. Rig and Agent Deck remain optional for task assignment and
+provider lifecycle work.
 
 ## Manage connections in the UI
 
@@ -52,6 +54,95 @@ controller login or disconnect local terminals. Restore the grant or repair the
 peer credential, then reconnect the viewer to its surviving provider. Both
 removal actions require confirmation. These controls are administrator-only in authenticated mode and
 available to operators in trusted `auth.mode: none`, like other settings.
+
+## Verify a node identity
+
+After configuring an HTTPS peer and its matching incoming owner grant, select
+**Verify identity** in Manage servers. WebMux pins the remote node, receiving
+account and TLS key. Pinned HTTP and WebSocket connections prove that original
+identity on the same TLS connection before sending a credential. A changed key,
+node or account is refused; editing the name/address preserves the pin. Remove
+and explicitly enroll again for a deliberate identity change.
+
+When browsing is enabled, a lost enrolled endpoint can migrate to a discovered
+address only after the original identity is verified. This keeps the configured
+peer/session namespace and its account scope. It never creates another provider.
+Manual HTTP peers remain available without identity enrollment or automatic
+migration. End-to-end HTTPS and normal OS certificate trust are required; TLS
+termination between the peers is not supported for pinned connections. See
+[network discovery](network-discovery.md) for the protocol, bounds and current
+native qualification limits.
+
+## Share project coordination context
+
+Project summaries have a separate node-level permission. Existing incoming grants
+retain their terminal access and do not acquire coordination sharing implicitly.
+All eligible sessions for a mapped local account participate automatically; there
+is no per-session switch.
+
+1. Configure the HTTPS peer and matching incoming grant, then use **Verify
+   identity** to enroll its receiving node/account.
+2. On the receiving server, edit the incoming grant and select **Allow project
+   coordination summaries** for its existing local owner.
+3. On the controller, edit the verified peer and enter an existing local account
+   in **Coordination account on this server**. Leave it empty to disable sharing
+   toward that account. The local account and receiving account can have different
+   names; WebMux retains both identities.
+
+The mapped account's coordination view includes read-only `peers` entries for its
+verified projects. They contain that receiving account's matching session/task,
+branch/worktree, claim and worker-availability metadata. Private inbox/outbox
+messages, admission receipts, capabilities and server credentials are excluded.
+Other local accounts cannot borrow the peer credential. Each direction requires
+its own mapping and receiving permission; connections do not transitively expose
+another node's summaries.
+
+Background refresh uses the pinned, same-connection HTTPS identity proof before
+sending the existing server credential. HTTP-only/manual unverified peers remain
+available for their terminal contract. The coordination controls require an
+enrolled HTTPS identity. Removing a local mapping removes its peer context from
+subsequent views immediately. A receiving refusal clears retained data; a network
+outage can retain a clearly stale observation until its 30-second expiry. Pending,
+invalid, disabled or unavailable context does not mean that remote work is absent.
+
+These permissions authorize project context only. Cross-node claims and
+reservations still require separate authority. A remote availability
+summary does not acquire that worker. See [session coordination](session-coordination.md)
+and the [two-host protocol receipt](validation/coordination-peers-2026-11-21/README.md).
+
+## Allow coordination messages
+
+After enabling summaries, edit the outgoing verified peer and select **Allow
+coordination messages to this peer**. On the receiving server edit its incoming
+grant, select **Allow incoming coordination messages**, and enter the sending
+server's node ID and mapped local account. The management dialog displays this
+server's node ID below **Incoming access**. Preserve the distinct sending and
+receiving accounts even when their names match. Each direction requires its own
+configuration; existing summary and terminal permissions do not enable messages.
+
+The corresponding file fields are `coordination_messages: true` on the outgoing
+entry and incoming grant, plus `source_node_id` and `source_owner` on the grant.
+The grant still requires `coordination: true`. Messages append only to a live
+same-project recipient's coordination inbox. Recipients explicitly record
+delivery, acknowledgment and completion. A queued or uncertain transport is not
+proof of delivery. Removing permission stops future attempts, while an existing
+in-flight admission may already have committed. See the
+[durable protocol and recovery rules](session-coordination.md#durable-messages-across-nodes).
+
+## Allow shared worker reservations
+
+For an enrolled HTTPS peer with a local coordination account, select **Allow
+shared worker reservations on this peer**. On the receiving incoming grant,
+enable summaries and **Allow incoming shared worker reservations**, then bind the
+sending node ID/account. This permission is independent of inbox messaging and
+defaults off. The file field is `coordination_reservations: true` in both entries;
+the incoming grant also needs `coordination`, `source_node_id` and `source_owner`.
+
+Local and remote sessions contend on one authority's heavy-worker lease. A grant
+does not execute a job. Workers must verify the current lease and original fence,
+honor the conservative expiry and stop before release. Older lease-unaware
+clients are explicitly refused. See the
+[authority, retry and compatibility contract](session-coordination.md#shared-heavy-worker-reservations).
 
 ## Configure a pair through files
 

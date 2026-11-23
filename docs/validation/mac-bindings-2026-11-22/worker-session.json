@@ -1,0 +1,79 @@
+{
+  "schema": "webmux.mac.worker-session-qualification.v1",
+  "observed_at": "2026-11-23T06:11:56.232268+00:00",
+  "scope": "Controlled identity projection and related-record fences; native unowned-task refusal only",
+  "source_sha256": {
+    "webmux/server/internal/maccoord/session.go": "096014fd10658cd02eee53e708adaea7d6338e473c0e43a9c97268a50b5dc621",
+    "webmux/server/internal/maccoord/session_test.go": "d1b4ec0476cef2ff3cc2011c748fe8038bcfe4b1cabf308fec5490d8cd979df3",
+    "webmux/server/internal/maccoord/worker.go": "c91045e08d7c0f4dd00b3c2db7265e9d323fbfb722b839dc9bed7ab5100f412d",
+    "webmux/server/internal/maccoord/worker_test.go": "d34f23408289ae24995cef8492cfaae3b79866552caf12982425a6f28e9c35be",
+    "webmux/server/internal/maccoord/task.go": "7d21960d312fe144d98102527a809676c0b4f67add53476e7cc189a414b009f1",
+    "webmux/server/internal/maccoord/native_read_access_darwin_test.go": "0cc4bd0fb957b1af73ea4c993661f4c7c9adb2047fae7540bba65b315fd57937"
+  },
+  "checks": [
+    {
+      "command": "go test -race ./internal/maccoord -count=1 -timeout=60s",
+      "exit_code": 0,
+      "elapsed_seconds": 7.386,
+      "native_test": "default skipped; separately qualified below"
+    },
+    {
+      "command": "go vet ./internal/maccoord",
+      "exit_code": 0
+    },
+    {
+      "command": "GOOS=windows GOARCH=amd64 go test -c ./internal/maccoord",
+      "exit_code": 0,
+      "classification": "cross-compilation only"
+    }
+  ],
+  "controlled_worker_checks": [
+    "authorized project task is prerequisite; foreign/unowned tasks do not read worker or machine",
+    "canonical IDs remain distinct from display names and hostnames",
+    "other current task, resources, capabilities and persona context withheld",
+    "task owner/state/attempt/lease ID/expiry changes refuse the joined tuple",
+    "worker machine rebinding and deletion changes refuse the joined tuple",
+    "missing/malformed/case-alias record fields refused",
+    "deleted historical owner retained as deleted; freshness unqualified",
+    "15 fixed-route GETs include negative controls on each read; no arbitrary worker API"
+  ],
+  "controlled_session_checks": [
+    "receiving account and exact repository required",
+    "node/account/session/incarnation retained; new incarnation has different identity",
+    "unknown/not-present/revoked observations retained; no freshness assertion",
+    "MAC links remain null/unlinked; execution-host nickname is not a machine/worker ID",
+    "revocation metadata returned by independent copy; declared work not treated as MAC task"
+  ],
+  "native": {
+    "observed_at": "2026-11-23T06:09:16.919472Z",
+    "publisher_fingerprint": "dd3e7375c27b124a12430167e8e0c5b8886cd5d372b833fbfa078fde934308c0",
+    "matches_prior_publisher": true,
+    "unowned_task_worker_refused": true,
+    "positive_worker_machine_join_observed": false,
+    "task_lease_observation": "unleased",
+    "foreign_task_refused": true,
+    "missing_task_refused": true,
+    "generic_write_refused": true,
+    "exit_code": 0,
+    "package_elapsed_seconds": 3.249,
+    "raw_task_private": true
+  },
+  "MAC_record_source_audit": {
+    "installed_revision": "da57461f05ba054e9bc57a42c1889bee47dab1f1",
+    "loaded_revision": "unattested",
+    "worker": "Agent.to_dict, GET /agents/{agent_id}, services.get_agent query_one",
+    "machine": "Machine.to_dict, GET /machines/{machine_id}, services.get_machine query_one",
+    "wire_record_version": "unversioned; exact required fields inspected, versioned WebMux projection"
+  },
+  "limitations": [
+    "No native positive worker/machine join; native fleet-root task was unowned",
+    "No actual WebMux session/MAC participant association or product consumer",
+    "Standalone OwnerView filters revoked members; retained offline/revoked inventory exposure remains open under #674",
+    "No atomic snapshot or protection from changes and restoration between samples",
+    "Freshness policy and admission/publication remain unqualified"
+  ],
+  "credentials_or_profile_changed": false,
+  "worker_or_task_changed": false,
+  "service_changed": false,
+  "nas_access": false
+}

@@ -1,0 +1,160 @@
+{
+  "scope": "Automatic scoped MCP startup via ordinary shell-installed native aliases; two separate single-agent runs on one macOS ARM64 host, controlled fixture peers; not a two-agent or cross-host workflow",
+  "qualifiedAtUTC": "2026-11-22T06:44:56.469523+00:00",
+  "sourceBaseCommit": "8fd6f01c47c3bf47dee768ff29c934e5140ce40c",
+  "sourceSha256": {
+    "webmux/scripts/server-contract.mts": "cc685656b07c8521ac6df9a3f8a7a15dc07b8dd13cadc9bbb285863db783c6cd",
+    "webmux/server/cmd/webmux/main.go": "cc83dba1fb6935578efcf4c2c6e619cd4cab256125c054a5792505233a04b25f",
+    "webmux/server/go.mod": "2f76dbb6ea1fe15260d271fb8bf6593d986d5ab83c08f7d4627e5a6c12a1a12d",
+    "webmux/server/go.sum": "ee6a5eeea5cf2a0b2768348d078eb8d941ba3229896169cedf8185d35a2d690f",
+    "webmux/server/internal/coordinationclient/client.go": "d6f5fbe9f99817858be4bcef362a6f243cb2824d3284565f91b779effdf519ab",
+    "webmux/server/internal/coordinationclient/client_test.go": "285c59df1895fbfa8b8a41ae224af6f4fcdab46039f3cd5eb25bd579fe298417",
+    "webmux/server/internal/coordinationclient/native.go": "683eb61a5fb5dd96fdc283abb578d58de0aa0bc631f8b5333eef39b19ae0d23e",
+    "webmux/server/internal/coordinationclient/native_test.go": "5b9ed608efe396204da7ac863dc67259368aebba245817148112929c3a2aa156",
+    "webmux/server/internal/coordinationmcp/server.go": "4cd12ead2c13c4853ceed1f7ccf3aa9c3c50a079eb18f612660bb2b339294f00",
+    "webmux/server/internal/coordinationmcp/server_test.go": "f864c8ed422e979a7b6136944d7f1d69f42527cf1fe0f3a392ddb6b5d7091ad6",
+    "webmux/server/internal/httpapi/session_coordination.go": "e14f6519d0aa058083a431f738555d08d05a6c378a7279a1a241b4e45c78979d",
+    "webmux/server/internal/httpapi/session_coordination_native_test.go": "aad65a1b9d684e5f6eaeb4eef9af71f31cd67ddf68584b54a717abeaf3a66441",
+    "webmux/server/internal/httpapi/session_coordination_test.go": "df49f8552002a3b45788143eafec307d72c29ee98116f163983cd5837337ebf6",
+    "webmux/server/internal/recovery/cache.go": "5f3d6bfd00fb866bbb2b097ed93da3df40632513d9f87d748067285996ed8e01",
+    "webmux/server/internal/recovery/cli.go": "b5a1ddbeae681ef2fcde75ed81b95b8989806d20fadb7d4c9b71740c7e1de865",
+    "webmux/server/internal/recovery/protocol.go": "b82a59e3e3181c96761c8b5eef70c0b857c5a46c48235c45a5fc62db95608fb2",
+    "webmux/server/internal/recovery/provider_unix.go": "00bd25794f45ddbffe929399cbc2b17fe79f750407b784f9f622fdea25902a0e",
+    "webmux/server/internal/recovery/provider_unix_test.go": "7263cee60c43f39b157e57c21096f682a14d3ae82083fb1830e684d0a4624e9a",
+    "webmux/server/internal/recovery/state.go": "532e15707107dcc31ce6af540d8838f877f36560c324a2d0ff22409ebbef4cb0",
+    "webmux/server/internal/recovery/wait.go": "fd5cb2bea02cddcc3b309ea3b45c0575b7f74d54ffb0d2a8a9149873194e299f",
+    "webmux/server/internal/session/broker.go": "0528f6d18a64c450245370f2d3887fd142a053ec07cc34c5123b361278358bd9",
+    "webmux/server/internal/session/model.go": "c14b514637abdcdce2ff38d61b49f5bfc999cb660a9477d9183d4585c6b31b52",
+    "webmux/server/internal/session/recovery.go": "865290b1164e28033f25996c9dd2ad5d5ffe75cc9e3c7bc37ada000c399ab0c5",
+    "webmux/server/internal/session/recovery_control.go": "16f6c8475083b3f808f156e18f7062d3544fd7dc1099784d51c1feb6b57f9c7d",
+    "webmux/server/internal/session/recovery_test.go": "2aa96abb9cb2ec925b3a68791060ba3650df2482ab517ced75e4a52e670c3a2c",
+    "webmux/server/internal/terminal/launcher.go": "76832139ef50d025c97020da562a659f2e5e67067ad6b2347f157584b2e59fdf",
+    "webmux/server/internal/terminal/launcher_test.go": "d4b3b7895c2685d129ab6c5f9179033e7d3304959c566c12dcdf88d234296523"
+  },
+  "checks": [
+    {
+      "command": "Node 24.22.2 PATH go test -p 4 -count=1 ./...",
+      "exit_code": 0,
+      "evidence": "_build/agent-coordination630/go-test-qualified.log",
+      "sha256": "99a843b3aa94dbdcdfaf7dab410634c2a075c1dfffc345302374a128ac0fdf03"
+    },
+    {
+      "command": "go vet ./...",
+      "exit_code": 0,
+      "evidence": "_build/agent-coordination630/go-vet-final.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "selected coordination/recovery/session/terminal/API go test -race controls",
+      "exit_code": 0,
+      "evidence": "_build/agent-coordination630/race-admitted.log",
+      "sha256": "70e017c6b143c62365fca2f6e0c988b6015d023fe6b299afaef9beac63127440"
+    },
+    {
+      "command": "go test -race ./internal/coordinationclient ./internal/coordinationmcp -count=1",
+      "exit_code": 0,
+      "evidence": "_build/agent-coordination630/client-race-qualified.log",
+      "sha256": "ce18e3d1fef24f668d9a5573eda353fe3c096bb1df8149c28a89419929ca3b33"
+    },
+    {
+      "command": "Node 24.22.2 PATH npm run test:contract",
+      "exit_code": 0,
+      "evidence": "_build/agent-coordination630/contract-qualified.log",
+      "sha256": "4afaaec2ed30914b0f3ae6416b681088a047b12f40a6691ac4d09432bf5d746f"
+    },
+    {
+      "command": "Node 24.22.2 PATH npm run typecheck",
+      "exit_code": 0,
+      "evidence": "_build/agent-coordination630/typecheck.log",
+      "sha256": "a4b9d0bbbc3660d4798d15f01182907929f23dfb9c9fceb96fbbeeb6b9b182b1"
+    },
+    {
+      "command": "WEBMUX_QUALIFY_NATIVE_MCP_PARSERS=1 go test ./internal/coordinationclient -run ^TestNativeMCPConfigParsers$ -count=1 -v",
+      "exit_code": 0,
+      "evidence": "_build/agent-coordination630/native-codex-parser-qualified.log",
+      "sha256": "96fc8dfadf787810300b35186ace97d85da3bbabe96c649635f39a190622826b"
+    }
+  ],
+  "native": {
+    "platform": "darwin/arm64",
+    "helperSha256": "4a5e8fe13af40dd0fdca1170a819f3fb726648a0c0cb486e990417a80aa8595a",
+    "launch": "ordinary broker-owned exec PTY -> production --browser-shell -> automatically installed PATH aliases -> plain native task command",
+    "recording": false,
+    "browserViewers": 0,
+    "userTask": "Before changing anything, check whether anyone else is working in this project. Do not modify files, run commands, use shell/filesystem tools, or start/delegate to other agents. Briefly report the available collaboration context, then stop.",
+    "assertions": [
+      "actual native view tool result, not model prose",
+      "result self matches the broker session",
+      "node-local contract and verified-git binding",
+      "three same-account members across linked worktrees; foreign owner excluded",
+      "signed live bootstrap evidence observed with transcript recording disabled"
+    ],
+    "runs": [
+      {
+        "cli": "codex",
+        "version": "0.171.0",
+        "exit_code": 0,
+        "testOutput": "=== RUN   TestCoordinationNativeAgentBootstrap\n    session_coordination_native_test.go:176: native codex codex-cli 0.171.0 invoked scoped MCP view from ordinary broker-owned PTY before any browser; verified Git project with three same-account members; node-local only; original policy/configuration preserved\n--- PASS: TestCoordinationNativeAgentBootstrap (15.67s)\nPASS\nok  \tgithub.com/jordanhubbard/webmux/server/internal/httpapi\t15.905s\n",
+        "testOutputSha256": "938998859a188c2c14a2bd45899d5f0fe37cade7a0e819f5162bfb4a75114adb",
+        "privateNativeEventsSha256": "6c9f95496ba8b9a1a9ec24b730dc2acfe0330c35aabe101c6d3e3098f37e62c9",
+        "transportAdjustment": "adapter automatically disables only code_mode_host_grpc; explicit selectors preserved"
+      },
+      {
+        "cli": "claude",
+        "version": "2.1.327",
+        "exit_code": 0,
+        "testOutput": "=== RUN   TestCoordinationNativeAgentBootstrap\n    session_coordination_native_test.go:176: native claude 2.1.327 (Claude Code) invoked scoped MCP view from ordinary broker-owned PTY before any browser; verified Git project with three same-account members; node-local only; original policy/configuration preserved\n--- PASS: TestCoordinationNativeAgentBootstrap (11.83s)\nPASS\nok  \tgithub.com/jordanhubbard/webmux/server/internal/httpapi\t12.094s\n",
+        "testOutputSha256": "91c35489f0ccebb4d9c72f7ca3a8ebeb78a6f1177a085cedadb033b7d245fbae",
+        "privateNativeEventsSha256": "595d3765762282ed075514012f6cbf4774b56102ca5f752acec79f8d2312456d",
+        "transportAdjustment": "native defaults; additive --mcp-config"
+      }
+    ]
+  },
+  "crossCompilation": {
+    "exit_code": 0,
+    "scope": "compilation only, not native runtime or installer acceptance",
+    "sha256": {
+      "webmux-linux-arm64": "bf9e6036f2fa6743b4661903631ff94d553f4418cef8aa47ae8e9a6ba642ec44",
+      "webmux-windows-arm64.exe": "f880b173582b15d06c10b48998bbaba0fa8447a70412730f2333fd473b8eb103",
+      "coordinationclient-windows-arm64.test.exe": "ca4a327a609f5469ce4ca6e1c23e2faf83a95638e0667b9e908adf09dd0883e0",
+      "coordinationmcp-windows-arm64.test.exe": "7fb9732a65a1b8d4e06ac834f7266210079e73cb6ddeff8e50640144a1fae6e4"
+    }
+  },
+  "failedExperiments": [
+    {
+      "case": "codex-default-grpc",
+      "exit_code": 1,
+      "outcome": "120-second qualification deadline; native router reported gRPC code-mode-host session opening timeout. Not admitted.",
+      "evidenceSha256": "48e0f6e2897e91a06382cbda6e3026aefda233c930fce537a4e786c756013d5e",
+      "privateNativeOutputSha256": "da1185337cdf2ea1d367c3e0d4221815e3bf2c8d88374a5931942799114061c8"
+    },
+    {
+      "case": "codex-host-disabled",
+      "exit_code": 1,
+      "outcome": "Disabling the full host fails closed; rejected workaround. Not admitted.",
+      "evidenceSha256": "1bc7e2f57b3463f5d8a15bdcaca1f15801f5cebee84e3d0da150742259924001",
+      "privateNativeOutputSha256": "892cf117cd70f74cd85793892b3ce20e6d925d3c95412a07ecb4a21d54ed88cf"
+    },
+    {
+      "case": "claude-inherited-outer-tmux",
+      "exit_code": 1,
+      "outcome": "Tool succeeded but signed bootstrap/directory evidence went to inherited outer tmux routing; qualification refused. Fixed PTY environment isolation; final full-shell runs pass.",
+      "evidenceSha256": "6855dcb7d847a17a780e73c771a14be62f41a8b0b898e1d89619b8534eb34079"
+    },
+    {
+      "case": "agentdeck-fixture-startup",
+      "exit_code": 1,
+      "outcome": "Unchanged 300ms cancellation fixture could not read child.pid; tracked in #636. Five focused repetitions and full suites at package concurrency four pass; fixture unchanged here.",
+      "evidenceSha256": "1173f51ec89c725e85eb57504a1c2e5967cf5f7f179ce2e17069858fed750ef0"
+    }
+  ],
+  "remaining": [
+    "cross-node membership, delivery and authoritative reservations",
+    "native live notification channels and already-running agent onboarding",
+    "managed/SSH execution-host provisioning",
+    "explicit repository mappings",
+    "simultaneous two-real-agent claim/overlap/acknowledged-handoff/shared-reservation workflow",
+    "additional versions, Windows/Linux native custody/sandbox and distribution qualification",
+    "complete discovered two-host restart/reconnect workflow"
+  ]
+}

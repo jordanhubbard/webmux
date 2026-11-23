@@ -21,12 +21,20 @@ import (
 	"github.com/jordanhubbard/webmux/server/internal/storage"
 )
 
+// CoordinationAccess locates the session-scoped interface without carrying a bearer in argv.
+type CoordinationAccess struct {
+	File string
+	CLI  string
+}
+
 // LaunchRequest carries internal session state; address fields are validated
 // again before constructing a terminal or companion SSH command.
 // Passwords are separate so they cannot accidentally enter persisted sessions.
 type LaunchRequest struct {
-	RecoveryKey                          string             `json:"-"`
-	RecoverySeed                         *recovery.Activity `json:"-"`
+	controlPath                          string              // Private to this run, never serialized or persisted.
+	Coordination                         *CoordinationAccess `json:"-"`
+	RecoveryKey                          string              `json:"-"`
+	RecoverySeed                         *recovery.Activity  `json:"-"`
 	SessionID                            string
 	Hostname, Username, Transport, KeyID string
 	Port, Cols, Rows                     int
@@ -41,6 +49,14 @@ type Launcher struct {
 }
 
 func (l Launcher) Launch(request LaunchRequest, password string) (*Process, error) {
+	request.controlPath = SSHControlPath(l.ControlDir, request.SessionID)
+	if request.Coordination != nil && l.ControlDir != "" && (request.Transport == "ssh" || request.Transport == "mosh" || request.Transport == "") {
+		generation, err := recovery.NewInstance()
+		if err != nil {
+			return nil, err
+		}
+		request.controlPath = SSHControlPath(l.ControlDir, request.SessionID+"/"+generation)
+	}
 	keyPath, moshServer := "", ""
 	if request.Transport != "exec" && request.Transport != "local" && request.KeyID != "" {
 		var document struct {
@@ -84,14 +100,14 @@ func (l Launcher) Launch(request LaunchRequest, password string) (*Process, erro
 	if err != nil {
 		return nil, err
 	}
-	command, err := (planner{controlPath: SSHControlPath(l.ControlDir, request.SessionID), browserShell: browserShell, platform: runtime.GOOS, home: home, environment: os.Environ(), lookup: exec.LookPath, currentUser: currentUser}).build(request, password, keyPath, moshServer)
+	command, err := (planner{controlPath: request.controlPath, browserShell: browserShell, platform: runtime.GOOS, home: home, environment: os.Environ(), lookup: exec.LookPath, currentUser: currentUser}).build(request, password, keyPath, moshServer)
 	if err != nil {
 		return nil, err
 	}
 	local := request.Transport == "local" || command.Path == browserShell
 	if !local && password == "" && (request.Transport == "ssh" || request.Transport == "" || request.Transport == "mosh") {
 		// Probe in the PTY child, not under the broker's lock during restore.
-		payload, err := json.Marshal(browserConnect{Request: request, KeyPath: keyPath, Path: command.Path, Args: command.Args, ControlPath: SSHControlPath(l.ControlDir, request.SessionID)})
+		payload, err := json.Marshal(browserConnect{Request: request, KeyPath: keyPath, Path: command.Path, Args: command.Args, ControlPath: request.controlPath})
 		if err != nil {
 			return nil, err
 		}
@@ -100,6 +116,10 @@ func (l Launcher) Launch(request LaunchRequest, password string) (*Process, erro
 	process, err := startLaunch(request, command)
 	if process != nil {
 		process.browserLocal = local
+		process.controlPath = request.controlPath
+		if !local && request.Coordination != nil && l.ControlDir != "" {
+			process.controlClose = func() { closeCoordinationMaster(request, request.controlPath) }
+		}
 		if request.Transport != "exec" && (local || password == "") {
 			process.recovery = func(ctx context.Context, rpc recovery.RPCRequest) recovery.RPCResponse {
 				return l.Recovery(ctx, request, local, rpc)
@@ -147,14 +167,20 @@ func (p planner) build(request LaunchRequest, password, keyPath, moshServer stri
 		return command, err
 	}
 	command = Command{Dir: p.home, Cols: request.Cols, Rows: request.Rows, Env: append([]string{}, p.environment...)}
-	// Remove inherited TERM rather than relying on duplicate-variable behavior.
+	// A new PTY must not inherit another terminal's control/metadata routing.
 	for i := len(command.Env) - 1; i >= 0; i-- {
 		key, _, _ := strings.Cut(command.Env[i], "=")
-		if key == "TERM" || strings.HasPrefix(key, "WEBMUX_RECOVERY_") || p.platform == "windows" && (strings.EqualFold(key, "TERM") || strings.HasPrefix(strings.ToUpper(key), "WEBMUX_RECOVERY_")) {
+		if p.platform == "windows" {
+			key = strings.ToUpper(key)
+		}
+		if key == "TERM" || key == "TMUX" || key == "TMUX_PANE" || strings.HasPrefix(key, "WEBMUX_RECOVERY_") || strings.HasPrefix(key, "WEBMUX_COORDINATION_") {
 			command.Env = append(command.Env[:i], command.Env[i+1:]...)
 		}
 	}
 	command.Env = append(command.Env, "TERM=xterm-256color")
+	if request.Coordination != nil {
+		command.Env = append(command.Env, "WEBMUX_COORDINATION_FILE="+request.Coordination.File, "WEBMUX_COORDINATION_CLI="+request.Coordination.CLI)
+	}
 	if request.RecoveryKey != "" {
 		command.Env = append(command.Env, "WEBMUX_RECOVERY_KEY="+request.RecoveryKey, "WEBMUX_RECOVERY_SESSION="+request.SessionID)
 		if request.RecoverySeed != nil {
