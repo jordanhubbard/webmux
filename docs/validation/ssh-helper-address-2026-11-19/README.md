@@ -1,4 +1,7 @@
-# Stored SSH destination validation (draft)
+# Stored SSH destination validation
+
+Local qualification resumed successfully on 2026-11-23; see the resumption below.
+The earlier failed/held checkpoint is retained as historical evidence.
 
 Refs [#625](https://github.com/jordanhubbard/webmux/issues/625) and
 [#91](https://github.com/jordanhubbard/webmux/issues/91).
@@ -18,7 +21,7 @@ Port zero still selects 22 and an empty username still uses the native default.
 Error-state history and existing file-route connected-state checks remain intact.
 Local browser workers retain their existing path.
 
-## Evidence and remaining qualification
+## Historical qualification hold (2026-11-19)
 
 The original implementation fails the new HTTP, browser/file command and capability
 probe regressions. After the fix, the focused regressions and existing valid argv
@@ -54,3 +57,13 @@ Before merge: run all added compatibility tests, rerun the complete server race
 suite on a healthy worker with Node 24, and execute the prepared native boundary
 check. Preserve earlier failures alongside the new results. No frontend behavior
 changed. Broader native-component, roadmap and release gates remain open.
+
+## Resumed local qualification (2026-11-23)
+
+The overload cleared under fresh native CPU/memory/disk admission. Node 24.22.2 and Go 1.27.4 were selected explicitly. All seven added focused cases, the complete server race suite and server vet pass on both original `b404ab1` and current-main composition `611647c`. No deadline or assertion was reduced. The sole merge conflict preserved both coordination startup and SSH validation.
+
+Fresh native parent/candidate executables pass the prepared authenticated HTTP/restart workload on both source cohorts. In each cohort, the parent reaches the controlled SSH witness eight times across four invalid destinations and two server lifetimes; the candidate reaches it zero times. Both retain error-state sessions, anonymous/other-owner refusal and the connected-file-route guard across restart. Both servers exit cleanly twice, no witness remains, and all binary hashes remain unchanged. Four affected packages also cross-compile for Windows AMD64; that is not native Windows execution.
+
+The [resumption receipt](resumed-2026-11-23.json) retains exact inputs, source/log/binary hashes, workload results and the original failed qualification. The private driver changed only its worktree/root binding; its original deadlines and assertions remain. The actual executed composed revision is retained locally. Only its unpublished merge subject was subsequently amended to include `[skip ci]`, preserving the entire source tree. Validation documentation does not change the application.
+
+The recovered prior-owner instruction requires local resources and `[skip ci]` on new commits/merge subjects. No new hosted workflow is dispatched for this delivery. Native SSH authentication, remote Chrome, vendor/backport status, signing, packaging and broader #91/recovery/release acceptance are outside this scoped check. Installed WebMux/MAC, credentials, global SDKs and NAS state are unchanged. Original owner files and the global handoff are preserved.
