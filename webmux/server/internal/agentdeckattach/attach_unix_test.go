@@ -45,23 +45,61 @@ func TestUnsupportedAndOversizeOutputRefused(t *testing.T) {
 func TestStalledVersionChildGroupIsTerminated(t *testing.T) {
 	marker := filepath.Join(t.TempDir(), "child.pid")
 	t.Setenv("WM_ATTACH_CHILD", marker)
-	path := fake(t, "sleep 30 &\necho $! > \"$WM_ATTACH_CHILD\"\nwait\n")
-	ctx, cancel := context.WithTimeout(context.Background(), 300*time.Millisecond)
-	defer cancel()
+	// Deliberately outlast the former 300 ms startup assumption. Publish the
+	// complete PID atomically so readiness cannot observe a partially written ID.
+	path := fake(t, "sleep 1\nsleep 30 &\necho $! > \"$WM_ATTACH_CHILD.next\"\nmv -f \"$WM_ATTACH_CHILD.next\" \"$WM_ATTACH_CHILD\"\nwait\n")
+	ctx, cancel := context.WithCancel(context.Background())
+	finished := make(chan struct{})
+	var checkErr error
+	go func() {
+		checkErr = check(ctx, path)
+		close(finished)
+	}()
+	t.Cleanup(func() {
+		cancel()
+		select {
+		case <-finished:
+		case <-time.After(2 * time.Second):
+			t.Error("version check did not finish during fixture cleanup")
+		}
+	})
+	startup := time.NewTimer(2 * time.Second)
+	defer startup.Stop()
+	tick := time.NewTicker(10 * time.Millisecond)
+	defer tick.Stop()
+	var pid int
+	for pid == 0 {
+		raw, err := os.ReadFile(marker)
+		if err == nil {
+			pid, err = strconv.Atoi(strings.TrimSpace(string(raw)))
+			if err != nil || pid <= 0 {
+				t.Fatal("invalid ready child PID", err)
+			}
+			break
+		}
+		if !os.IsNotExist(err) {
+			t.Fatal(err)
+		}
+		select {
+		case <-finished:
+			t.Fatal("version check finished before child readiness", checkErr)
+		case <-startup.C:
+			t.Fatal("version child did not become ready within startup bound")
+		case <-tick.C:
+		}
+	}
 	start := time.Now()
-	if err := check(ctx, path); err == nil {
+	cancel()
+	select {
+	case <-finished:
+	case <-time.After(2 * time.Second):
+		t.Fatal("version check exceeded cancellation bound")
+	}
+	if checkErr == nil {
 		t.Fatal("stalled version accepted")
 	}
 	if time.Since(start) > 2*time.Second {
 		t.Fatal("version check exceeded cancellation bound")
-	}
-	raw, err := os.ReadFile(marker)
-	if err != nil {
-		t.Fatal(err)
-	}
-	pid, err := strconv.Atoi(strings.TrimSpace(string(raw)))
-	if err != nil {
-		t.Fatal(err)
 	}
 	deadline := time.Now().Add(time.Second)
 	for syscall.Kill(pid, 0) == nil && time.Now().Before(deadline) {

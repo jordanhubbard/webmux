@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"sort"
 	"strings"
@@ -29,8 +30,8 @@ type NodeOptions struct {
 	Browse     bool
 	Advertise  bool
 	Interfaces []string
-	Host       string
-	HTTPPort   int // Optional legacy HTTP listener advertisement, under the same policy.
+	Host       string // Raw mDNS host hint. macOS uses the OS-authoritative Bonjour hostname.
+	HTTPPort   int    // Optional legacy HTTP listener advertisement, under the same policy.
 	Port       int
 	TLS        bool
 }
@@ -49,13 +50,16 @@ type Candidate struct {
 }
 
 type NodeBrowser struct {
-	mu         sync.Mutex
-	candidates map[string]Candidate
-	cancel     context.CancelFunc
-	conn       *mdns.Conn
-	done       chan struct{}
-	closeOnce  sync.Once
-	closeErr   error
+	mu            sync.Mutex
+	candidates    map[string]Candidate
+	cancel        context.CancelFunc
+	conn          *mdns.Conn
+	advertiser    io.Closer
+	err           error
+	done          chan struct{}
+	closeOnce     sync.Once
+	transportOnce sync.Once
+	closeErr      error
 }
 
 func ValidNodeID(id string) bool {
@@ -110,8 +114,9 @@ func StartNodes(parent context.Context, o NodeOptions) (*NodeBrowser, error) {
 		return nil, err
 	}
 	options := []mdns.ServerOption{mdns.WithCacheRefresh(false)}
+	var interfaces []net.Interface
 	if len(o.Interfaces) != 0 {
-		interfaces := make([]net.Interface, 0, len(o.Interfaces))
+		interfaces = make([]net.Interface, 0, len(o.Interfaces))
 		for _, name := range o.Interfaces {
 			iface, err := net.InterfaceByName(name)
 			if err != nil || iface.Flags&net.FlagUp == 0 || iface.Flags&net.FlagMulticast == 0 {
@@ -122,33 +127,53 @@ func StartNodes(parent context.Context, o NodeOptions) (*NodeBrowser, error) {
 		}
 		options = append(options, mdns.WithInterfaces(interfaces...))
 	}
+	var services []mdns.ServiceInstance
 	if o.Advertise {
-		options = append(options, mdns.WithLocalNames(svc.Host), mdns.WithService(svc), mdns.WithResponseTTL(60))
+		services = append(services, svc)
 		if o.HTTPPort > 0 {
 			if o.HTTPPort > 65535 {
 				cancel()
 				return nil, errors.New("invalid HTTP listener port")
 			}
-			options = append(options, mdns.WithService(mdns.ServiceInstance{Instance: svc.Instance + " HTTP", Service: clearService, Host: svc.Host, Port: uint16(o.HTTPPort)}))
+			services = append(services, mdns.ServiceInstance{Instance: svc.Instance + " HTTP", Service: clearService, Host: svc.Host, Port: uint16(o.HTTPPort)})
 			if o.TLS {
-				options = append(options, mdns.WithService(mdns.ServiceInstance{Instance: svc.Instance + " HTTPS", Service: secureService, Host: svc.Host, Port: svc.Port}))
+				services = append(services, mdns.ServiceInstance{Instance: svc.Instance + " HTTPS", Service: secureService, Host: svc.Host, Port: svc.Port})
 			}
 		}
 	}
-	v4, v6, err := multicastSockets()
-	if err != nil {
-		cancel()
-		return nil, err
+	if o.Advertise && !nativeNodeAnnouncements {
+		options = append(options, mdns.WithLocalNames(svc.Host), mdns.WithResponseTTL(60))
+		for _, service := range services {
+			options = append(options, mdns.WithService(service))
+		}
 	}
-	b.conn, err = mdns.NewServer(packet4(v4), packet6(v6), options...)
-	if err != nil {
-		cancel()
-		closeSockets(v4, v6)
-		return nil, err
+	if o.Browse || !nativeNodeAnnouncements {
+		v4, v6, err := multicastSockets()
+		if err != nil {
+			cancel()
+			return nil, err
+		}
+		b.conn, err = mdns.NewServer(packet4(v4), packet6(v6), options...)
+		if err != nil {
+			cancel()
+			closeSockets(v4, v6)
+			return nil, err
+		}
+		b.conn.OnServiceDiscovered(func(e mdns.ServiceEvent) { b.observe(e, o.ID, time.Now()) })
 	}
-	b.conn.OnServiceDiscovered(func(e mdns.ServiceEvent) { b.observe(e, o.ID, time.Now()) })
+	if o.Advertise && nativeNodeAnnouncements {
+		b.advertiser, err = startNativeNodeAnnouncements(ctx, services, interfaces, b.fail)
+		if err != nil {
+			cancel()
+			if b.conn != nil {
+				_ = b.conn.Close()
+			}
+			return nil, err
+		}
+	}
 	go func() {
 		defer close(b.done)
+		defer b.closeTransports()
 		if !o.Browse {
 			<-ctx.Done()
 			return
@@ -157,6 +182,9 @@ func StartNodes(parent context.Context, o NodeOptions) (*NodeBrowser, error) {
 			round, finish := context.WithTimeout(ctx, 30*time.Second)
 			if err := b.conn.Browse(round, NodeService); err != nil {
 				finish()
+				if ctx.Err() == nil {
+					b.fail(err)
+				}
 				return
 			}
 			<-round.Done()
@@ -169,12 +197,38 @@ func StartNodes(parent context.Context, o NodeOptions) (*NodeBrowser, error) {
 func (b *NodeBrowser) Close() error {
 	b.closeOnce.Do(func() {
 		b.cancel()
-		if b.conn != nil {
-			b.closeErr = b.conn.Close()
-		}
+		b.closeTransports()
 		<-b.done
 	})
 	return b.closeErr
+}
+
+func (b *NodeBrowser) closeTransports() {
+	b.transportOnce.Do(func() {
+		if b.conn != nil {
+			b.closeErr = b.conn.Close()
+		}
+		if b.advertiser != nil {
+			b.closeErr = errors.Join(b.closeErr, b.advertiser.Close())
+		}
+	})
+}
+
+// Err reports a terminal transport failure after successful startup. A failed
+// discovery transport grants no authority and does not disable manual peers.
+func (b *NodeBrowser) Err() error {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.err
+}
+
+func (b *NodeBrowser) fail(err error) {
+	b.mu.Lock()
+	if b.err == nil {
+		b.err = err
+	}
+	b.mu.Unlock()
+	b.cancel()
 }
 
 func candidateKey(c Candidate) string { return c.Instance + "\x00" + c.Address }

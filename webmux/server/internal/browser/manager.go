@@ -14,6 +14,7 @@ import (
 
 	"github.com/jordanhubbard/webmux/server/internal/session"
 	"github.com/jordanhubbard/webmux/server/internal/storage"
+	"github.com/jordanhubbard/webmux/server/internal/terminal"
 )
 
 type client struct {
@@ -57,6 +58,9 @@ func WorkerCommand(ctx context.Context, s session.Session, store *storage.Store,
 	if s.Transport != "ssh" && s.Transport != "mosh" && s.Transport != "" {
 		return nil, errors.New("Browser companion requires a Local, SSH, or Mosh terminal; exec commands do not identify the shell host")
 	}
+	if err := terminal.ValidateSSHAddress(s.Hostname, s.Username, s.Port); err != nil {
+		return nil, err
+	}
 	port := s.Port
 	if port == 0 {
 		port = 22
@@ -87,7 +91,7 @@ func WorkerCommand(ctx context.Context, s session.Session, store *storage.Store,
 	if s.Username != "" {
 		args = append(args, "-l", s.Username)
 	}
-	// Session hostnames and usernames have already passed terminal validation.
+	// Revalidate retained session metadata before constructing this SSH command.
 	args = append(args, "--", s.Hostname, "webmux "+mode)
 	return exec.CommandContext(ctx, "ssh", args...), nil
 }

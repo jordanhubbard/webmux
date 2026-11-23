@@ -1,0 +1,197 @@
+{
+  "scope": "Current-main native discovery and ambiguous listener selection component qualification; not authenticated enrollment or full roadmap acceptance.",
+  "qualified_commit": "fbee9bfb6e98b9f62713d3009bf9b75606cf77f9",
+  "prior_main": "71918922b2caa0a9f7807f7349fef8514aaa0b43",
+  "original_pr_heads": {
+    "658": "effc55f17e1f00b9bdb66c6edac8cd25211339d0",
+    "663": "c3d16dee860b30c34c0e43655b2cbde4d1a395b6",
+    "666": "86911d0828ca35f27bd4f108ad6ee6ca26265970"
+  },
+  "native_runs": {
+    "https-20261123T1020": {
+      "receipt_sha256": "8a1a822d6944f5f6765f8531b9f0d9090d37858c4b7bc9ab4604dff3d2aa9d81",
+      "passed": true,
+      "sources_unchanged": true,
+      "primary": {
+        "kernel": "Darwin",
+        "machine": "arm64"
+      },
+      "remote": {
+        "kernel": "Linux",
+        "machine": "aarch64"
+      },
+      "binary_sha256": {
+        "darwin": "e96a65a3e6f0b3ab678f65b4deb402a978559864810b76681165a3e4abd2fe8d",
+        "linux": "47f0190674cce04d18b6c97cee10d10b92f114593cb64423f609d700616738ed"
+      },
+      "phases": [
+        {
+          "name": "forward",
+          "passed": true,
+          "mac_exit_code": 0,
+          "linux_exit_code": 0,
+          "legacy_instance_records_verified": true,
+          "linux_host_lookup_verified": true,
+          "mac_host_ambiguity_refused": true,
+          "owned_mac_competitor_verified": true
+        },
+        {
+          "name": "reverse",
+          "passed": true,
+          "mac_exit_code": 0,
+          "linux_exit_code": 0,
+          "legacy_instance_records_verified": true,
+          "linux_host_lookup_verified": true,
+          "mac_host_ambiguity_refused": true,
+          "owned_mac_competitor_verified": true
+        },
+        {
+          "name": "duplex",
+          "passed": true,
+          "mac_exit_code": 0,
+          "linux_exit_code": 0,
+          "legacy_instance_records_verified": true,
+          "linux_host_lookup_verified": true,
+          "mac_host_ambiguity_refused": true,
+          "owned_mac_competitor_verified": true
+        },
+        {
+          "name": "bonjour-control",
+          "passed": true,
+          "mac_exit_code": -2,
+          "linux_exit_code": 0,
+          "legacy_instance_records_verified": null,
+          "linux_host_lookup_verified": null,
+          "mac_host_ambiguity_refused": null,
+          "owned_mac_competitor_verified": null
+        }
+      ]
+    },
+    "http-20261123T1020": {
+      "receipt_sha256": "a2f0e8dc19087c9bcedd069085a8382d7ce23d46e562cb26974d1df013f4c5c9",
+      "passed": true,
+      "sources_unchanged": true,
+      "primary": {
+        "kernel": "Darwin",
+        "machine": "arm64"
+      },
+      "remote": {
+        "kernel": "Linux",
+        "machine": "aarch64"
+      },
+      "binary_sha256": {
+        "darwin": "e96a65a3e6f0b3ab678f65b4deb402a978559864810b76681165a3e4abd2fe8d",
+        "linux": "47f0190674cce04d18b6c97cee10d10b92f114593cb64423f609d700616738ed"
+      },
+      "phases": [
+        {
+          "name": "forward",
+          "passed": true,
+          "mac_exit_code": 0,
+          "linux_exit_code": 0,
+          "legacy_instance_records_verified": true,
+          "linux_host_lookup_verified": true,
+          "mac_host_ambiguity_refused": true,
+          "owned_mac_competitor_verified": true
+        },
+        {
+          "name": "reverse",
+          "passed": true,
+          "mac_exit_code": 0,
+          "linux_exit_code": 0,
+          "legacy_instance_records_verified": true,
+          "linux_host_lookup_verified": true,
+          "mac_host_ambiguity_refused": true,
+          "owned_mac_competitor_verified": true
+        },
+        {
+          "name": "duplex",
+          "passed": true,
+          "mac_exit_code": 0,
+          "linux_exit_code": 0,
+          "legacy_instance_records_verified": true,
+          "linux_host_lookup_verified": true,
+          "mac_host_ambiguity_refused": true,
+          "owned_mac_competitor_verified": true
+        },
+        {
+          "name": "bonjour-control",
+          "passed": true,
+          "mac_exit_code": -2,
+          "linux_exit_code": 0,
+          "legacy_instance_records_verified": null,
+          "linux_host_lookup_verified": null,
+          "mac_host_ambiguity_refused": null,
+          "owned_mac_competitor_verified": null
+        }
+      ]
+    }
+  },
+  "standalone_builds": [
+    {
+      "os": "darwin",
+      "arch": "arm64",
+      "build_exit_code": 0,
+      "dependency_graph_exit_code": 0,
+      "purego_in_graph": true
+    },
+    {
+      "os": "darwin",
+      "arch": "amd64",
+      "build_exit_code": 0,
+      "dependency_graph_exit_code": 0,
+      "purego_in_graph": true
+    },
+    {
+      "os": "windows",
+      "arch": "arm64",
+      "build_exit_code": 0,
+      "dependency_graph_exit_code": 0,
+      "purego_in_graph": false
+    },
+    {
+      "os": "linux",
+      "arch": "arm64",
+      "build_exit_code": 0,
+      "dependency_graph_exit_code": 0,
+      "purego_in_graph": false
+    }
+  ],
+  "execution_constraint": "Local resources only; no new hosted qualification jobs; new commit and merge subjects include [skip ci]. Original CI outcomes and original failed native controls retained.",
+  "recorded_at": "2026-11-23T10:22:32.952272+00:00",
+  "production_and_qualifier_sources_equal_original_666": true,
+  "checks": {
+    "current-discovery-race-20261123T1018.log": {
+      "exit_code": 0,
+      "sha256": "90fd87c4ed9d7f5b86fd060fbe9df22ac53ec124eadfa60440483547812081d7"
+    },
+    "current-full-server-race-20261123T1020.log": {
+      "exit_code": 0,
+      "sha256": "abb2258323f994542b2f5b621e7bfff1d27a849e8133e41b6033537451456848"
+    },
+    "current-full-vet-20261123T1020.log": {
+      "exit_code": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "current-native-bonjour-cgo0-20261123T1020.log": {
+      "exit_code": 0,
+      "sha256": "7b9c74fbf11d60fd9d3551b198561fdf4cc23dadb03b967b5791506d5b82c80b"
+    },
+    "current-native-bonjour-race-20261123T1020.log": {
+      "exit_code": 0,
+      "sha256": "27348b9cfec03f748a0f3daef63dfb6ac65dd3948d4474732554a23039f6dee0"
+    },
+    "current-server-contract-20261123T1020.log": {
+      "exit_code": 0,
+      "sha256": "02dd422159a5cc00a17a106ad5bfc6affc09a88bc8beec6ad83c0a7c7ef2317c"
+    }
+  },
+  "limits": [
+    "No authenticated TLS/enrollment or full cross-host agent workflow qualification.",
+    "No native Windows or Intel execution claim from cross-compilation.",
+    "IPv6 address observations are not IPv6 transport acceptance.",
+    "Original failed raw multicast/reverse/duplex/host-only and intermediate queue controls remain unchanged.",
+    "Original hosted CI applies only to its exact old revisions; no new hosted jobs dispatched.",
+    "No installed runtime, OS/trust/network policy or NAS change."
+  ]
+}
