@@ -36,7 +36,10 @@ function run(program: string, args: string[], input?: string, cwd = root, timeou
 }
 const remote = (code: string, input?: unknown) => run('ssh', [...sshArgs, peer!, 'python3 -c '+quote(code)], input === undefined ? undefined : JSON.stringify(input), root, 20_000);
 function inventory() {
-  return Object.fromEntries(run('git', ['ls-files', '-z']).split('\0').filter(Boolean).map(name => [name, sha(fs.readFileSync(path.join(root, name)))]));
+  return Object.fromEntries(run('git', ['ls-files', '-z']).split('\0').filter(Boolean).map(name => {
+    const full = path.join(root, name);
+    return [name, sha(fs.lstatSync(full).isSymbolicLink() ? 'symlink:'+fs.readlinkSync(full) : fs.readFileSync(full))];
+  }));
 }
 const revision = run('git', ['rev-parse', 'HEAD']);
 if (run('git', ['status', '--porcelain'])) throw new Error('Commit the qualifier before native qualification');
