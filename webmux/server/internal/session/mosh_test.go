@@ -151,7 +151,10 @@ func TestMoshFallbackLifecycle(t *testing.T) {
 			eventually(t, func() bool {
 				v, _ := b.Get("owner", s.ID)
 				if tc.fallback {
-					return v.Transport == "ssh"
+					// The transport changes before startLocked releases the lock
+					// for SSH launch. Wait for a failed launch to finish before
+					// inspecting diagnostics restored by fallbackLocked.
+					return v.Transport == "ssh" && (!tc.sshFail || v.State == "error")
 				}
 				return v.State == "disconnected" || v.State == "error"
 			})
