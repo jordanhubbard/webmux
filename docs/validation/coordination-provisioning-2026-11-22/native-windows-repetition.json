@@ -1,0 +1,48 @@
+{
+  "recorded_at": "2026-11-22T19:04:13.618462+00:00",
+  "head": "4a837fec43251e87a73ad39b4ecfe91f88ab7ca1",
+  "native_checkout": "ceac3a3bb74a154f5fee51064a7f2bb4cdf32788",
+  "native_tree": "95e675d6464c1a49be7437cfc3e3a7f94bbb4ad1",
+  "head_tree": "95e675d6464c1a49be7437cfc3e3a7f94bbb4ad1",
+  "tree_equal": true,
+  "native_os": "windows/amd64",
+  "run": 45058272386,
+  "job": 137318269494,
+  "source_metadata": {
+    "run": "45058272386",
+    "source": "ceac3a3bb74a154f5fee51064a7f2bb4cdf32788",
+    "repetitions": 10,
+    "goTarget": [
+      "windows",
+      "amd64"
+    ],
+    "nodeVersion": "v24.22.3",
+    "goVersion": "go version go1.27.4 windows/amd64",
+    "pullRequestHead": "4a837fec43251e87a73ad39b4ecfe91f88ab7ca1"
+  },
+  "counts": {
+    "TestCoordinationSnapshotDoesNotWaitForOtherTerminalLaunch": 10,
+    "TestCoordinationSnapshotDoesNotWaitForInterfaceProvisioning": 10,
+    "TestCoordinationProvisioningUsesFreshSerializedSnapshot": 10,
+    "TestPendingTerminalLaunchCannotSurviveDeletionOrShutdown": 10,
+    "TestShutdownDuringCoordinationProvisioningStartsNoProvider": 10,
+    "TestRevokedAgentDuringProvisioningStartsNoProvider": 10,
+    "TestPendingTerminalLaunchKeepsLatestGeometry": 10,
+    "TestCoordinationPeerClaimImmediateConflictAndDurableNotices": 10
+  },
+  "total_root_passes": 80,
+  "no_fail_events": true,
+  "artifact_sha256": {
+    "source.json": "a5a663f45465dbb5bae2196a0b2e6f5f061bb2a3ddaaeddbde402243c5d9359b",
+    "verification.json": "4777fceee91154d832ed48464016be916c3c6fee1857ac414334da94ce23c1e3",
+    "tests.jsonl": "f8f33739cc8c50d49cad5b349846130f149eb036d87cb2879d539cb07b908273"
+  },
+  "run_url": "https://github.com/jordanhubbard/webmux/actions/runs/45058272386",
+  "job_url": "https://github.com/jordanhubbard/webmux/actions/runs/45058272386/job/137318269494",
+  "source_scope": "Native Windows AMD64 loopback two-server/ordinary-PTY fixture and lifecycle controls; not physical multi-host/MAC authority acceptance",
+  "unchanged_runtime_input_binding": {
+    "qualified_tree": "95e675d6464c1a49be7437cfc3e3a7f94bbb4ad1",
+    "webmux_tree": "427a354f55dace59e2fdd8bb064a2ede92f9d964",
+    "workflow_sha256": "a28da218240e8ce63ec4fe7fbe0ceda7a39788b9cbde66ead98b32b859375e00"
+  }
+}

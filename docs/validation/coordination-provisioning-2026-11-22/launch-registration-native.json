@@ -1,0 +1,47 @@
+{
+  "recorded_at": "2026-11-22T19:35:14.759601+00:00",
+  "head": "82fc07116a777f5f6f5b25ad0effcd8f000a110c",
+  "native_checkout": "5ffd24be6609d380957ba21fc6c46e7c55327ddc",
+  "native_tree": "a3b1054002ae11d2a4d892a7b8fe25b27a080668",
+  "tree_equal": true,
+  "run": 45061206001,
+  "job": 137327311614,
+  "run_url": "https://github.com/jordanhubbard/webmux/actions/runs/45061206001",
+  "source_metadata": {
+    "pullRequestHead": "82fc07116a777f5f6f5b25ad0effcd8f000a110c",
+    "source": "5ffd24be6609d380957ba21fc6c46e7c55327ddc",
+    "repetitions": 10,
+    "nodeVersion": "v24.22.3",
+    "goVersion": "go version go1.27.4 windows/amd64",
+    "goTarget": [
+      "windows",
+      "amd64"
+    ],
+    "run": "45061206001"
+  },
+  "counts": {
+    "TestLaunchProvisionIsAtomicAcrossMembershipRefresh": 10,
+    "TestAtomicLaunchProvisionRetainsAuthorityGuards": 10,
+    "TestLaunchProvisionDoesNotWithdrawUnrelatedMembers": 10,
+    "TestCoordinationSnapshotDoesNotWaitForOtherTerminalLaunch": 10,
+    "TestCoordinationSnapshotDoesNotWaitForInterfaceProvisioning": 10,
+    "TestCoordinationProvisioningUsesFreshSerializedSnapshot": 10,
+    "TestPendingTerminalLaunchCannotSurviveDeletionOrShutdown": 10,
+    "TestShutdownDuringCoordinationProvisioningStartsNoProvider": 10,
+    "TestRevokedAgentDuringProvisioningStartsNoProvider": 10,
+    "TestPendingTerminalLaunchKeepsLatestGeometry": 10,
+    "TestCoordinationPeerClaimImmediateConflictAndDurableNotices": 10
+  },
+  "total_root_passes": 110,
+  "no_fail_events": true,
+  "artifact_sha256": {
+    "source.json": "6e64cea464c81dfcc55b037e0af305bf9c7d5302d17d3f47f24aabcf6621815f",
+    "verification.json": "9387fc7ee8d9dcc7e2dea4be6897ea8f65a82f5729f9e03d3fe2404acecf016f",
+    "tests.jsonl": "a169cf2c7ac5a5999f0f8f76ff96d78b4b6548c1e1993801f8429734d424d4f7"
+  },
+  "source_scope": "Native Windows AMD64 loopback two-server ordinary-session startup and lifecycle/authority regressions; broader multi-host/MAC workflow not qualified",
+  "runtime_input_binding": {
+    "webmux_tree": "803ef6675dd8218f5ebd51f6eb9a98947953762b",
+    "workflow_sha256": "d5694e53ae993692b51f8bfaed35fe74e6a244f44fb287f0d41f1b1124072d61"
+  }
+}
