@@ -128,7 +128,9 @@ jobs:
         if: runner.os == 'Windows'
         timeout-minutes: 2
         shell: pwsh
-        run: ./scripts/qualification-process.test.ps1
+        run: |
+          ./scripts/qualification-process.test.ps1
+          ./scripts/snapshot-msi-diagnostics.test.ps1
       - name: Install WiX for native MSI
         if: runner.os == 'Windows'
         shell: pwsh
@@ -183,6 +185,7 @@ jobs:
           node scripts/smoke-native-package.mts $roots[0].FullName
           if ($LASTEXITCODE -ne 0) { throw 'Native runtime smoke failed.' }
       - name: Exercise installed native MSI and service
+        id: msi_qualification
         if: runner.os == 'Windows'
         timeout-minutes: 14
         env:
@@ -208,30 +211,17 @@ jobs:
           Invoke-QualificationProcess -FilePath $pwsh -Arguments @('-NoProfile', '-File', './scripts/smoke-native-msi.ps1', '-Installer', $installers[0].FullName, '-PreviousInstaller', $previousMSI, '-DiagnosticsDirectory', $diagnostics) `
             -TimeoutSeconds 300 -DiagnosticsDirectory $diagnostics -Phase 'upgrade-service-uninstall'
       - name: Snapshot interrupted Windows service fixtures
-        if: always() && runner.os == 'Windows'
+        if: always() && runner.os == 'Windows' && (steps.msi_qualification.outcome == 'failure' || steps.msi_qualification.outcome == 'cancelled')
         timeout-minutes: 1
         shell: pwsh
         run: |
           # A deadline can terminate the smoke process before its finally block.
-          # Only collect logs from this isolated job's known service fixtures.
-          $destination = Join-Path $env:RUNNER_TEMP 'webmux-msi-diagnostics/interrupted-service'
-          New-Item -ItemType Directory -Path $destination -Force | Out-Null
-          Get-CimInstance Win32_Service -Filter "Name='WebMux'" |
-            Select-Object Name, State, ExitCode, ServiceSpecificExitCode |
-            ConvertTo-Json | Set-Content (Join-Path $destination 'service-status.json')
-          $directories = @((Join-Path $env:ProgramData 'WebMux'))
-          $directories += @(Get-ChildItem -LiteralPath $env:ProgramData -Directory -Filter 'webmux-service-smoke-*' |
-            Where-Object { -not ($_.Attributes -band [IO.FileAttributes]::ReparsePoint) } |
-            ForEach-Object { Join-Path $_.FullName 'logs' })
-          $index = 0
-          foreach ($directory in $directories) {
-            $index++
-            if (Test-Path -LiteralPath $directory) {
-              Get-ChildItem -LiteralPath $directory -File -Filter '*.log' |
-                Where-Object { -not ($_.Attributes -band [IO.FileAttributes]::ReparsePoint) } |
-                ForEach-Object { Get-Content -LiteralPath $_.FullName -Tail 200 | Set-Content (Join-Path $destination "$index-$($_.Name)") }
-            }
-          }
+          # Run collection in its own process: CIM/filesystem calls can block
+          # the action shell and prevent its step deadline from being observed.
+          . ./scripts/qualification-process.ps1
+          $diagnostics = Join-Path $env:RUNNER_TEMP 'webmux-msi-diagnostics'
+          Invoke-QualificationProcess -FilePath ([Environment]::ProcessPath) -Arguments @('-NoProfile', '-File', './scripts/snapshot-msi-diagnostics.ps1', '-DiagnosticsDirectory', $diagnostics) `
+            -TimeoutSeconds 20 -DiagnosticsDirectory $diagnostics -Phase 'interrupted-service-snapshot'
       - name: Retain Windows MSI qualification diagnostics
         if: always() && runner.os == 'Windows'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7

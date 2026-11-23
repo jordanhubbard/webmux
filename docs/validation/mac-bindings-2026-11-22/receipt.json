@@ -1,0 +1,90 @@
+{
+  "observed_at": "2026-11-23T04:26:30.413064+00:00",
+  "scope": "Local versioned operator-binding parser/resolver foundation only; no live MAC read, product consumer, task admission or fleet qualification",
+  "issues": {
+    "parent": 664,
+    "foundation": 673,
+    "dependentReadView": 674
+  },
+  "base_revision": "07a68f79cf88a107dcc12a97824959201edddfa3",
+  "source_sha256": {
+    "webmux/server/internal/maccoord/bindings.go": "f117fc887539681e121708a732fba0c0836fadf5da26480e0226f52b636ee147",
+    "webmux/server/internal/maccoord/bindings_test.go": "3c037965319763ce448b226e6e20568b5ebd673f82eca4bc9f806e4acb0a1d97"
+  },
+  "checks": [
+    {
+      "command": "go test -race ./internal/maccoord",
+      "exit_code": 0
+    },
+    {
+      "command": "go vet ./internal/maccoord",
+      "exit_code": 0
+    },
+    {
+      "command": "go test ./internal/maccoord -run '^$' -fuzz '^FuzzParseBindings$' -fuzztime=5s -parallel=2",
+      "exit_code": 0,
+      "executions": 350,
+      "elapsedSeconds": 6.099,
+      "scope": "Bounded local parser fuzz exercise, not exhaustive input coverage"
+    }
+  ],
+  "evidence": "Baseline command completion observed in the owned session; deliberate mutation outputs retained as hashed local logs",
+  "mutation_controls": {
+    "observedAt": "2026-11-23T04:24:46.602088+00:00",
+    "source_sha256": "f117fc887539681e121708a732fba0c0836fadf5da26480e0226f52b636ee147",
+    "results": [
+      {
+        "name": "account-scope",
+        "exit_code": 1,
+        "expectedFailures": [
+          "TestBindingUsesAccountAndExactVerifiedRepository/foreign_account",
+          "TestBindingUsesAccountAndExactVerifiedRepository/unknown_account"
+        ],
+        "log_sha256": "3d6f5ebb528bf862e4dc859c5304fc1c3ca8641bb2d567d3b8e4fa4d90ec6671",
+        "classification": "Deliberate mutation control, not historical source or live-fleet acceptance"
+      },
+      {
+        "name": "duplicate-keys",
+        "exit_code": 1,
+        "expectedFailures": [
+          "TestBindingOriginsAndStrictDocument/duplicate_key",
+          "TestBindingOriginsAndStrictDocument/escaped_duplicate"
+        ],
+        "log_sha256": "e874840e9f66847e22d56e5203b68d0f0baceb661724f1560668d2f08b16bd19",
+        "classification": "Deliberate mutation control, not historical source or live-fleet acceptance"
+      }
+    ],
+    "sourceUnchanged": true
+  },
+  "mac_source_refresh": {
+    "revision": "fa08464470f6562ae53329c8e4385e87e9061856",
+    "files": [
+      {
+        "path": "src/mac/api.py",
+        "git_blob": "c3a2800b71cd346f6a3cfec1c0d87598814b13f8",
+        "sha256": "9d995b8f1c62ca4153b910dc526f47ae650e67ff907299fc0f16ff75dfa3efc2"
+      },
+      {
+        "path": "src/mac/observability_console.py",
+        "git_blob": "1709f7124ce8ad34caea9e991af16dc98e5c4d65",
+        "sha256": "ec11c5ebd1aae742071135e45e0ad2aa06d27826fd8eeaeb3aa4a43cf3667ee2"
+      },
+      {
+        "path": "src/mac/models.py",
+        "git_blob": "67bbf2ff7a844a0fc66ffd11b9b1a150157b79aa",
+        "sha256": "59cba56538de0528bea5b194b172edfd45c60764b876ce1c6186e02b75450b1b"
+      }
+    ],
+    "auth_and_graph_contracts": "Pinned API and project graph functions unchanged from previously inspected 99925eaff54076310b58f15e0fb4ba9079746673",
+    "native_authorization_qualified": false
+  },
+  "limitations": [
+    "No live server configuration loader or UI/agent consumer",
+    "No actual MAC authentication/capability negotiation or credential revocation qualification",
+    "Session/worker/task-attempt/source-reference wire mappings remain open under #673",
+    "The configured observe capability is requested scope, not a grant or proof of authority",
+    "The four product questions and full roadmap acceptance remain open"
+  ],
+  "mac_mutations": false,
+  "nas_access": false
+}

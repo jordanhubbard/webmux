@@ -13,6 +13,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/http/httptrace"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -181,6 +182,8 @@ func Request(ctx context.Context, access Access, method, path string, body io.Re
 	request.Header.Set("Authorization", "Bearer "+access.Capability)
 	request.Header.Set("Content-Type", "application/json")
 	request.Header.Set(LeaseProtocolHeader, "1")
+	progress := newRequestProgress()
+	request = request.WithContext(httptrace.WithClientTrace(request.Context(), progress.trace()))
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 	transport.Proxy = nil
 	if access.Socket != "" {
@@ -192,7 +195,7 @@ func Request(ctx context.Context, access Access, method, path string, body io.Re
 	client := &http.Client{Transport: transport, Timeout: timeout, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 	response, err := client.Do(request)
 	if err != nil {
-		return errors.New("local coordination service is unavailable")
+		return progress.failure(err)
 	}
 	defer response.Body.Close()
 	data, err := io.ReadAll(io.LimitReader(response.Body, (8<<20)+1))

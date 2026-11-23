@@ -1,3 +1,4 @@
+import { installGridWheel } from '../utils/gridWheel';
 import { movePair } from '../utils/movePair';
 import { Dialog } from './Dialog';
 import { AddSessionCell } from './AddSessionCell';
@@ -118,6 +119,15 @@ export function GraphicsWorkspace() {
   const [dropTarget, setDropTarget] = useState<{ row: number; col: number } | null>(null);
   const [ghostPos, setGhostPos] = useState({ x: 0, y: 0 });
   const gridRef = useRef<HTMLDivElement>(null);
+  const wheelRef = useRef<HTMLDivElement>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const selectedRef = useRef<string | null>(null);
+  const select = (id: string) => { selectedRef.current = id; setSelectedId(id); };
+
+  useEffect(() => {
+    const root = wheelRef.current;
+    if (root) return installGridWheel(root, () => selectedRef.current);
+  }, [loading, fullscreen.type]);
 
   const vncPasswordsRef = useRef(new Map<string, string>());
 
@@ -127,6 +137,12 @@ export function GraphicsWorkspace() {
 
   const allSessions: AnySession[] = [...vncSessions, ...rdpSessions];
   useEffect(() => { allSessionsRef.current = allSessions; }, [vncSessions, rdpSessions]);
+  useEffect(() => {
+    if (!allSessions.some(session => session.id === selectedRef.current)) {
+      selectedRef.current = allSessions[0]?.id ?? null;
+      setSelectedId(selectedRef.current);
+    }
+  }, [vncSessions, rdpSessions]);
   useEffect(() => { draggingIdRef.current = draggingId; }, [draggingId]);
   useEffect(() => { dropTargetRef.current = dropTarget; }, [dropTarget]);
 
@@ -309,7 +325,7 @@ export function GraphicsWorkspace() {
   }
 
   return (
-    <div style={styles.outer}>
+    <div ref={wheelRef} data-testid="graphics-scroll" style={styles.outer}>
       {operationError && <div role="alert">{operationError} <button onClick={() => setOperationError('')}>Dismiss</button></div>}
       <div
         ref={gridRef}
@@ -323,6 +339,10 @@ export function GraphicsWorkspace() {
         {vncSessions.map(session => (
           <div
             key={session.id}
+            data-desktop-session={session.id}
+            data-selected={selectedId === session.id}
+            onMouseDownCapture={() => select(session.id)}
+            onFocusCapture={() => select(session.id)}
             style={{ gridColumn: session.col + 1, gridRow: session.row + 1, minHeight: 0, minWidth: 0, display: 'flex' }}
           >
             <VncTile
@@ -332,6 +352,7 @@ export function GraphicsWorkspace() {
               onClose={() => handleCloseVnc(session.id)}
               onReconnect={() => handleReconnectVnc(session.id)}
               onTitleMouseDown={e => handleTitleMouseDown(session.id, e)}
+              isSelected={selectedId === session.id}
               isDragging={draggingId === session.id}
               isDropTarget={dropTarget?.row === session.row && dropTarget?.col === session.col}
             />
@@ -341,6 +362,10 @@ export function GraphicsWorkspace() {
         {rdpSessions.map(session => (
           <div
             key={session.id}
+            data-desktop-session={session.id}
+            data-selected={selectedId === session.id}
+            onMouseDownCapture={() => select(session.id)}
+            onFocusCapture={() => select(session.id)}
             style={{ gridColumn: session.col + 1, gridRow: session.row + 1, minHeight: 0, minWidth: 0, display: 'flex' }}
           >
             <RdpTile
@@ -349,6 +374,7 @@ export function GraphicsWorkspace() {
               onClose={() => handleCloseRdp(session.id)}
               onReconnect={() => handleReconnectRdp(session.id)}
               onTitleMouseDown={e => handleTitleMouseDown(session.id, e)}
+              isSelected={selectedId === session.id}
               isDragging={draggingId === session.id}
               isDropTarget={dropTarget?.row === session.row && dropTarget?.col === session.col}
             />

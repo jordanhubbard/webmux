@@ -1,0 +1,51 @@
+{
+  "schema": "webmux.attach-readiness-integration.v1",
+  "observed_at": "2026-11-23T10:10:46.350458+00:00",
+  "issue": 636,
+  "PR": 687,
+  "composed_source_revision": "fa5bc84cc954c4188a2ed78c9cb02fb74b5853e1",
+  "base_main": "9b674677059776f34216bac92084eae221a4b001",
+  "production_unchanged": true,
+  "production_sha256": "5d28f7fc14b22d8ec282b5445222cc9d7c669f689e7d2c8e82dc244a48ccd84d",
+  "test_sha256": "7e72ea81eb5aa49ec0d64d2fac958457cf275df1b6fb8addf22971e202461471",
+  "current_local_checks": [
+    {
+      "command": "go test -race ./internal/agentdeckattach -count=5 -timeout=30s",
+      "exit_code": 0,
+      "elapsed_seconds": 8.749
+    },
+    {
+      "command": "go vet ./internal/agentdeckattach",
+      "exit_code": 0
+    },
+    {
+      "command": "Integrated overlay restoring only300ms pre-readiness context",
+      "exit_code": 1,
+      "classification": "expected negative control",
+      "failure": "version check finished before child readiness"
+    },
+    {
+      "command": "git diff --check",
+      "exit_code": 0
+    }
+  ],
+  "native_CI_original_head": "7c350f4ec80a22a03ad53ea3877833e57eeed1e8",
+  "original_CI_all_applicable_checks_passed": true,
+  "original_CI_attribution": "Original Unix fixture without explicit mv-f flag; current integration adds only that noninteractive fixture flag and requalifies locally. No current-composition Linux/Windows execution claimed.",
+  "original_CI_jobs": {
+    "Linux_server": 137593436167,
+    "macOS_server": 137593436282,
+    "Windows_server": 137593436294,
+    "Windows_ARM64_workflow": 137593435376
+  },
+  "native_scope": "macOS process-group cancellation, child cleanup and startup/cancel bounds. Windows excludes this Unix test.",
+  "preserved_bounds": {
+    "production_version_check_seconds": 3,
+    "production_wait_delay_milliseconds": 200,
+    "startup_seconds": 2,
+    "cancellation_seconds": 2,
+    "child_exit_seconds": 1
+  },
+  "CI_policy": "New commits and merge subjects [skip ci], local resources only; preserve existing runs",
+  "installed_runtime_MAC_or_NAS_change": false
+}

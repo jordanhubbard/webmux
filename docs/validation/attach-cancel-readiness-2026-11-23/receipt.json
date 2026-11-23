@@ -1,0 +1,56 @@
+{
+  "schema": "webmux.attach-cancellation-readiness-qualification.v1",
+  "issue": 636,
+  "observed_at": "2026-11-23T09:15:42.055266+00:00",
+  "source_revision_before_receipt_commit": "90a8f03abfa20c0fba00a013558cc4f5830c442c",
+  "host": "macOS ARM64",
+  "source_sha256": {
+    "webmux/server/internal/agentdeckattach/attach_unix.go": "5d28f7fc14b22d8ec282b5445222cc9d7c669f689e7d2c8e82dc244a48ccd84d",
+    "webmux/server/internal/agentdeckattach/attach_unix_test.go": "6841cf3a9a0ce5c4fa1b206ffd983abdb93018cf42beefcd25f80af7ec1d51f0"
+  },
+  "production_unchanged_from_base": true,
+  "bounds": {
+    "production_version_check_seconds": 3,
+    "production_wait_delay_milliseconds": 200,
+    "fixture_child_startup_seconds": 2,
+    "fixture_deliberate_start_delay_seconds": 1,
+    "cancellation_seconds": 2,
+    "child_exit_observation_seconds": 1
+  },
+  "checks": [
+    {
+      "command": "go test -race ./internal/agentdeckattach -count=5 -timeout=30s",
+      "exit_code": 0,
+      "elapsed_seconds": 10.056
+    },
+    {
+      "command": "go vet ./internal/agentdeckattach",
+      "exit_code": 0
+    },
+    {
+      "command": "Go overlay restoring only the pre-readiness 300ms context timeout; same delayed child fixture",
+      "exit_code": 1,
+      "classification": "expected negative control",
+      "elapsed_seconds": 0.503,
+      "failure": "version check finished before child readiness; signal: killed",
+      "production_source_changed": false
+    },
+    {
+      "command": "git diff --check",
+      "exit_code": 0
+    }
+  ],
+  "preserved": [
+    "Actual process-group cancellation and child-survival assertion",
+    "Linux zombie distinction",
+    "No terminal input consumption and parent TERM test",
+    "Unsupported/oversized version-output refusal",
+    "Separate bounded startup and prompt-cancellation checks",
+    "Cancel/wait cleanup on early fixture failure"
+  ],
+  "limits": [
+    "Local macOS process evidence only; Linux runs in normal CI.",
+    "The new one-second delay makes the former 300ms startup assumption fail deterministically; it does not claim to reproduce the historical scheduler interleaving.",
+    "No installed Agent Deck, WebMux, MAC, fleet, NAS or service state changed."
+  ]
+}

@@ -1,0 +1,155 @@
+{
+  "schema": "webmux.mac.native-read-series.v1",
+  "scope": "Same-host MAC authentication and generic write refusal only; no project existence, worker participation, product read adapter or three-host qualification",
+  "installed_mac_source_revision": "da57461f05ba054e9bc57a42c1889bee47dab1f1",
+  "running_mac_source_revision": "unattested",
+  "source_sha256": {
+    "webmux/server/internal/maccoord/bindings.go": "389eb6b3ee97163fe74da8e08aede18852d371103e65838a33fb4e1d4a9d2e16",
+    "webmux/server/internal/maccoord/bindings_test.go": "38417409fb2f5dbab5a0db9caa24fae7a53a23639bb1acff744f7399b5290d35",
+    "webmux/server/internal/maccoord/read_access.go": "0558d56aee84d81ac0f2496cbf134d8e7b38ee4ef55430674e95229ee772b873",
+    "webmux/server/internal/maccoord/read_access_test.go": "9939f820474ef499497974b3f123ac47a11681bb5a1e7d0c4020646a4a8118bd",
+    "webmux/server/internal/maccoord/native_read_access_darwin_test.go": "ce7473739f8b2135eebce24b3f8835616af49f4e52b3234369a25c68392c9a67"
+  },
+  "observations": [
+    {
+      "schema": "webmux.mac.native-read-qualification.v1",
+      "client_id": "webmux-observer-puck-01a2018c",
+      "observed_at": "2026-11-23T05:19:03.959949Z",
+      "credential_expires_at": "2026-11-24T05:12:07.130369Z",
+      "publisher_fingerprint": "dd3e7375c27b124a12430167e8e0c5b8886cd5d372b833fbfa078fde934308c0",
+      "repository_id": "e9319885c4b08dd63c754f1b02a84ae5d125ef37d0f91ad4fa72408f2a0868ee",
+      "read": {
+        "schema": "webmux.mac.read-authentication.v1",
+        "authority_id": "explicit-local-mac-qualification",
+        "project_key": "webmux-auth-qualification",
+        "binding_revision": "1c8801f98547471f7d2702801c4a4f5b75ff9b1d4a6a5a0d40b77e0a20d80af6",
+        "observed_at": "2026-11-23T05:19:03.925036Z",
+        "upstream_schema": "mac.dashboard.observe.project_graph.v1",
+        "missing_credentials_refused": true,
+        "invalid_credentials_refused": true,
+        "supplied_credential_accepted": true,
+        "principal_identity": "unverified",
+        "other_operations": "unqualified"
+      },
+      "expected_refusal": false,
+      "write_refused": true,
+      "scope": "Native read/scope outcomes only; synthetic project key is not project enrollment, worker identity or admission"
+    },
+    {
+      "schema": "webmux.mac.native-read-qualification.v1",
+      "client_id": "webmux-read-probe-01a2018c",
+      "observed_at": "2026-11-23T05:19:41.43434Z",
+      "credential_expires_at": "2026-11-23T05:28:05.020837Z",
+      "publisher_fingerprint": "dd3e7375c27b124a12430167e8e0c5b8886cd5d372b833fbfa078fde934308c0",
+      "repository_id": "e9319885c4b08dd63c754f1b02a84ae5d125ef37d0f91ad4fa72408f2a0868ee",
+      "read": {
+        "schema": "webmux.mac.read-authentication.v1",
+        "authority_id": "explicit-local-mac-qualification",
+        "project_key": "webmux-auth-qualification",
+        "binding_revision": "1c8801f98547471f7d2702801c4a4f5b75ff9b1d4a6a5a0d40b77e0a20d80af6",
+        "observed_at": "2026-11-23T05:19:41.282085Z",
+        "upstream_schema": "mac.dashboard.observe.project_graph.v1",
+        "missing_credentials_refused": true,
+        "invalid_credentials_refused": true,
+        "supplied_credential_accepted": true,
+        "principal_identity": "unverified",
+        "other_operations": "unqualified"
+      },
+      "expected_refusal": false,
+      "write_refused": true,
+      "scope": "Native read/scope outcomes only; synthetic project key is not project enrollment, worker identity or admission"
+    },
+    {
+      "schema": "webmux.mac.native-read-qualification.v1",
+      "client_id": "webmux-read-probe-01a2018c",
+      "observed_at": "2026-11-23T05:21:19.914333Z",
+      "credential_expires_at": "2026-11-23T05:28:05.020837Z",
+      "publisher_fingerprint": "dd3e7375c27b124a12430167e8e0c5b8886cd5d372b833fbfa078fde934308c0",
+      "repository_id": "e9319885c4b08dd63c754f1b02a84ae5d125ef37d0f91ad4fa72408f2a0868ee",
+      "read": {
+        "schema": "",
+        "authority_id": "",
+        "project_key": "",
+        "binding_revision": "",
+        "observed_at": "0001-01-01T00:00:00Z",
+        "upstream_schema": "",
+        "missing_credentials_refused": false,
+        "invalid_credentials_refused": false,
+        "supplied_credential_accepted": false,
+        "principal_identity": "",
+        "other_operations": ""
+      },
+      "expected_refusal": true,
+      "write_refused": true,
+      "scope": "Native read/scope outcomes only; synthetic project key is not project enrollment, worker identity or admission"
+    },
+    {
+      "schema": "webmux.mac.native-read-qualification.v1",
+      "client_id": "webmux-observer-puck-01a2018c",
+      "observed_at": "2026-11-23T05:26:48.947367Z",
+      "credential_expires_at": "2026-11-24T05:12:07.130369Z",
+      "publisher_fingerprint": "dd3e7375c27b124a12430167e8e0c5b8886cd5d372b833fbfa078fde934308c0",
+      "repository_id": "e9319885c4b08dd63c754f1b02a84ae5d125ef37d0f91ad4fa72408f2a0868ee",
+      "read": {
+        "schema": "webmux.mac.read-authentication.v1",
+        "authority_id": "explicit-local-mac-qualification",
+        "project_key": "webmux-auth-qualification",
+        "binding_revision": "1c8801f98547471f7d2702801c4a4f5b75ff9b1d4a6a5a0d40b77e0a20d80af6",
+        "observed_at": "2026-11-23T05:26:48.892973Z",
+        "upstream_schema": "mac.dashboard.observe.project_graph.v1",
+        "missing_credentials_refused": true,
+        "invalid_credentials_refused": true,
+        "supplied_credential_accepted": true,
+        "principal_identity": "unverified",
+        "other_operations": "unqualified"
+      },
+      "expected_refusal": false,
+      "write_refused": true,
+      "scope": "Native read/scope outcomes only; synthetic project key is not project enrollment, worker identity or admission"
+    }
+  ],
+  "temporary_probe_revoked_at": "2026-11-23T05:19:48.554023+00:00",
+  "client_preservation": {
+    "originalIDsRetained": true,
+    "originalMetadataUnchanged": true,
+    "addedIDs": [
+      "webmux-observer-puck-01a2018c",
+      "webmux-read-probe-01a2018c"
+    ],
+    "activeProfileUnchanged": true
+  },
+  "enrollment_scopes": [
+    "read"
+  ],
+  "changes": [
+    "Created two dedicated local read-only MAC clients through native hub-owner CLI",
+    "Installed observer profile without activation; original active profile unchanged",
+    "Revoked only the temporary probe client"
+  ],
+  "checks": [
+    {
+      "command": "go test -race -v ./internal/maccoord -count=1 -timeout=30s",
+      "native_manifest": "dedicated observer",
+      "exit_code": 0
+    },
+    {
+      "command": "go vet ./internal/maccoord",
+      "exit_code": 0
+    },
+    {
+      "command": "GOOS=windows GOARCH=amd64 go test -c ./internal/maccoord",
+      "classification": "cross-compilation only; not native Windows execution",
+      "exit_code": 0
+    }
+  ],
+  "limitations": [
+    "Synthetic graph project key does not prove a real project binding",
+    "ReadEvidence leaves principal identity unverified and other operations unqualified",
+    "No native profile loader or human/agent consumer exists",
+    "An optional GET /projects timed out after three seconds; fresh /health and fixed graph requests passed; no broad endpoint retry or service restart",
+    "Initial --expires-in 1d enrollment attempt was rejected by argparse before mutation; native CLI accepts integer seconds"
+  ],
+  "nas_access": false,
+  "service_restart": false,
+  "worker_or_task_mutation": false
+}

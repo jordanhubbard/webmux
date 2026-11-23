@@ -42,6 +42,9 @@ export function VncViewer({ sessionId, vncUsername, vncPassword, mode, onStateCh
 
     const options = { credentials: { username: vncUsername, ...(vncPassword ? { password: vncPassword } : {}) } };
     const rfb = new RFB(containerRef.current, buildVncWsUrl(sessionId), options);
+    // Thumbnail pointer input stays disabled. The grid routes only wheel input
+    // to the selected viewer's native noVNC handler.
+    containerRef.current.querySelector('canvas')?.setAttribute('data-wheel-surface', '');
 
     rfb.scaleViewport = mode === 'fullscreen';
     rfb.resizeSession = false;
