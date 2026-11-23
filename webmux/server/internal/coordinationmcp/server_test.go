@@ -23,6 +23,14 @@ func TestMCPGuidanceToolsAndAdmissionSemantics(t *testing.T) {
 		if r.Header.Get("Authorization") != "Bearer wmc1.fixture.private" {
 			t.Error("wrong scoped capability")
 		}
+
+		if r.Method == "GET" && r.URL.Path == "/project" {
+			if r.URL.RawQuery != "offset=2" {
+				t.Error("project page changed", r.URL.RawQuery)
+			}
+			_, _ = w.Write([]byte(`{"schema":"webmux.mac.session-project-view.v1","project":{"schema":"webmux.mac.project-observation.v1","project_key":"scoped-project","conflict_verdict":"unknown","ordering_verdict":"unknown","tasks":[],"dependencies":[]},"sessions":[],"standalone_history_state":"retained_unreconciled"}`))
+			return
+		}
 		if r.Method == "GET" {
 			_, _ = w.Write([]byte(`{"contract":"webmux-session-coordination/v1","scope":"node-local","enabled":true,"members":[],"claims":[],"inbox":[],"outbox":[],"resources":[]}`))
 			return
@@ -62,7 +70,7 @@ func TestMCPGuidanceToolsAndAdmissionSemantics(t *testing.T) {
 		t.Fatal("no startup guidance")
 	}
 	tools, err := session.ListTools(ctx, nil)
-	if err != nil || len(tools.Tools) != 2 {
+	if err != nil || len(tools.Tools) != 3 {
 		t.Fatal(tools, err)
 	}
 	result, err := session.CallTool(ctx, &mcp.CallToolParams{Name: "webmux_coordination_view", Arguments: map[string]any{}})
@@ -72,6 +80,19 @@ func TestMCPGuidanceToolsAndAdmissionSemantics(t *testing.T) {
 	data, _ := json.Marshal(result)
 	if !strings.Contains(string(data), "node-local") || strings.Contains(string(data), "wmc1.") {
 		t.Fatal("invalid or secret tool output", string(data))
+	}
+
+	project, err := session.CallTool(ctx, &mcp.CallToolParams{Name: "webmux_mac_project_view", Arguments: map[string]any{"offset": 2}})
+	if err != nil || project.IsError {
+		t.Fatal("project tool failed", project, err)
+	}
+	encodedProject, _ := json.Marshal(project)
+	if !strings.Contains(string(encodedProject), "scoped-project") || !strings.Contains(string(encodedProject), "unknown") || strings.Contains(string(encodedProject), "wmc1.") {
+		t.Fatal("project tool lost scope or exposed credentials", string(encodedProject))
+	}
+	badProject, err := session.CallTool(ctx, &mcp.CallToolParams{Name: "webmux_mac_project_view", Arguments: map[string]any{"offset": 201}})
+	if err != nil || !badProject.IsError {
+		t.Fatal("invalid project page accepted", badProject, err)
 	}
 	args := map[string]any{"request_id": "unchanged-request-id", "action": "reserve", "resource": "node:fixture:heavy"}
 	result, err = session.CallTool(ctx, &mcp.CallToolParams{Name: "webmux_coordination_act", Arguments: args})

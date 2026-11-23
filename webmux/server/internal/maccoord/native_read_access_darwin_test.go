@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
@@ -219,6 +220,28 @@ func TestNativeLocalMACReadAccess(t *testing.T) {
 		}
 		project = &observation
 	}
+
+	runtimeQualified := false
+	if project != nil && os.Getenv("WEBMUX_MAC_NATIVE_RUNTIME") == "1" {
+		policy := map[string]any{
+			"schema": RuntimeSchema, "bindings": document,
+			"credentials": []any{map[string]any{"authority_id": "explicit-local-mac-qualification", "client_id": manifest.ClientID,
+				"enrollment_file": path, "publisher": map[string]any{"pid": pid, "fingerprint": before}}},
+		}
+		// A temporary private reference to the original enrollment, never a
+		// copied token, installed profile change or runtime backend cutover.
+		config := filepath.Join(t.TempDir(), "mac-observation.json")
+		encoded, err := json.Marshal(policy)
+		if err != nil || os.WriteFile(config, encoded, 0600) != nil {
+			t.Fatal("native runtime fixture unavailable")
+		}
+		runtime := OpenRuntime(config, nil)
+		got, err := runtime.ObserveProject(t.Context(), "native-qualification", repo, 0, 2)
+		if err != nil || got.Schema != ProjectSchema || got.ProjectKey != project.ProjectKey || got.ConflictVerdict != "unknown" || got.OrderingVerdict != "unknown" {
+			t.Fatal("native explicit observer runtime failed:", err)
+		}
+		runtimeQualified = true
+	}
 	if publisher() != before {
 		t.Fatal("native publisher changed during qualification")
 	}
@@ -238,9 +261,10 @@ func TestNativeLocalMACReadAccess(t *testing.T) {
 		Worker               *WorkerObservation  `json:"worker,omitempty"`
 		UnownedWorkerRefused bool                `json:"unowned_worker_refused,omitempty"`
 		Project              *ProjectObservation `json:"project,omitempty"`
+		RuntimeQualified     bool                `json:"runtime_qualified"`
 		Scope                string              `json:"scope"`
 	}{"webmux.mac.native-read-qualification.v1", manifest.ClientID, time.Now().UTC(), expires, before,
-		repo.ID, evidence, refusal, true, task, foreignTaskRefused, missingTaskRefused, worker, unownedWorkerRefused, project,
+		repo.ID, evidence, refusal, true, task, foreignTaskRefused, missingTaskRefused, worker, unownedWorkerRefused, project, runtimeQualified,
 		"Native read/scope and optional user-supplied fleet-task observations only; test binding is not WebMux project/session enrollment or admission"}
 	encoded, err := json.MarshalIndent(receipt, "", "  ")
 	if err != nil {

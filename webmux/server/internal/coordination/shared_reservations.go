@@ -205,6 +205,10 @@ func (s *Service) SharedIntent(node, token string, inputs []MemberInput, r Reque
 			admitted = e
 			return nil
 		}
+		if err := s.admit(actor.Ref.Owner, actor.Project, r.Action); err != nil {
+			admitted = err
+			return nil
+		}
 		saved, exists, e := get[receipt](bucket(tx, "receipts"), requestKey(actor.Ref, r.ID))
 		if e != nil {
 			return e
@@ -259,6 +263,10 @@ func (s *Service) BeginSharedAttempt(node, token string, inputs []MemberInput, r
 		actor, e := authenticate(tx, token)
 		if e != nil {
 			admitted = e
+			return nil
+		}
+		if err := s.admit(actor.Ref.Owner, actor.Project, r.Action); err != nil {
+			admitted = err
 			return nil
 		}
 		key := requestKey(actor.Ref, r.ID)
@@ -426,6 +434,16 @@ func (s *Service) ExchangeReservation(node string, scope SenderScope, inputs []M
 		}
 		if !enabled(tx) {
 			return ErrDisabled
+		}
+		var project *Binding
+		for _, input := range inputs {
+			if input.Ref.Owner == scope.ReceiverOwner && input.Project != nil && input.Project.ID == e.Project {
+				project = input.Project
+				break
+			}
+		}
+		if err := s.admit(scope.ReceiverOwner, project, e.Request.Action); err != nil {
+			return err
 		}
 		reply = ReservationReply{Contract: ReservationContract, ID: e.ID, Hash: e.Hash(), Epoch: string(bucket(tx, "meta").Get([]byte("history_epoch"))), State: "absent", Now: now}
 		if reply.Epoch != e.Epoch {

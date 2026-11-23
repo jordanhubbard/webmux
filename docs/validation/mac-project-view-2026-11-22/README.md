@@ -2,8 +2,11 @@
 
 Component qualification for [#674](https://github.com/jordanhubbard/webmux/issues/674),
 stacked on #679. Read the [contract](../../mac-project-view.md) and
-[receipt](receipt.json). This checkpoint supplies collection and authorization;
-product configuration, HTTP, browser and native-agent consumers remain unfinished.
+[receipt](receipt.json). The original `receipt.json` records the earlier collector-only checkpoint and its
+source hashes. `runtime-read.json` records the subsequent private runtime loader,
+shared browser/agent reader, MCP tool, UI and standalone admission guard. These
+receipts retain their separate evidence scope; neither completes live fleet
+project enrollment, roadmap linkage or conflict/order qualification.
 
 The reader independently verifies every returned task, withholds foreign and
 unresolved dependency details, preserves bounds/unknown states, and discards the

@@ -18,12 +18,13 @@ const Contract = "webmux-session-coordination/v1"
 const DefaultLease = 120
 
 var (
-	ErrUnauthorized = errors.New("session coordination capability is invalid or inactive")
-	ErrDisabled     = errors.New("session coordination is disabled by server policy")
-	ErrClosed       = errors.New("session coordination is closed")
-	ErrInvalid      = errors.New("invalid session coordination request")
-	ErrClock        = errors.New("coordination authority clock moved backwards; leases remain held")
-	ErrIdentity     = errors.New("coordination node identity differs from its retained database")
+	ErrExternalAuthority = errors.New("project execution belongs to an external authority; standalone admission is unavailable")
+	ErrUnauthorized      = errors.New("session coordination capability is invalid or inactive")
+	ErrDisabled          = errors.New("session coordination is disabled by server policy")
+	ErrClosed            = errors.New("session coordination is closed")
+	ErrInvalid           = errors.New("invalid session coordination request")
+	ErrClock             = errors.New("coordination authority clock moved backwards; leases remain held")
+	ErrIdentity          = errors.New("coordination node identity differs from its retained database")
 )
 
 type Ref struct {
