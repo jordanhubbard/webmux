@@ -6,6 +6,7 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -282,6 +283,117 @@ func TestNodeCandidateIdentityReconciliationBoundaries(t *testing.T) {
 			}
 			if _, ok := candidatePeer(q, c, now); ok {
 				t.Fatal("unsafe candidate admitted")
+			}
+		})
+	}
+}
+
+func TestInitialEnrollmentCandidateBoundaries(t *testing.T) {
+	now := time.Now()
+	previous := serverPeer{ID: "remote", URL: "https://Builder.local:9443", Credential: strings.Repeat("secret", 8)}
+	candidate := discovery.Candidate{ClaimedID: strings.Repeat("a", 32), Host: "builder.local.", Address: "192.0.2.45", Port: 9443, TLS: true, Expires: now.Add(time.Second)}
+	next, ok := enrollmentCandidatePeer(previous, candidate, now)
+	if !ok || next.URL != previous.URL || next.Identity != (nodeIdentity{}) || next.Credential != previous.Credential || next.DiscoveredAddress != candidate.Address {
+		t.Fatal("an address hint changed the configured authority or granted identity", next, ok)
+	}
+	for _, change := range []string{"plain-url", "foreign-host", "wrong-port", "plaintext", "expired", "invalid-claim", "empty-port", "loopback", "unspecified", "multicast", "unscoped", "invalid-host", "foreign-pin", "invalid-pin"} {
+		t.Run(change, func(t *testing.T) {
+			p, c := previous, candidate
+			switch change {
+			case "plain-url":
+				p.URL = "http://builder.local:9443"
+			case "foreign-host":
+				c.Host = "other.local"
+			case "wrong-port":
+				c.Port++
+			case "plaintext":
+				c.TLS = false
+			case "expired":
+				c.Expires = now
+			case "invalid-claim":
+				c.ClaimedID = "not-a-node"
+			case "empty-port":
+				c.Port = 0
+			case "loopback":
+				c.Address = "127.0.0.1"
+			case "unspecified":
+				c.Address = "0.0.0.0"
+			case "multicast":
+				c.Address = "224.0.0.251"
+			case "unscoped":
+				c.Address = "fe80::1"
+			case "invalid-host":
+				c.Host = "user@builder.local"
+			case "foreign-pin":
+				p.Identity = nodeIdentity{NodeID: strings.Repeat("b", 32), Owner: "owner", TLSKey: strings.Repeat("c", 64)}
+			case "invalid-pin":
+				p.Identity.NodeID = c.ClaimedID
+			}
+			if _, ok := enrollmentCandidatePeer(p, c, now); ok {
+				t.Fatal("unsafe initial enrollment address accepted")
+			}
+		})
+	}
+	previous.URL, candidate.Port = "https://builder.local", 443
+	if _, ok := enrollmentCandidatePeer(previous, candidate, now); !ok {
+		t.Fatal("implicit HTTPS port did not match")
+	}
+}
+
+func TestNodeAddressHintRetainsHostnameTLSAndProofBoundary(t *testing.T) {
+	for _, mode := range []string{"valid", "wrong-hostname", "untrusted-certificate", "wrong-grant"} {
+		t.Run(mode, func(t *testing.T) {
+			var mu sync.Mutex
+			var events []nodeWireEvent
+			a, _, h, remote, secret := nodePair(t, func(r *http.Request) {
+				mu.Lock()
+				defer mu.Unlock()
+				events = append(events, nodeWireEvent{r.URL.Path, r.Header.Get("Authorization"), r.RemoteAddr})
+			})
+			target, err := url.Parse(remote.URL)
+			if err != nil || len(remote.Certificate().DNSNames) == 0 {
+				t.Fatal("fixture DNS certificate missing", err)
+			}
+			peer := pinnedPeer(t, a)
+			peer.DiscoveredAddress = target.Hostname()
+			host := remote.Certificate().DNSNames[0]
+			if mode == "wrong-hostname" {
+				host = "wrong.invalid"
+			}
+			peer.URL = "https://" + net.JoinHostPort(host, target.Port())
+			roots := a.peerRoots
+			if mode == "untrusted-certificate" {
+				roots = x509.NewCertPool()
+			}
+			credential := secret
+			if mode == "wrong-grant" {
+				credential = strings.Repeat("incorrect-grant-", 3)
+			}
+			connection, identity, err := dialNodePeer(context.Background(), peer, credential, roots)
+			if mode == "valid" {
+				if err != nil {
+					t.Fatal(err)
+				}
+				connection.Close()
+				peer.Identity = identity
+				federationConfig(t, a, serverDirectory{Version: 1, Servers: []serverPeer{peer}})
+				requireStatus(t, request(h, "GET", "/api/servers/remote/sessions", "", token(t, a, "owner")), 200)
+			} else if err == nil {
+				connection.Close()
+				t.Fatal("address hint bypassed hostname, CA or grant verification")
+			}
+			mu.Lock()
+			defer mu.Unlock()
+			if mode == "valid" {
+				if len(events) != 3 || events[0].credential != "" || events[1].credential != "" || events[2].credential != "Bearer "+secret || events[1].address != events[2].address {
+					t.Fatal("hint changed the same-connection proof/bearer boundary", events)
+				}
+			} else {
+				for _, event := range events {
+					if event.credential != "" {
+						t.Fatal("bearer sent without successful identity proof")
+					}
+				}
 			}
 		})
 	}
