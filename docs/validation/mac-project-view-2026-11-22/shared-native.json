@@ -1,0 +1,117 @@
+{
+  "schema": "webmux.mac.native-shared-consumer-qualification.v1",
+  "observed_at": "2026-11-23T07:51:04.010391Z",
+  "source_revision_before_receipt_commit": "1e0fd2152f845930f5c10c20324c88d914163789",
+  "source_sha256": {
+    "tests/e2e/mac-project-view.spec.ts": "7e3e54a64bff28e84c0619ec880ce164d0910122dfeb752dfab665d8773f064d",
+    "tests/frontend/MACProjectDialog.test.tsx": "7b3f023854177e6685099f2eae8bedc2d3354c2a5ab938d6bb6ac064e041ec3d",
+    "webmux/frontend/src/components/MACProjectDialog.tsx": "fb8f4e74206c36368d5ee7d7bb8ca34109ed26bf5ea8567f0464c7b4e92bb665",
+    "webmux/frontend/src/utils/api.ts": "b0f354d1814f2278e3ff48635c4e212a4b5794bbb53dbd54f3a9c2f59d1e23cf",
+    "webmux/scripts/mac-project-native-browser.mts": "8e49fecc6653af9d05d668e768f210c82c4bd105e9689603ba80876455d718ff",
+    "webmux/server/internal/coordinationclient/client.go": "3373f03f2d270b2bf99f1947852b05f604e5a9ca66006d594001e4748f81d86d",
+    "webmux/server/internal/httpapi/mac_project.go": "c427f1f409b8b55f2d135355e6eb2553ff46eadd6728ffdaf630a38552f2e190",
+    "webmux/server/internal/httpapi/mac_project_native_darwin_test.go": "f57f9918b285e1c4f81dcb5bfdf5e9fcdcfdf5b5027d7df6bec118f5a57489b0",
+    "webmux/server/internal/httpapi/mac_project_test.go": "3fa3fb34e314ed9035253ee8aa2115bbd304cb85ab1baf6c13036cc246aa8223",
+    "webmux/server/internal/maccoord/project.go": "36616aee271c3c198347642644ece4cea75b51a4bb7249f9c0248107544db7a6",
+    "webmux/server/internal/maccoord/runtime.go": "aab65a7e4a49a6025efde579900b801d23b690d73c69f2fc07d7d99bff293594"
+  },
+  "native": {
+    "scope": "Disposable local WebMux broker sessions and explicit private fleet test context; not live WebMux project enrollment or three-host participant acceptance",
+    "package_elapsed_seconds": 11.169,
+    "native_shared_read_elapsed_seconds": 8.90981025,
+    "exit_code": 0,
+    "publisher_fingerprint": "dd3e7375c27b124a12430167e8e0c5b8886cd5d372b833fbfa078fde934308c0",
+    "shared_browser_route_MCP_task_identities": 8,
+    "chrome_completed": true,
+    "chrome_shared_task_identities": 8,
+    "browser_route_interception": false,
+    "source_observed": true,
+    "source_task_link_state": "unlinked",
+    "project_existence": "unverified",
+    "coverage": "incomplete",
+    "conflict_verdict": "unknown",
+    "ordering_verdict": "unknown",
+    "positive_native_worker_machine_join": false,
+    "all_returned_task_owners_unowned": true,
+    "competing_standalone_work_refused": true,
+    "changed_policy_refused_both_consumers": true,
+    "provider_incarnations_preserved": true,
+    "MCP_transport": "SDK in-memory transport to the real tool adapter; actual session HTTP and MAC HTTP requests",
+    "browser": "Installed Google Chrome 158.0.8127.36, fresh Playwright profile, production frontend and real WebMux server/MAC reads",
+    "MAC_token_location": "Original private native enrollment; read by trusted Go server only",
+    "WebMux_browser_token_transport": "stdin to local browser helper; not argv or environment",
+    "human_projection_sha256": "21f59a6007efdb0f527ea974a24d0f599e2aeac4f40774bcd3269c46d7941420",
+    "agent_projection_sha256": "47cfbe87f99d27edb8a25e6cb0dcd8087567db43cf4daea01e117ee92f9b32f3",
+    "private_receipt_sha256": "a4ab8f45e4580d6d5eff594efc5592c4642abfb6ae5b753c7b7a88bbd2862440",
+    "private_screenshot_sha256": {
+      "project-native.png": "79ce285b9d8f9529a839c2ccc34f34b7cc9f41309d85c7d71848b19338dddecb",
+      "project-native-source.png": "4f83421b35ba9cf73fdeebb1ef5f705c86ac97d723e9981d01b2c5d0871072af"
+    }
+  },
+  "controlled_checks": [
+    {
+      "command": "go test -race ./internal/maccoord ./internal/coordinationclient ./internal/coordinationmcp -count=1 -timeout=90s",
+      "exit_code": 0,
+      "package_elapsed_seconds": {
+        "maccoord": 7.523,
+        "coordinationclient": 1.333,
+        "coordinationmcp": 2.002
+      }
+    },
+    {
+      "command": "go test -race ./internal/httpapi -run '^(TestMACProject|TestMCPMarkupMessageMatchesCLIAndRetainsEncodedBodyLimit)' -count=1 -timeout=90s",
+      "exit_code": 0,
+      "package_elapsed_seconds": 8.929
+    },
+    {
+      "command": "go vet ./internal/maccoord ./internal/httpapi ./internal/coordinationclient ./internal/coordinationmcp",
+      "exit_code": 0
+    },
+    {
+      "command": "GOOS=windows GOARCH=amd64 go test -c ./internal/httpapi",
+      "exit_code": 0,
+      "classification": "cross-compilation only"
+    },
+    {
+      "command": "npm run typecheck",
+      "exit_code": 0
+    },
+    {
+      "command": "npm test -- MACProjectDialog RecoveryDialog",
+      "exit_code": 0,
+      "tests_passed": 24
+    },
+    {
+      "command": "npm run build",
+      "exit_code": 0
+    },
+    {
+      "command": "npm run test:e2e -- mac-project-view.spec.ts",
+      "exit_code": 0,
+      "tests_passed": 1,
+      "elapsed_seconds": 9.4,
+      "scope": "Controlled DTO source rendering/access refusal with actual browser/server/provider; distinct from native real-MAC browser proof"
+    }
+  ],
+  "refusal_cases": [
+    "Foreign receiving account/session credentials refused",
+    "Changed private observer policy refuses previous successful project observations",
+    "Standalone work not admitted under accepted MAC policy",
+    "A real locally accessible remote execution path is never inspected as local Git source",
+    "Source remains distinct from MAC task/roadmap linkage",
+    "Refresh failure removes previously displayed source and task data"
+  ],
+  "native_fixture_correction": "API-only fixture lacks required full-app settings/name and uses overlapping positions; native UI harness supplies production defaults and distinct disposable tile rows. No installed settings changed.",
+  "limitations": [
+    "Observed source is the disposable session repository, not an enrolled live WebMux project or MAC task source",
+    "No positive native worker/machine/session mapping in this unowned task page",
+    "No three-host interactive participant acceptance",
+    "No source-roadmap import or strict conflict/order admission verdict",
+    "Fresh pages and Git metadata sampling are not an atomic snapshot",
+    "No native Windows runtime proof from cross-compilation"
+  ],
+  "installed_config_profile_service_changes": false,
+  "MAC_dispatch_or_worker_registration": false,
+  "NAS_access": false,
+  "reclaimed_bytes": 0
+}
