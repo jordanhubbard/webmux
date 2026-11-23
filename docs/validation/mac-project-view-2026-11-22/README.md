@@ -26,3 +26,19 @@ qualification. Raw task data, project key and backlog counts remain private;
 the public receipt retains selected qualification metadata and a projection digest.
 This is not a WebMux project enrollment or human/agent product acceptance.
 No task, worker, credential, profile, service, policy or NAS state changed.
+
+The subsequent runtime checkpoint uses the same dedicated native read-only client
+through its original enrollment reference and a temporary private policy. It
+checks the publisher before/after, actual write-scope refusal and final policy/
+credential revisions. The production server loads optional explicit policy;
+MAC-bound projects are refused standalone local/replayed/peer admission while
+release and receipt operations can drain retained history.
+
+A real WebMux broker/capability/account integration test exercises both shared
+routes against an authenticated controlled TLS MAC publisher. Frontend lifecycle
+tests cover late responses, failed refreshes, plain text and page replacement.
+The Chrome browser test uses a controlled project DTO and an actual native
+provider; it preserves the same provider start record after access refusal.
+The native stdio contract checks the added tool and unbound-project refusal.
+These are distinct scopes, not a claim that the live WebMux project has completed
+human/agent enrollment or that source roadmap/conflict/order requirements are done.

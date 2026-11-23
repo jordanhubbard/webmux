@@ -1,0 +1,142 @@
+{
+  "schema": "webmux.mac.runtime-read-qualification.v1",
+  "observed_at": "2026-11-23T07:37:24.986828+00:00",
+  "source_revision_before_receipt_commit": "64d03331a1ab7f7ed632c6f5de2c8961563d49a3",
+  "source_sha256": {
+    "tests/e2e/mac-project-view.spec.ts": "fb12f2cf7988d7719944afa56c983e5d0fe08e9cc2d3b80b7fd16322d5bcd46d",
+    "tests/frontend/MACProjectDialog.test.tsx": "92d931428fed0237b3dd056f3e2b40dda2be98fc38ac97577e0235c986641a70",
+    "webmux/frontend/src/components/MACProjectDialog.css": "bcb5a9277e2a0c0ca9784329c016ece8339c1866ceb0f21eec096e4ffb3c5cf9",
+    "webmux/frontend/src/components/MACProjectDialog.tsx": "7fc9334837d9389319cf3a6b05185b8d19e914a8e4a047b71c37414fff767ceb",
+    "webmux/frontend/src/components/TerminalActions.tsx": "494cdfa2f4a1bd0f24be744306009316572323a8e64197141606300446b0dc21",
+    "webmux/frontend/src/utils/api.ts": "b0079da1ac100b8f0ba5fe7126271907f4710912689931661c6e3683b7e90f94",
+    "webmux/scripts/server-contract.mts": "5879e5d70b20c7674d02fb0c3e363556a1ce2b5c68eec86e64f8d01434395a0b",
+    "webmux/server/internal/coordination/admission_gate_test.go": "f45153b5bd1aea6ab58c4d074edeebe2af570d2cdfceac87af5602aa05a5fe14",
+    "webmux/server/internal/coordination/inventory.go": "79d84d7e0d82cc2004dfedae25a57ff483da58d1f6d09f1b0ead8c96cde69757",
+    "webmux/server/internal/coordination/inventory_test.go": "c866676852156aa12e06f6ebb4ce81c791042a0eaee2be619b58a16a8b5c5f27",
+    "webmux/server/internal/coordination/model.go": "623c52d85deb910da2d1980b3c10a96ce586667712034be2c02699808a2dd04e",
+    "webmux/server/internal/coordination/operations.go": "4769d4a0e407715fd1af2089d2fe8d95c43ff8bc4565e6320ac95006b73853a3",
+    "webmux/server/internal/coordination/remote.go": "955d64ef211da460f849bcd992967ee40202e7c1da16df399fb30fa89d285a92",
+    "webmux/server/internal/coordination/shared_reservations.go": "73a8265350dd3e1759233d522facccbbbecd1420dd04e2ffc446a9a22ea43c78",
+    "webmux/server/internal/coordination/store.go": "40f195fda7841e272eb95daba98c365a6fe5f1b795c1d60e7a37330542fdca4e",
+    "webmux/server/internal/coordinationclient/client.go": "56387d60e70b132e62c3c1ceb67b88b015cef1350b16e479301f884114b3ff27",
+    "webmux/server/internal/coordinationmcp/server.go": "71e5936cfb6f4aa30796c68e1e86a40d20f7cc6d97e552b9f8ecf3efb5ce909b",
+    "webmux/server/internal/coordinationmcp/server_test.go": "c201fc7fdd9508e3946b6381382a7e358441fd4a747c743a04227e40af3b34c6",
+    "webmux/server/internal/httpapi/coordination_mcp_payload_test.go": "4dc489e9b3fa53d3c134f5eff733f4b4b0531de1d058a209988e0112341c31c2",
+    "webmux/server/internal/httpapi/mac_project.go": "a5378b8a8e200effceb09af8fd2dec01603dfd96adcfb59c5f43421c574cd6bb",
+    "webmux/server/internal/httpapi/mac_project_fixture_unix_test.go": "c0365c1775f11f73369a776e3150dd2e72dd51e895b245f3b8de1c8f39a9b621",
+    "webmux/server/internal/httpapi/mac_project_fixture_windows_test.go": "3af1a160a39a182f421360bd5ae72747cc9e3a33a2f56c84db319d02012e2432",
+    "webmux/server/internal/httpapi/mac_project_test.go": "d66f77b71609fe8d590e575e84eac2e0d4b7329a2f6789d1398e4408b39a4097",
+    "webmux/server/internal/httpapi/server.go": "6761760a8cb7fa7585f341f52f1cbfe8fbe44cb8caeca369eb7fccb8968451e6",
+    "webmux/server/internal/httpapi/session_coordination.go": "6fd32461abb8869e2fffe360bb4f8fd3f8f41636126c557c4e28983f255ce923",
+    "webmux/server/internal/maccoord/native_read_access_darwin_test.go": "d09410f05015fcd1178d4c4cdf0517cf90cef7dfc9f84ac99b4c96bb0c51195a",
+    "webmux/server/internal/maccoord/private_unix.go": "55b6b280a493bd90add85080aee8d1d7554c7cabc385f1d3391515d9525ce8c4",
+    "webmux/server/internal/maccoord/private_windows.go": "aa8499576f3ec9059c69af706a6c16e170a7d4a63fd5252c709fc1f354e729d6",
+    "webmux/server/internal/maccoord/project.go": "bdbc5d1c88e23485d625524705fa6c70e0b1c4f7e37b20ec4d9adbb3c093f3ac",
+    "webmux/server/internal/maccoord/publisher_unix.go": "9e8f51b60091b353acbee63eabe612b839d8797905799e191804cd335ce42fac",
+    "webmux/server/internal/maccoord/publisher_windows.go": "4f7f9f0aa28bc0730fc9dd0344d71d02d08057ad6632c53823786f13630a7998",
+    "webmux/server/internal/maccoord/runtime.go": "2fe5d700b7c949589145b950d6913583fed6f2948e63c507bc67d80370f4427e",
+    "webmux/server/internal/maccoord/runtime_fixture_unix_test.go": "ca3bb98c24cdbfbd1d10b2546ef703ebb68e3532514fee5b8051cb158125ba07",
+    "webmux/server/internal/maccoord/runtime_fixture_windows_test.go": "af1973a833b8443f9397f72a5a211f33aadcd5abd6a2e8a8509d699303565ee8",
+    "webmux/server/internal/maccoord/runtime_test.go": "842a1a17f41e3fd39ca78f8cb305ff9b44b0f9e47c6cb12928e9d8013e9feb58"
+  },
+  "scope": "Shared scoped browser and agent read, explicit private observer loader, and prevention of competing standalone admission; not full live fleet project acceptance",
+  "checks": [
+    {
+      "command": "go test -race ./internal/httpapi -count=1 -timeout=10m",
+      "exit_code": 0,
+      "elapsed_seconds": 270.533,
+      "scope": "Full HTTP package before final strict query parsing and incoming main integration; affected tests rerun afterward"
+    },
+    {
+      "command": "go test -race ./internal/httpapi -run '^(TestMACProject|TestMCPMarkupMessageMatchesCLIAndRetainsEncodedBodyLimit)' -count=1 -timeout=90s",
+      "exit_code": 0,
+      "elapsed_seconds": 6.352,
+      "scope": "After strict query parsing and main integration"
+    },
+    {
+      "command": "go test -race ./internal/maccoord -count=1 -timeout=90s",
+      "exit_code": 0,
+      "elapsed_seconds": 8.213
+    },
+    {
+      "command": "go test -race ./internal/coordination ./internal/coordinationmcp -count=1 -timeout=90s",
+      "exit_code": 0,
+      "coordination_elapsed_seconds": 14.464,
+      "mcp_elapsed_seconds": 2.263
+    },
+    {
+      "command": "go test -race ./internal/coordinationmcp ./internal/coordinationclient -count=1 -timeout=60s",
+      "exit_code": 0,
+      "scope": "After main markup fix integration"
+    },
+    {
+      "command": "go vet ./internal/maccoord ./internal/coordination ./internal/httpapi ./internal/coordinationclient ./internal/coordinationmcp",
+      "exit_code": 0
+    },
+    {
+      "command": "GOOS=windows GOARCH=amd64 go test -c ./internal/maccoord; GOOS=windows GOARCH=amd64 go test -c ./internal/httpapi",
+      "exit_code": 0,
+      "scope": "Cross-compilation, not native Windows execution"
+    },
+    {
+      "command": "npm run typecheck",
+      "exit_code": 0
+    },
+    {
+      "command": "npm test -- MACProjectDialog RecoveryDialog",
+      "exit_code": 0,
+      "tests_passed": 23
+    },
+    {
+      "command": "npm run build",
+      "exit_code": 0,
+      "scope": "Production Go/frontend build; existing large-chunk advisory retained"
+    },
+    {
+      "command": "npm run test:e2e -- mac-project-view.spec.ts",
+      "exit_code": 0,
+      "tests_passed": 1,
+      "elapsed_seconds": 5.2,
+      "browser": "Installed Google Chrome 158.0.8127.36, isolated Playwright profile",
+      "scope": "Actual server/provider/browser; project DTO controlled. Real account/capability/MAC HTTP boundaries covered separately in Go integration."
+    },
+    {
+      "command": "npm run test:contract",
+      "exit_code": 0,
+      "scope": "Production binary, actual provisioned CLI and stdio MCP; includes three named tools and unbound project refusal"
+    }
+  ],
+  "native": {
+    "runtime_qualified": true,
+    "observed_at": "2026-11-23T07:30:03.945958Z",
+    "publisher_fingerprint": "dd3e7375c27b124a12430167e8e0c5b8886cd5d372b833fbfa078fde934308c0",
+    "private_original_enrollment_reference": true,
+    "raw_task_project_and_backlog_private": true,
+    "generic_write_scope_refused": true,
+    "project_existence": "unverified",
+    "conflict_verdict": "unknown",
+    "ordering_verdict": "unknown",
+    "coverage": "incomplete",
+    "exit_code": 0,
+    "package_elapsed_seconds": 0.938,
+    "selection": "Private explicit user-supplied fleet-root test context; not live WebMux project enrollment"
+  },
+  "screenshot_sha256": "e59f5bec91e04d16761c643945175347ee959bd6b677425a55d0f3eef16aa19d",
+  "test_corrections": [
+    "Updated native stdio contract from two tools to three named tools and tested read-only annotation/unbound refusal",
+    "Browser task title selector now matches the table cell containing both title and task ID",
+    "Inventory foreign-account fixture uses its actual foreign owner"
+  ],
+  "limitations": [
+    "No installed observer configuration or service restart/cutover",
+    "No live WebMux project enrollment or native positive task/worker/session join",
+    "No source-roadmap linkage, exclusive conflict verdict or strict roadmap admission",
+    "No native Windows runtime execution from cross-compilation",
+    "Fresh numeric pages are not an atomic inventory",
+    "Standalone history remains retained and unreconciled"
+  ],
+  "NAS_access": false,
+  "reclaimed_bytes": 0,
+  "fleet_dispatch_or_worker_impersonation": false,
+  "installed_credential_profile_or_service_changes": false
+}
