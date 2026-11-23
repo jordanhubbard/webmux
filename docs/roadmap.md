@@ -428,8 +428,9 @@ Retained recovery acceptance from #318, in order (tracker issue closed):
    minimum 1.16.39 contains the upstream fix; old-record migration, native reboot,
    local/SSH/remote lifecycle and production attach-worker early-input controls
    passed ([scope and evidence](validation/agent-deck-2026-11-17/README.md)).
-4. Audit #318 against its complete acceptance criteria before closing it. The
-   owner-approved merge of #322 does not close this requirement or cut a release.
+4. Audit the original #318 requirements against their complete acceptance
+   criteria. The tracker is closed; its closure and the owner-approved #322
+   merge do not supply missing acceptance evidence or cut a release.
    The [seven-criterion audit](validation/recovery-acceptance-audit-2026-11-19/README.md)
    maps the implementation and retained native evidence to every requirement;
    it records outstanding coverage and integration, not completed acceptance.
