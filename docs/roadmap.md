@@ -2,6 +2,8 @@
 
 Reviewed 2026-11-19 against the implementation, qualification receipts and GitHub
 issue states. GitHub issues track implementation and remaining acceptance work.
+The #318 and #630 tracker dispositions below were reconciled on 2026-11-23;
+historical qualification dates and limits remain attached to their own evidence.
 
 ## Trackpad scrolling
 
@@ -65,7 +67,8 @@ Ordered implementation and acceptance:
   in advertisements. This is separate from known `.local` hostname resolution
   completed under #208.
 - [ ] **Coordinate sessions automatically** under
-  [#630](https://github.com/jordanhubbard/webmux/issues/630). Provision agent
+  [#664](https://github.com/jordanhubbard/webmux/issues/664), retaining the
+  historical requirements from closed [#630](https://github.com/jordanhubbard/webmux/issues/630). Provision agent
   awareness and an agent-facing coordination interface for ordinary and managed
   sessions across authorized nodes, without special launch forms or manual
   session setup. Support project/peer discovery, task/branch/file ownership,
@@ -75,7 +78,7 @@ Ordered implementation and acceptance:
   coordination active without an open browser, retain state through reconnects
   and restart, and distinguish message admission, delivery, acknowledgment and
   completion. Do not inject unsolicited text into arbitrary terminal prompts.
-- [ ] **Qualify the complete workflow** under #630/#631 with independently
+- [ ] **Qualify the complete workflow** under #664/#631 with independently
   started real agents on two real WebMux hosts: discover nodes, authenticate
   enrollment, discover project peers without per-session opt-in, detect an
   overlapping claim, acknowledge a handoff and honor a shared worker reservation.
@@ -119,6 +122,16 @@ Native macOS-to-Linux production RPC qualification passes. Remote agent access
 and managed-provider onboarding remain open; verified project context does not
 establish those capabilities.
 
+MAC convergence retains its own ordered prerequisites:
+[#673](https://github.com/jordanhubbard/webmux/issues/673) authority/identity
+boundary → [#674](https://github.com/jordanhubbard/webmux/issues/674) shared
+human/agent observation → [#675](https://github.com/jordanhubbard/webmux/issues/675)
+interactive participation → [#676](https://github.com/jordanhubbard/webmux/issues/676)
+scope/roadmap admission → [#677](https://github.com/jordanhubbard/webmux/issues/677)
+review/publication → [#678](https://github.com/jordanhubbard/webmux/issues/678)
+three-host acceptance. These issues remain open; this sequence does not dispatch
+parallel fleet work.
+
 The [private SSH channel checkpoint](validation/coordination-ssh-channel-2026-11-22/README.md)
 adds automatic scoped startup through an authenticated private socket forward.
 Native ordinary SSH shell/CLI startup, first-use trust, same-provider reconnect,
@@ -137,17 +150,25 @@ the native agent releases its retained claim after startup restore. The
 [corrected-stack restart result](validation/coordination-controller-restart-integration-2026-11-22/README.md)
 extends that evidence through completion of the post-restart turn. Broader coding-agent
 adoption, managed/password/Mosh/Windows paths and the complete
-restart/durable-work lifecycle remain open under #630; this does not complete a
+restart/durable-work lifecycle remain open under #664 (historical #630); this does not complete a
 roadmap checkbox.
 
 ## Current reliability work
 
-**First priority: [#318](https://github.com/jordanhubbard/webmux/issues/318).**
-Session-state recovery has an implementation checkpoint in
-[#322](https://github.com/jordanhubbard/webmux/pull/322). The owner requested that
-this checkpoint enter `main` for fix-forward work in a Claude session. This is
-an integration handoff, not completed acceptance: #318 remains open and first
-priority ahead of the other reliability and integration follow-ups.
+**Retained recovery priority: the original [#318](https://github.com/jordanhubbard/webmux/issues/318)
+requirements and the remaining acceptance below.** The tracker records #318 as
+closed on 2026-11-20. Its earlier [#322](https://github.com/jordanhubbard/webmux/pull/322)
+integration was an owner-approved fix-forward handoff; neither that merge nor
+tracker closure supplies the missing native acceptance evidence. Do not treat
+the closed issue as dispatchable work or reopen it from this document alone.
+Continue its explicit remaining requirements through the active scoped
+follow-ups, including [#438](https://github.com/jordanhubbard/webmux/issues/438),
+[#523](https://github.com/jordanhubbard/webmux/issues/523),
+[#538](https://github.com/jordanhubbard/webmux/issues/538) and
+[#603](https://github.com/jordanhubbard/webmux/issues/603), retaining their
+individual lifecycle/platform/policy limits. Recovery acceptance was recorded
+as the first reliability priority; the closed tracker state does not establish
+that the remaining requirements have passed or remove them from this roadmap.
 
 ### Integrated implementation and remaining qualification
 
@@ -305,7 +326,7 @@ Consult #322 for the checks on its final handoff commit. Full receipts, hashes,
 supported versions and historical limits are in [session recovery](session-recovery.md).
 The next session's working context is in [MEMORY.md](../MEMORY.md).
 
-Remaining #318 work, in order:
+Retained recovery acceptance from #318, in order (tracker issue closed):
 
 1. Finish additional native active-session, policy/profile and platform
    coverage. Remote managed-host failure fallback is qualified
@@ -396,8 +417,9 @@ Remaining #318 work, in order:
    minimum 1.16.39 contains the upstream fix; old-record migration, native reboot,
    local/SSH/remote lifecycle and production attach-worker early-input controls
    passed ([scope and evidence](validation/agent-deck-2026-11-17/README.md)).
-4. Audit #318 against its complete acceptance criteria before closing it. The
-   owner-approved merge of #322 does not close this requirement or cut a release.
+4. Audit the original #318 requirements against their complete acceptance
+   criteria. The tracker is closed; its closure and the owner-approved #322
+   merge do not supply missing acceptance evidence or cut a release.
    The [seven-criterion audit](validation/recovery-acceptance-audit-2026-11-19/README.md)
    maps the implementation and retained native evidence to every requirement;
    it records outstanding coverage and integration, not completed acceptance.
