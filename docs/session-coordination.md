@@ -45,6 +45,10 @@ never records delivery or acknowledgment. `act` reads one JSON object, up to
 admission, an expired original lease or an overlapping claim. An overlapping
 claim is recorded and both parties receive notices; negotiate before editing.
 
+MCP actions retain the 16 KiB encoded HTTP-body limit and 32 KiB stdio input-line
+bound. The MCP-to-HTTP adapter avoids unnecessary HTML escaping, so markup does
+not consume extra body capacity solely through HTML escape sequences.
+
 Supported operations:
 
 | Action | Additional fields | Behavior |
