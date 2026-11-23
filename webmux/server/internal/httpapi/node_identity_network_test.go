@@ -114,7 +114,7 @@ func TestNodeIdentityNativeNetworkServer(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer moved.Close()
-	if os.Getenv("WEBMUX_NODE_NETWORK_DISCOVERY") == "1" {
+	if os.Getenv("WEBMUX_NODE_NETWORK_DISCOVERY") == "1" && os.Getenv("WEBMUX_NODE_NETWORK_DISCOVERY_SILENT") != "1" {
 		if err := startNetworkDiscoveryAdvertiser(b, original.Addr().(*net.TCPAddr).Port); err != nil {
 			t.Fatal(err)
 		}

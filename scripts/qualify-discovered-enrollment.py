@@ -30,6 +30,7 @@ if hashlib.sha256(binary.read_bytes()).hexdigest()!=i['sha256']:raise RuntimeErr
 (root/'credential').write_text(i['credential']+'\n')
 env={k:v for k,v in os.environ.items() if k in ('PATH','HOME','TMPDIR','LANG','TZ')}
 env.update(WEBMUX_NODE_NETWORK_ROLE='server',WEBMUX_NODE_NETWORK_DIR=str(root),WEBMUX_NODE_NETWORK_BIND=i['bind'],WEBMUX_NODE_NETWORK_DISCOVERY='1')
+env['WEBMUX_NODE_NETWORK_DISCOVERY_SILENT']='1' if i.get('without_advertisement') else '0'
 with (root/'server.log').open('xb') as log:
  p=subprocess.Popen([str(binary),'-test.run=^TestNodeIdentityNativeNetworkServer$','-test.v','-test.timeout=100s'],env=env,stdin=subprocess.DEVNULL,stdout=log,stderr=subprocess.STDOUT)
  try:
@@ -69,6 +70,8 @@ def main():
     parser.add_argument('--ssh-host', required=True)
     parser.add_argument('--remote-root', type=Path, required=True)
     parser.add_argument('--remote-bind', required=True, help='Verified non-loopback Linux LAN address')
+    parser.add_argument('--race-primary', action='store_true', help='Use a race-enabled native macOS controller')
+    parser.add_argument('--without-advertisement', action='store_true', help='Negative control: owned server remains silent; command must fail discovery')
     args = parser.parse_args()
     if not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.@-]*', args.ssh_host):
         parser.error('Use an already authorized plain SSH target')
@@ -86,7 +89,7 @@ def main():
         paths = [Path(__file__).resolve(), server_root/'go.mod', server_root/'go.sum']
         paths += sorted((server_root/'internal').rglob('*.go'))
         return {str(p.relative_to(root)): digest(p) for p in paths}
-    receipt = {'passed': False, 'sources_before': sources(), 'commands': {}, 'scope': 'Native API fixtures, actual mDNS observations and background reconciliation; not installed application, OS trust or agent-workflow qualification'}
+    receipt = {'passed': False, 'sources_before': sources(), 'commands': {}, 'race_primary':args.race_primary, 'without_advertisement':args.without_advertisement, 'scope': 'Native API fixtures, actual mDNS observations and background reconciliation; not installed application, OS trust or agent-workflow qualification'}
     ssh = ['ssh', '-o', 'BatchMode=yes', '-o', 'StrictHostKeyChecking=yes', '-o', 'ConnectTimeout=5', args.ssh_host, 'python3 -c '+shlex.quote(REMOTE)]
     environment = {k:v for k,v in os.environ.items() if k in ('PATH','HOME','TMPDIR','LANG','TZ','GOPATH','GOMODCACHE','GOCACHE','GOTOOLCHAIN')}
     remote = None
@@ -98,7 +101,8 @@ def main():
         return result.stdout
     try:
         for target in ('darwin','linux'):
-            command('build-'+target, ['go','test','-c','-o',str(args.output/('httpapi-'+target+'-arm64.test')),'./internal/httpapi'], cwd=server_root, env=dict(environment, GOOS=target, GOARCH='arm64', CGO_ENABLED='0'))
+            race = args.race_primary and target == 'darwin'
+            command('build-'+target, ['go','test']+(['-race'] if race else [])+['-c','-o',str(args.output/('httpapi-'+target+'-arm64.test')),'./internal/httpapi'], cwd=server_root, env=dict(environment, GOOS=target, GOARCH='arm64', CGO_ENABLED='1' if race else '0'))
         receipt['binary_sha256'] = {target:digest(args.output/('httpapi-'+target+'-arm64.test')) for target in ('darwin','linux')}
         prepared = command('remote-prepare', ssh, timeout=20, input=(json.dumps({'operation':'prepare','root':str(args.remote_root)})+'\n').encode())
         runtime = json.loads(prepared)
@@ -108,7 +112,7 @@ def main():
         credential = secrets.token_hex(32)
         (args.output/'credential').write_text(credential+'\n')
         remote = subprocess.Popen(ssh, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        remote.stdin.write((json.dumps({'operation':'run','root':str(args.remote_root),'bind':str(address),'credential':credential,'sha256':receipt['binary_sha256']['linux']})+'\n').encode())
+        remote.stdin.write((json.dumps({'operation':'run','root':str(args.remote_root),'bind':str(address),'credential':credential,'sha256':receipt['binary_sha256']['linux'],'without_advertisement':args.without_advertisement})+'\n').encode())
         remote.stdin.flush()
         # select bounds startup independently of SSH connection and native fixture deadlines.
         import select
