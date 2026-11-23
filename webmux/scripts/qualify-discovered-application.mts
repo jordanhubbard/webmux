@@ -14,6 +14,7 @@ const { values } = parseArgs({ options: {
   output: { type: 'string' }, peer: { type: 'string' },
   'local-bind': { type: 'string' }, 'remote-bind': { type: 'string' },
   'local-interface': { type: 'string' }, 'remote-interface': { type: 'string' },
+  'changed-node-proof': { type: 'boolean', default: false },
 } });
 const output = values.output, peer = values.peer;
 const localBind = values['local-bind'], remoteBind = values['remote-bind'];
@@ -46,6 +47,7 @@ if (run('git', ['status', '--porcelain'])) throw new Error('Commit the qualifier
 const sourcesBefore = inventory();
 const checks: string[] = [];
 const receipt: Record<string, unknown> = { passed: false, revision, sourcesBefore, checks,
+  changedNodeProof: values['changed-node-proof'],
   scope: 'Actual protected cmd/webmux processes and browser enrollment; isolated homes and process-local Linux fixture certificate trust. Not installed-service, OS trust or real-agent/MAC acceptance.' };
 const passed = (name: string) => { checks.push(name); console.log(`PASS ${name}`); };
 function child(program: string, args: string[], log: string, env = process.env) {
@@ -208,9 +210,25 @@ sys.stdout.write(result.stdout);sys.stderr.write(result.stderr);sys.exit(result.
   await expect(manager.getByRole('status',{name:'Server directory status'})).toContainText('Saved');
   const saved=await directory();expect(saved.servers).toHaveLength(1);
   const peerEntry=saved.servers[0];expect(peerEntry.identity?.node_id).toBeFalsy();
+  if(values['changed-node-proof']) {
+    const changed={...yaml.load(receiverFiles['node-discovery.yaml']) as object,id:randomBytes(16).toString('hex')};
+    // The running advertiser still announces its startup identity. The actual
+    // receiving API now proves a different identity from this owned fixture.
+    fs.writeFileSync(path.join(localHome,'config/node-discovery.yaml'),yaml.dump(changed));
+  }
+  const verification=page.waitForResponse(r=>new URL(r.url()).pathname===`/api/servers/${peerEntry.id}/verify-identity`,{timeout:10_000});
   await manager.getByRole('button',{name:'Verify identity of Native discovered peer',exact:true}).click();
+  const verificationStatus=(await verification).status();receipt.verificationStatus=verificationStatus;
+  if(values['changed-node-proof']) {
+    expect(verificationStatus).toBe(502);
+    const refused=await directory();expect(refused.servers).toHaveLength(1);expect(refused.servers[0].identity?.node_id).toBeFalsy();
+    receipt.changedNodeRefusedWithoutPin=true;
+    throw new Error('Expected changed-node-proof refusal observed; this negative command must fail');
+  }
+  expect(verificationStatus).toBe(204);
   await expect(manager.getByRole('status',{name:'Server directory status'})).toContainText('identity verified',{timeout:10_000});
   const enrolled=(await directory()).servers[0];expect(enrolled.identity).toMatchObject({node_id:nodeID,owner:'qualifier'});
+  receipt.enrolledIdentity=enrolled.identity;
   expect((await api(`/servers/${enrolled.id}/sessions`)).status).toBe(200);
   passed('human browser configures the discovered HTTPS endpoint and explicitly verifies node/account identity');
   await page.screenshot({path:path.join(output,'enrolled.png'),fullPage:true});await browser.close();browser=undefined;
@@ -219,11 +237,13 @@ sys.stdout.write(result.stdout);sys.stderr.write(result.stderr);sys.exit(result.
   localProcess=child(path.join(output,'darwin-webmux'),[],'receiver.log',localEnv);
   await expect.poll(async()=>{const entry=(await directory()).servers.find(s=>s.id===enrolled.id);return entry?.url.endsWith(':'+movedPort);},{timeout:20_000,intervals:[200,500,1000]}).toBe(true);
   const migrated=(await directory()).servers[0];expect(migrated.identity).toEqual(enrolled.identity);
+  receipt.migratedIdentity=migrated.identity;
   expect((await api(`/servers/${enrolled.id}/sessions`)).status).toBe(200);
   passed('actual receiver restart and changed port migrate in the controller background without an open browser');
   await stopRemote();remoteProcess=launchRemote();
   await expect.poll(async()=>{try{return(await api(`/servers/${enrolled.id}/sessions`)).status;}catch{return 0;}},{timeout:20_000}).toBe(200);
   expect((await directory()).servers[0]).toMatchObject({id:enrolled.id,url:migrated.url,identity:enrolled.identity});
+  receipt.controllerRestartRetainedIdentity=true;
   passed('actual controller restart retains verified peer identity and migrated endpoint');
   receipt.passed=true;
 } catch(error) {
