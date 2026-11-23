@@ -1,4 +1,4 @@
-import { installGridWheel } from '../utils/gridWheel';
+import { installGridWheel, panGridWheel } from '../utils/gridWheel';
 import { movePair } from '../utils/movePair';
 import { AddSessionCell } from './AddSessionCell';
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
@@ -211,6 +211,10 @@ export function Workspace({
   const [dropTarget, setDropTarget] = useState<{ row: number; col: number } | null>(null);
   const [ghostPos, setGhostPos] = useState({ x: 0, y: 0 });
   const outerRef = useRef<HTMLDivElement>(null);
+  const onBrowserGridWheel = useCallback((event: WheelEvent) => {
+    const root = outerRef.current;
+    return root ? panGridWheel(root, event) : false;
+  }, []);
   const gridRef = useRef<HTMLDivElement>(null);
   const outerSize = useElementSize(outerRef);
   const touchLikeViewport = useTouchLikeViewport();
@@ -787,6 +791,7 @@ export function Workspace({
               >
                 <Tile
                   session={session}
+                  onGridWheel={onBrowserGridWheel}
                   rigObservations={rigObservations}
                   canManageHosts={canManageHosts}
                   managedClient={savedHosts.some(host => host.id === session.host_id && host.hostname === session.hostname && host.username === session.username && (host.port || 22) === (session.port || 22))

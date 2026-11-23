@@ -18,6 +18,7 @@ import type { Session, ConnectionState, NamedTheme, ManagedClient } from '../typ
 
 interface TileProps {
   session: Session;
+  onGridWheel?: (event: WheelEvent) => boolean;
   rigObservations?: CoordinationSeat[];
   canManageHosts?: boolean;
   managedClient?: ManagedClient;
@@ -49,6 +50,7 @@ interface TileProps {
 
 export function Tile({
   session,
+  onGridWheel,
   rigObservations,
   canManageHosts = true,
   managedClient,
@@ -321,7 +323,7 @@ export function Tile({
           <button type="submit" disabled={savingProject}>{savingProject ? 'Saving…' : 'Save project label'}</button>
         </form>
       </Dialog>}
-      {showBrowser && <BrowserCompanion session={session} navigation={browserNavigation} onAuthentication={url => { setShowBrowser(false); setHandoff({ url, key: Date.now() }); }} onHide={() => { setBrowserNavigation(null); setShowBrowser(false); termHandleRef.current?.focus(); }} />}
+      {showBrowser && <BrowserCompanion session={session} navigation={browserNavigation} onGridWheel={onGridWheel} onAuthentication={url => { setShowBrowser(false); setHandoff({ url, key: Date.now() }); }} onHide={() => { setBrowserNavigation(null); setShowBrowser(false); termHandleRef.current?.focus(); }} />}
       {showManagedHost && <ManagedHostDialog session={session} client={managedClient} onClose={() => setShowManagedHost(false)} onChanged={() => onManagedClientChanged?.()} onSessionUpdated={updated => onSessionUpdated?.(updated)} />}
       <div style={{ ...styles.termContainer, display: collapsed ? 'none' : undefined }}>
         {/* Inset the terminal region so the scroll strip never overlaps text */}

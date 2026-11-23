@@ -1,9 +1,48 @@
 import { it, expect, vi } from 'vitest';
 import { render, act, screen, fireEvent } from '@testing-library/react';
 import { BrowserCompanion } from '@frontend/components/BrowserCompanion';
+import { panGridWheel } from '@frontend/utils/gridWheel';
 import type { Session } from '@frontend/types';
 const fixture = vi.hoisted(() => ({ action: vi.fn() }));
 vi.mock('@frontend/utils/api', () => ({ api: { browserAction: fixture.action, getBrowserProfiles: vi.fn().mockResolvedValue([]), endBrowser: vi.fn().mockResolvedValue(undefined), createBrowserProfile: vi.fn().mockResolvedValue({ id: 'saved', name: 'Work' }), releaseBrowser: vi.fn().mockResolvedValue(undefined) } }));
+
+it('routes portalled Shift gestures only to the owning grid and disposes its native listener', async () => {
+ const grids = [document.createElement('div'), document.createElement('div')];
+ const routes = grids.map(grid => vi.fn((event: WheelEvent) => panGridWheel(grid, event)));
+ const frame = { protocol: 3, control: { owned: true, available: false }, image: 'fixture', width: 800, height: 600, url: 'about:blank', tabs: [], target: 'one' };
+ fixture.action.mockReset().mockResolvedValue(frame);
+ const view = render(<>
+  <BrowserCompanion session={{ id: 'left', title: 'left', transport: 'local' } as Session} onHide={vi.fn()} onGridWheel={routes[0]} />
+  <BrowserCompanion session={{ id: 'right', title: 'right', transport: 'local' } as Session} onHide={vi.fn()} onGridWheel={routes[1]} />
+ </>);
+ let mounted = true;
+ try {
+  await act(async () => { await Promise.resolve(); });
+  const left = screen.getByRole('complementary', { name: 'Browser for left' }).querySelector('img')!;
+  const right = screen.getByRole('complementary', { name: 'Browser for right' }).querySelector('img')!;
+  const layer = left.closest('.browser-companion-layer')!;
+  fixture.action.mockClear();
+  const gesture = new WheelEvent('wheel', { bubbles: true, cancelable: true, shiftKey: true, deltaX: 12, deltaY: 24 });
+  fireEvent(left, gesture);
+  expect(gesture.defaultPrevented).toBe(true);
+  expect([grids[0].scrollLeft, grids[0].scrollTop]).toEqual([12, 24]);
+  expect([grids[1].scrollLeft, grids[1].scrollTop]).toEqual([0, 0]);
+  expect(routes[1]).not.toHaveBeenCalled();
+  fireEvent.wheel(right, { shiftKey: true, deltaX: 5, deltaY: 10 });
+  await act(async () => { await Promise.resolve(); });
+  expect([grids[0].scrollLeft, grids[0].scrollTop]).toEqual([12, 24]);
+  expect([grids[1].scrollLeft, grids[1].scrollTop]).toEqual([5, 10]);
+  expect(fixture.action.mock.calls.some(([, action]) => action.action === 'scroll')).toBe(false);
+  fireEvent.wheel(left, { deltaY: 40 });
+  await act(async () => { await Promise.resolve(); });
+  expect(fixture.action).toHaveBeenCalledWith('left', expect.objectContaining({ action: 'scroll', deltaY: 40, modifiers: 0 }));
+  expect([grids[0].scrollLeft, grids[0].scrollTop]).toEqual([12, 24]);
+  const calls = routes[0].mock.calls.length;
+  view.unmount(); mounted = false;
+  fireEvent.wheel(layer, { shiftKey: true, deltaY: 40 });
+  expect(routes[0]).toHaveBeenCalledTimes(calls);
+ } finally { if (mounted) view.unmount(); }
+});
 
 it.each(['about:blank', 'https://example.com/previous'])('keeps a URL draft when a delayed %s frame arrives between blur and Go', async previous => {
  vi.useFakeTimers();

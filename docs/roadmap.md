@@ -16,7 +16,9 @@ historical qualification dates and limits remain attached to their own evidence.
 The [terminal and desktop implementation checkpoint](validation/trackpad-scroll-2026-11-22/README.md)
 passes automated browser wheel, mouse, tmux and keyboard-broadcast isolation
 controls, plus selected VNC/RDP protocol-input isolation and Shift grid panning. Physical trackpad and remaining platform/surface acceptance are still
-open; this does not complete #661.
+open; this does not complete #661. The [browser pane follow-up](validation/browser-wheel-2026-11-23/README.md)
+also qualifies Shift ownership across the browser portal and ordinary vertical
+and horizontal scrolling through native Chromium.
 
 ## Automatic session coordination and network discovery
 

@@ -10,7 +10,42 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/chromedp/cdproto/input"
 )
+
+func TestMouseWheelAxesStayExplicitOnWire(t *testing.T) {
+	for _, test := range []struct {
+		name string
+		x, y float64
+	}{
+		{"vertical", 0, 220},
+		{"horizontal", -120, 0},
+		{"stationary", 0, 0},
+		{"fractional", 0.25, -0.75},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			data, err := json.Marshal(mouseWheelParams{Type: input.DispatchMouseEventTypeMouseWheel, DeltaX: test.x, DeltaY: test.y, Modifiers: 8})
+			if err != nil {
+				t.Fatal(err)
+			}
+			var wire map[string]json.RawMessage
+			if err := json.Unmarshal(data, &wire); err != nil {
+				t.Fatal(err)
+			}
+			for name, want := range map[string]float64{"x": 0, "y": 0, "deltaX": test.x, "deltaY": test.y, "modifiers": 8} {
+				var got float64
+				value, present := wire[name]
+				if !present || json.Unmarshal(value, &got) != nil || got != want {
+					t.Fatalf("mouseWheel wire field %s: got %s, want %v", name, value, want)
+				}
+			}
+			if string(wire["type"]) != `"mouseWheel"` {
+				t.Fatal("wrong native mouse event type", string(data))
+			}
+		})
+	}
+}
 
 func TestWorkerProfileCleanup(t *testing.T) {
 	if os.Getenv("WEBMUX_REAL_BROWSER") != "1" {
