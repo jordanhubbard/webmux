@@ -70,3 +70,24 @@ has no roadmap-content grant; its scope stays distinct from controlled shared
 snapshot tests. Final upstream revocation controls discard all sections together.
 The full post-change HTTP race suite passes in 255.937 seconds; typed, package,
 fuzz, native-source, browser, build and CLI contracts retain their own scopes.
+
+## Current-main composition, 2026-11-23
+
+[The integration receipt](integration-2026-11-23.json) binds `bc45ea0`, composed
+with main `0977eb8`, to fresh full HTTP API/coordination race checks, vet, all
+504 frontend tests, strict TypeScript, lint, production build, API/session
+contract, Windows ARM64 test compilation and actual Chrome/browser-route/MCP
+reads against the explicitly pinned native MAC publisher. The native consumers
+share eight task identities from the retained fleet-root test context and refuse
+changed policy and competing standalone work while preserving providers. This
+is not canonical WebMux project enrollment, worker/session linkage or full phase
+acceptance. Windows compilation is not native execution.
+
+The later main `4cf7eac` roadmap reconciliation is integrated without changing
+application, script or test bytes. The observation checkpoint remains draft
+#682; #673 is still a prerequisite and #674/#664 remain open. No MAC source
+owner/task claim or supported bounded canonical project-record route is verified.
+No registration, activation, dispatch, credential/profile/service or NAS state
+changed. Retained owner policy requires local qualification and `[skip ci]` on
+new commit/merge subjects; no new hosted jobs are requested. Original receipts
+retain their source and scope.

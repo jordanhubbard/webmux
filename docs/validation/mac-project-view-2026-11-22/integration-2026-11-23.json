@@ -1,0 +1,68 @@
+{
+  "schema": "webmux.mac.project-view.integration.v1",
+  "observed_at": "2026-11-23T10:45:42.252184+00:00",
+  "qualified_commit": "bc45ea010389a9e490dee451fdf9b24da34b9702",
+  "qualified_prior_main": "0977eb871d91c8b1feba9fb00dc1e683215cf2a2",
+  "later_roadmap_only_main": "4cf7eacbc2c2116dcc33de2deacb9d74292c42ce",
+  "later_documentation_merge": "00ece7d1abaf90c569dd0345ce4cbb040919201e",
+  "application_scripts_tests_unchanged_after_qualification": true,
+  "checks": {
+    "go-race.log": {
+      "exit_code": 0,
+      "sha256": "e0033e99b4368df3fda4963bb8cc0a71d4ad02527b607fa64a3ba61e99e65140",
+      "HTTP_API_seconds": 189.025
+    },
+    "go-vet.log": {
+      "exit_code": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "frontend.log": {
+      "exit_code": 0,
+      "sha256": "3afc71b6ed9640f7df0c794beb8274c734d6f6b1d6f6dc99eeab42ec0e1adf0f",
+      "passed_test_count": 504
+    },
+    "typecheck.log": {
+      "exit_code": 0,
+      "sha256": "a4b9d0bbbc3660d4798d15f01182907929f23dfb9c9fceb96fbbeeb6b9b182b1"
+    },
+    "lint.log": {
+      "exit_code": 0,
+      "sha256": "24a11fdad2b0d766a9f66f2eb9e8a43887f1839736354248c6384ffd4975da9b"
+    },
+    "build.log": {
+      "exit_code": 0,
+      "sha256": "22afea9753de6b951673baa5e524604b2164d9632ee59953496f1516fb305e4b"
+    },
+    "server-contract.log": {
+      "exit_code": 0,
+      "sha256": "02dd422159a5cc00a17a106ad5bfc6affc09a88bc8beec6ad83c0a7c7ef2317c"
+    },
+    "native-shared-read.log": {
+      "exit_code": 0,
+      "sha256": "42d664bd9a0eb997038d149d7c4c7ab758dfef4946424b79264a4fb895b0816f"
+    },
+    "windows-compile.log": {
+      "exit_code": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "scope": "Windows ARM64 API test compilation only"
+    }
+  },
+  "native": {
+    "scope": "Isolated local WebMux sessions and explicit fleet test context; not live WebMux product enrollment or three-host participant acceptance",
+    "elapsed_seconds": 6.897790375,
+    "shared_task_identities": 8,
+    "publisher_fingerprint": "dd3e7375c27b124a12430167e8e0c5b8886cd5d372b833fbfa078fde934308c0",
+    "competing_standalone_work_refused": true,
+    "changed_policy_refused_both_consumers": true,
+    "provider_incarnations_preserved": true,
+    "installed_config_profile_service_changes": false,
+    "MAC_dispatch_or_worker_registration": false,
+    "NAS_access": false
+  },
+  "native_browser_completed": true,
+  "native_private_receipt_sha256": "eb3f8169836c54c98700d98dd4cefaf7df2b77a3a547db259211cd3c858afa78",
+  "phase_boundary": "Draft682 remains unmerged;673 prerequisite and674/664 remain open. Fleet-root test context is not canonical WebMux enrollment; no verified source owner/task or supported bounded canonical-record route. No real worker/session join, roadmap task mapping, admission/publication enforcement or three-host acceptance is inferred.",
+  "execution_constraint": "Local resources only; no new hosted qualification jobs; all new commit and merge subjects use [skip ci].",
+  "MAC_source_registration_activation_dispatch_or_installed_service_changes": false,
+  "NAS_access": false
+}
