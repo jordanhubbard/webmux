@@ -54,3 +54,19 @@ The isolated test sessions do not enroll the live WebMux project or establish
 three-host participation. Package/API/MCP race tests, vet, strict TypeScript,
 24 frontend tests, production build and the updated controlled browser workflow
 passed; Windows API cross-compilation passed without native execution.
+
+`source-roadmap.json` records the explicit source-content read extension. Browser
+and real MCP consumers share an exact regular Git blob with source commit, blob
+ID, content hash, dirty warning and unlinked task state. Tests cover account/path/
+capability boundaries, working-copy and committed symlinks, binary/oversized
+content, stale source and local replacement refs. Removing the replacement-ref
+guard in a Go overlay fails its control; real source is unchanged by the overlay.
+
+The actual WebMux roadmap was read at the exact commit recorded in the receipt;
+its raw snapshot remains local. This is a Git component proof, not MAC project
+registration. A further native MAC UI/MCP run validates the final post-source
+read qualification using the original read-only enrollment. The native fleet test
+has no roadmap-content grant; its scope stays distinct from controlled shared
+snapshot tests. Final upstream revocation controls discard all sections together.
+The full post-change HTTP race suite passes in 255.937 seconds; typed, package,
+fuzz, native-source, browser, build and CLI contracts retain their own scopes.
