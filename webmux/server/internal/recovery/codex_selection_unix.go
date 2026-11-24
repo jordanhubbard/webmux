@@ -32,6 +32,7 @@ func newCodexSelectionObserver(binary, cwd string, args []string) *codexSelectio
 			_ = writer.Close() // only the exact child retains the write end
 			go func() {
 				defer close(done)
+				defer reader.Close()
 				publish := func(observation codexSelectionObservation) {
 					// Store the newest state, including loss of confidence. A slow
 					// consumer must not retain an older queued selection indefinitely.

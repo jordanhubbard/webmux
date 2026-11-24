@@ -177,10 +177,9 @@ func RunCLI(name string, args []string) error {
 	if codexSelection != nil {
 		codexSelection.start(cmd.Process.Pid)
 	}
-	var codexSelectionSeen bool
 	var latestCodexSelection codexSelectionObservation
 	var observeCodex func(string) (string, string)
-	if cli == "codex" {
+	if cli == "codex" && codexSelection == nil {
 		// Pin the launched process before Wait can release its OS handle. A
 		// later process reusing this PID must never own this conversation.
 		var closer io.Closer
@@ -224,7 +223,6 @@ func RunCLI(name string, args []string) error {
 				_ = cmd.Process.Signal(sig)
 			}
 		case selection := <-codexSelections:
-			codexSelectionSeen = true
 			latestCodexSelection = selection
 			observeCodexSelection(&event, selection, cwd)
 			emit()
@@ -247,10 +245,10 @@ func RunCLI(name string, args []string) error {
 					event.StateFile = cursorStateFile(event.SessionID, cwd)
 				}
 			}
-			if cli == "codex" && codexSelectionSeen {
+			if cli == "codex" && codexSelection != nil {
 				observeCodexSelection(&event, latestCodexSelection, cwd)
 			}
-			if cli == "codex" && !codexSelectionSeen {
+			if cli == "codex" && codexSelection == nil {
 				currentID, currentFile := observeCodex(cwd)
 				observeProcessState(&event, currentID, currentFile)
 			}

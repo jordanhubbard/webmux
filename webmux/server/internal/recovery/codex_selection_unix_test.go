@@ -73,8 +73,14 @@ func TestCodexSelectionPrivatePipeBindsProcessAndRefusesReplay(t *testing.T) {
 	cmd := exec.Command(binary)
 	cmd.Env = append(os.Environ(), "WEBMUX_CODEX_SELECTION_FIXTURE=1")
 	cmd.Stdin = input
+	unrelated, err := os.CreateTemp(t.TempDir(), "other-launch-channel")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer unrelated.Close()
+	cmd.ExtraFiles = []*os.File{unrelated}
 	o.attach(cmd)
-	if len(cmd.ExtraFiles) != 1 || cmd.Args[1] != "--selection-observer-fd" {
+	if len(cmd.ExtraFiles) != 2 || cmd.Args[1] != "--selection-observer-fd" || cmd.Args[2] != "4" {
 		t.Fatal("missing isolated inherited descriptor")
 	}
 	if err := cmd.Start(); err != nil {
