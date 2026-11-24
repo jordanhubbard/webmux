@@ -3124,3 +3124,14 @@ and only unavailable selection events. Socket ownership and permissions must
 not promote that forward into execution-host confidence. The fixture backend,
 relay, viewer and owned helper groups must all settle. This checks default-path
 classification; it does not qualify SSH transport or any model work.
+
+The four-Codex coordinator also accepts `--ssh-host puck.local` to exercise real
+OpenSSH. It first verifies the peer's kernel boot identity and account UID match
+the local execution account used by its process/socket inspectors. The private
+SSH launcher scopes remote helper lookup, HOME, native configuration, tmux and
+recovery caches to the fixture, and disables SSH connection multiplexing. It
+uses the supplied WebMux binary as a private helper without installing it or
+attaching to the user's tmux server. Each viewer explicitly selects the owned
+managed daemon. Other physical execution hosts need their own native binary and
+process-inspection adapter; this profile cannot map their PIDs into the local
+kernel. Source/refusal controls alone do not qualify the SSH coding profile.

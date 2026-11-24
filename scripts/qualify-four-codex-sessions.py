@@ -12,6 +12,7 @@ import datetime
 import hashlib
 import json
 import os
+import pwd
 from pathlib import Path
 import re
 import select
@@ -94,7 +95,7 @@ class Fixture:
         self.tmuxdir = self.root / 'tmux'
         self.tmuxdir.mkdir(mode=0o700)
         self.tmuxsocket = self.tmuxdir / f'tmux-{os.getuid()}' / 'default'
-        self.env = {key: os.environ[key] for key in ('PATH', 'USER', 'LANG', 'TMPDIR') if key in os.environ}
+        self.env = {key: os.environ[key] for key in ('PATH', 'USER', 'LANG', 'TMPDIR', 'SSH_AUTH_SOCK') if key in os.environ}
         self.env.update(HOME=str(self.root), CODEX_HOME=str(self.home), TMUX_TMPDIR=str(self.tmuxdir),
             TERM='xterm-256color', COLORTERM='truecolor', SHELL='/bin/bash',
             WEBMUX_HOME=str(self.webhome), WEBMUX_COORDINATION_DISABLED='1', WEBMUX_ROOT='')
@@ -104,6 +105,8 @@ class Fixture:
         self.env['PATH'] = str(nativebin) + os.pathsep + self.env.get('PATH', '')
         self.env['WEBMUX_BROWSER_ORIGINAL_PATH'] = self.env['PATH']
         self.env['WEBMUX_RECOVERY_CACHE_HOME'] = str(self.root / 'host-cache')
+        if args.ssh_host:
+            self.configure_private_ssh(nativebin)
         self.controller = self.rpc = None
         self.daemon_start_attempted = False
         self.daemon_pid = None
@@ -119,10 +122,34 @@ class Fixture:
             'worker_start': {'load': list(os.getloadavg()), 'cpus': os.cpu_count(),
                 'free_disk_bytes': shutil.disk_usage(self.root).free, 'machine': os.uname().machine},
             'model_requests_attempted': 0, 'model_requests_submitted': 0, 'coding_requests_replayed': 0, 'native_daemon_restarts': 0,
-            'scope': 'four isolated local durable providers; actual native model coding turns; no SSH or installed-user-session claim'}
+            'ssh_host': args.ssh_host, 'ssh_execution_boot_sha256': args.ssh_boot_sha256,
+            'scope': ('four isolated actual SSH durable providers on the verified same-kernel macOS account' if args.ssh_host else 'four isolated local durable providers') + '; actual native model coding turns; installed/legacy viewer migration and other execution hosts unqualified'}
         self.output = args.output.open('x')
         os.chmod(args.output, 0o600)
         self.save()
+
+    def configure_private_ssh(self, nativebin):
+        # Real OpenSSH connects to the verified local execution host. Scope its
+        # remote helper search and tmux/cache roots without installing anything
+        # or joining the operator's SSH control master or tmux server.
+        helpers = self.root / 'ssh-tools'
+        helpers.mkdir(mode=0o700)
+        (helpers / 'webmux').symlink_to(self.args.webmux)
+        original_path = str(helpers) + os.pathsep + str(nativebin) + os.pathsep + self.env.get('PATH', '')
+        remote = dict(HOME=str(self.root), CODEX_HOME=str(self.home), TMUX_TMPDIR=str(self.tmuxdir),
+            WEBMUX_RECOVERY_CACHE_HOME=str(self.root / 'host-cache'), PATH=original_path,
+            WEBMUX_BROWSER_ORIGINAL_PATH=original_path, SHELL='/bin/bash')
+        prefix = 'cd ' + shlex.quote(str(self.root)) + ' || exit 125; export ' + ' '.join(key+'='+shlex.quote(value) for key, value in remote.items()) + '; '
+        shimdir = self.root / 'ssh-launch'
+        shimdir.mkdir(mode=0o700)
+        shim = shimdir / 'ssh'
+        shim.write_text('#!/usr/bin/env python3\nimport os, sys\nargs = sys.argv[1:]\n'
+            + 'host = '+repr(self.args.ssh_host)+'\n'
+            + 'if len(args) < 2 or not any(value == host or value.endswith("@"+host) for value in args) or args[-1] == host or args[-1].endswith("@"+host):\n    raise SystemExit("Fixture SSH destination or remote command is missing")\n'
+            + 'args[-1] = '+repr(prefix)+' + args[-1]\n'
+            + 'os.execv("/usr/bin/ssh", ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=5", "-o", "ControlMaster=no", "-o", "ControlPath=none", "-o", "ControlPersist=no", *args])\n')
+        os.chmod(shim, 0o700)
+        self.env['PATH'] = str(shimdir) + os.pathsep + self.env['PATH']
 
     def save(self):
         self.output.seek(0)
@@ -265,10 +292,13 @@ class Fixture:
         self.controller_epoch = self.start_controller()
         self.api('/api/config', {'app': {'session_logging': {'enabled': True}}}, 'PUT')
         for session in self.sessions:
-            session['id'] = str(uuid.UUID(self.api('/api/sessions', {'transport': 'local', 'cols': 140, 'rows': 45})['id']))
+            request = {'transport': 'local', 'cols': 140, 'rows': 45}
+            if self.args.ssh_host:
+                request.update(transport='ssh', hostname=self.args.ssh_host, username=pwd.getpwuid(os.getuid()).pw_name)
+            session['id'] = str(uuid.UUID(self.api('/api/sessions', request)['id']))
             session['target'] = 'webmux-' + session['id']
             self.wait(lambda: self.api('/api/session-recovery/'+session['id']).get('shell_ready'), 'provider-shell-ready')
-            self.tmux('send-keys', '-t', '='+session['target'], '-l', f'cd {shlex.quote(str(session["project"]))} && codex --no-alt-screen resume {session["thread"]}')
+            self.tmux('send-keys', '-t', '='+session['target'], '-l', f'cd {shlex.quote(str(session["project"]))} && ' + self.viewer_command(session))
             self.tmux('send-keys', '-t', '='+session['target'], 'Enter')
             self.wait(lambda: self.selection(session) == session['thread'], 'native-selection-ready')
             session['provider'] = int(self.tmux('display-message', '-p', '-t', '='+session['target'], '#{pane_pid}').strip())
@@ -286,6 +316,10 @@ class Fixture:
             session['worktree_read_before'] = self.read_worktrees(session)
         self.receipt['fixtures_ready'] = True
         self.save()
+
+    def viewer_command(self, session):
+        # Explicitly select this managed daemon even from a real SSH login.
+        return shlex.join(['codex', '--remote', 'unix://'+str(self.socket), '--no-alt-screen', 'resume', session['thread']])
 
     def tmux(self, *args):
         require(self.root in self.tmuxsocket.parents, 'private-tmux-boundary')
@@ -344,7 +378,7 @@ class Fixture:
             # belongs to the separate managed daemon and must continue unchanged.
             os.kill(session['viewer'], signal.SIGKILL)
             self.wait(lambda: self.api('/api/session-recovery/'+session['id']).get('shell_ready'), 'fixture-viewer-shell-return')
-            self.tmux('send-keys', '-t', '='+session['target'], '-l', f'codex --no-alt-screen resume {session["thread"]}')
+            self.tmux('send-keys', '-t', '='+session['target'], '-l', self.viewer_command(session))
             self.tmux('send-keys', '-t', '='+session['target'], 'Enter')
             old_viewer = session['viewer']
             def replacement():
@@ -580,7 +614,9 @@ def main():
         parser.add_argument('--'+name, type=Path, required=True)
     for name in ('native-sha256', 'webmux-sha256', 'model'):
         parser.add_argument('--'+name, required=True)
+    parser.add_argument('--ssh-host', help='Real SSH profile; must resolve to this kernel and account; uses private helpers/tmux')
     args = parser.parse_args()
+    args.ssh_boot_sha256 = None
     require(os.uname().sysname == 'Darwin', 'native-macos-required')
     require(not args.output.exists(), 'exclusive-output-required')
     for name in ('native', 'webmux'):
@@ -590,6 +626,15 @@ def main():
         setattr(args, name, binary)
     args.auth_home = args.auth_home.resolve(strict=True)
     args.node = args.node.resolve(strict=True)
+    if args.ssh_host:
+        require(re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9.-]{0,252}', args.ssh_host), 'ssh-host-name-required')
+        local_boot = subprocess.check_output(['/usr/sbin/sysctl', '-n', 'kern.bootsessionuuid'], text=True, timeout=5).strip()
+        code = 'import json,os,subprocess;print(json.dumps({"uid":os.getuid(),"boot":subprocess.check_output(["/usr/sbin/sysctl","-n","kern.bootsessionuuid"],text=True).strip()}))'
+        peer = subprocess.run(['/usr/bin/ssh', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=5', '-o', 'ControlMaster=no', '-o', 'ControlPath=none', args.ssh_host,
+            shlex.join(['/usr/bin/python3', '-c', code])], capture_output=True, text=True, timeout=15, check=True)
+        identity = json.loads(peer.stdout)
+        require(identity.get('uid') == os.getuid() and identity.get('boot') == local_boot, 'ssh-profile-requires-this-kernel-and-account')
+        args.ssh_boot_sha256 = hashlib.sha256(local_boot.encode()).hexdigest()
     fixture = Fixture(args)
     passed = False
     def interrupted(_signal, _frame):
