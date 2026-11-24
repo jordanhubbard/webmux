@@ -218,7 +218,17 @@ Add `--companion` in managed mode to require a second native viewer on that same
 daemon: it must remain on C while the primary switches A → B → A, then switch to
 B without changing the primary's selected A. Both must demote on daemon loss.
 This concurrent-viewer mechanism control passed on the earlier artifact; the
-current native host policy still requires its own rerun.
+current native host policy still requires its own rerun. `--reconnect` additionally
+requires the same viewers to recover their selections after replacing only the
+isolated daemon; it records daemon replacement separately from continuity.
+The first reconnect qualification stopped before replacement on interleaved PTY
+metadata ([#717](https://github.com/jordanhubbard/webmux/issues/717)). After aligning
+the qualifier with the product decoder's malformed-frame discard behavior, the
+same-viewer selection reconnect control passed on the earlier artifact. One
+malformed frame was discarded; fresh authenticated loss and selection events
+still met the original deadlines. `framing_integrity_qualified` remains false for
+that receipt and #717 remains open. No malformed frame counts as evidence. This
+harness checks the signed stream, not host-cache recovery.
 `--profile remote-negative` requires selection to stay unavailable over an
 explicit remote fixture socket. `--profile legacy-remote` retains the original
 positive publication test for the earlier artifact only.
