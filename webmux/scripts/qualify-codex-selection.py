@@ -32,6 +32,7 @@ parser.add_argument('--daemon-binary', help='Managed profile: exact installed da
 parser.add_argument('--daemon-sha256', help='Managed profile: independently recorded executable SHA-256')
 parser.add_argument('--webmux-binary', help='Exercise the actual WebMux launcher and signed recovery channel')
 parser.add_argument('--webmux-sha256', help='SHA-256 of the exact WebMux launcher build')
+parser.add_argument('--companion', action='store_true', help='Require independent selection in a second viewer on the same daemon')
 args = parser.parse_args()
 if not re.fullmatch(r'[0-9a-f]{64}', args.expected_sha256):
     parser.error('--expected-sha256 must be 64 lowercase hexadecimal characters')
@@ -39,6 +40,8 @@ if args.profile == 'managed' and (not args.daemon_binary or not re.fullmatch(r'[
     parser.error('managed profile requires --daemon-binary and --daemon-sha256')
 if args.webmux_binary and not re.fullmatch(r'[0-9a-f]{64}', args.webmux_sha256 or ''):
     parser.error('--webmux-binary requires --webmux-sha256')
+if args.companion and args.profile != 'managed':
+    parser.error('--companion requires the managed profile')
 binary = Path(args.binary).resolve()
 output = Path(args.output).resolve()
 assert not output.exists(), 'preserve prior receipts'
@@ -75,6 +78,11 @@ receipt = {'schema': 1, 'passed': False, 'fixture_root': str(root), 'selection_e
            'active_work_qualified': False, 'four_session_survival_qualified': False,
            'fixture_kind': 'synthetic saved rollouts; actual native CLI and app-server; no model execution'}
 server = viewer = None
+companion = None
+companion_reader = companion_writer = companion_master = companion_slave = None
+companion_buffer = companion_tail = b''
+companion_target = None
+companion_transition = True
 master = slave = reader = writer = None
 logs = []
 pipe_buffer = b''
@@ -232,15 +240,32 @@ def settle_groups(groups):
     return members
 
 def pump(duration, expected='unmatched'):
-    global pipe_buffer, terminal_tail, packet_buffer
+    global pipe_buffer, terminal_tail, packet_buffer, companion_buffer, companion_tail, companion_transition
     until = time.monotonic() + duration
     while time.monotonic() < until:
-        events, _, _ = select.select([fd for fd in [reader, master] if fd is not None], [], [], min(0.1, max(0, until-time.monotonic())))
+        events, _, _ = select.select([fd for fd in [reader, master, companion_reader, companion_master] if fd is not None], [], [], min(0.1, max(0, until-time.monotonic())))
         for fd in events:
             try:
                 data = os.read(fd, 65536)
             except OSError:
                 data = b''
+            if fd == companion_reader:
+                if not data:
+                    raise RuntimeError('companion observation channel closed unexpectedly')
+                companion_buffer += data
+                while b'\n' in companion_buffer:
+                    line, companion_buffer = companion_buffer.split(b'\n', 1)
+                    assert len(line) <= 512
+                    item = json.loads(line)
+                    assert item['schema'] == 'codex.tui.selection.v1' and item['pid'] == companion.pid
+                    previous = receipt['companion_events']
+                    assert not previous or item['sequence'] > previous[-1]['sequence']
+                    assert item['thread_id'] == companion_target or (companion_transition and item['thread_id'] is None), 'another viewer changed companion selection'
+                    if item['thread_id'] == companion_target:
+                        companion_transition = False
+                    previous.append(item)
+                    checkpoint()
+                continue
             if fd == reader:
                 if not data:
                     if expected != 'unmatched':
@@ -259,9 +284,10 @@ def pump(duration, expected='unmatched'):
                     if item['thread_id'] == expected:
                         return item
             elif data:
-                terminal_log.write(data)
+                is_companion = fd == companion_master
+                (companion_log if is_companion else terminal_log).write(data)
                 matched = False
-                if args.webmux_binary:
+                if args.webmux_binary and not is_companion:
                     packet_buffer += data
                     prefix = b'\x1b]777;webmux-recovery;'
                     while prefix in packet_buffer:
@@ -292,19 +318,25 @@ def pump(duration, expected='unmatched'):
                         matched = matched or thread == expected
                     if prefix not in packet_buffer:
                         packet_buffer = packet_buffer[-len(prefix):]
-                scan = terminal_tail + data
+                prior_tail = companion_tail if is_companion else terminal_tail
+                scan = prior_tail + data
                 responses = [(b'\x1b[6n', b'\x1b[1;1R'), (b'\x1b[c', b'\x1b[?1;2c'),
                     (b'\x1b[>c', b'\x1b[>0;1;0c'), (b'\x1b[?u', b'\x1b[?0u'),
                     (b'\x1b]11;?\x07', b'\x1b]11;rgb:0000/0000/0000\x07')]
                 for query, reply in responses:
                     for match in re.finditer(re.escape(query), scan):
-                        if match.end() > len(terminal_tail):
-                            os.write(master, reply)
-                terminal_tail = scan[-64:]
+                        if match.end() > len(prior_tail):
+                            os.write(companion_master if is_companion else master, reply)
+                if is_companion:
+                    companion_tail = scan[-64:]
+                else:
+                    terminal_tail = scan[-64:]
                 if matched:
                     return receipt['selection_events'][-1]
         if viewer.poll() is not None and expected != 'unmatched':
             raise RuntimeError(f'viewer exited {viewer.returncode} before expected selection')
+        if companion is not None and companion.poll() is not None:
+            raise RuntimeError('companion viewer exited unexpectedly')
     if expected != 'unmatched':
         raise TimeoutError(f'no observer selection {expected} within {duration}s')
 
@@ -322,7 +354,7 @@ try:
         receipt['daemon_binary_sha256'] = binary_hash(daemon_binary)
         if receipt['daemon_binary_sha256'] != args.daemon_sha256:
             raise RuntimeError('managed daemon binary does not match its expected hash')
-    ids = [str(uuid.uuid4()) for _ in range(2)]
+    ids = [str(uuid.uuid4()) for _ in range(3 if args.companion else 2)]
     # Use the upstream app_test_support rollout fixture format. Empty thread/start
     # sessions have no persisted rollout and cannot exercise a saved-chat resume.
     for index, thread_id in enumerate(ids):
@@ -395,27 +427,71 @@ try:
     writer = None
     os.close(slave)
     slave = None
+    if args.companion:
+        companion_target = ids[2]
+        receipt['companion_events'] = []
+        companion_reader, companion_writer = os.pipe()
+        companion_master, companion_slave = pty.openpty()
+        fcntl.ioctl(companion_slave, termios.TIOCSWINSZ, struct.pack('HHHH', 40, 120, 0, 0))
+        companion_log = private_log('companion-terminal.log')
+        companion = subprocess.Popen([str(binary), '--remote', f'unix://{socket_path}',
+            '--selection-observer-fd', str(companion_writer), '--no-alt-screen', 'resume', companion_target],
+            stdin=companion_slave, stdout=companion_slave, stderr=companion_slave,
+            cwd=project, env=env, pass_fds=(companion_writer,), preexec_fn=own_terminal)
+        receipt['companion_pid'] = companion.pid
+        os.close(companion_writer)
+        companion_writer = None
+        os.close(companion_slave)
+        companion_slave = None
     if args.profile == 'remote-negative':
         pump(20)
         assert receipt['selection_events'] and all(item['thread_id'] is None for item in receipt['selection_events'])
         receipt['remote_selection_unavailable'] = True
     else:
         pump(40, ids[0])
+        if args.companion:
+            until = time.monotonic() + 40
+            while not receipt['companion_events'] or receipt['companion_events'][-1]['thread_id'] != ids[2]:
+                if time.monotonic() >= until:
+                    raise TimeoutError('companion did not settle on its own conversation')
+                pump(0.2)
         for thread_id in [ids[1], ids[0]]:
             pump(0.3)
             os.write(master, b'\x1b[200~' + f'/resume {thread_id}'.encode() + b'\x1b[201~')
             pump(0.5)
             os.write(master, b'\r')
             pump(30, thread_id)
+            pump(1)  # Drain the other viewer before assessing isolation.
+        if args.companion:
+            assert receipt['companion_events'][-1]['thread_id'] == ids[2]
+            primary_count = len(receipt['selection_events'])
+            companion_target = ids[1]
+            companion_transition = True
+            os.write(companion_master, b'\x1b[200~' + f'/resume {companion_target}'.encode() + b'\x1b[201~')
+            pump(0.5)
+            os.write(companion_master, b'\r')
+            until = time.monotonic() + 30
+            while receipt['companion_events'][-1]['thread_id'] != companion_target:
+                if time.monotonic() >= until:
+                    raise TimeoutError('companion did not switch independently')
+                pump(0.2)
+            pump(1)
+            assert receipt['selection_events'][-1]['thread_id'] == ids[0]
+            assert all(item['thread_id'] == ids[0] for item in receipt['selection_events'][primary_count:])
+            receipt['concurrent_viewer_isolation_qualified'] = True
     assert viewer.poll() is None and server.poll() is None
     receipt['interactive_switch_qualified'] = args.profile != 'remote-negative'
     checkpoint()
     # Only the owned isolated server is terminated to verify selection demotion.
+    companion_target = None
+    companion_transition = True
     server.terminate()
     server.wait(timeout=10)
     previous_count = len(receipt['selection_events'])
     pump(20, None) if args.profile != 'remote-negative' else pump(2)
     pump(2)
+    if args.companion:
+        assert receipt['companion_events'][-1]['thread_id'] is None
     assert args.profile == 'remote-negative' or len(receipt['selection_events']) > previous_count
     assert all(item['thread_id'] is None for item in receipt['selection_events'][previous_count:])
     receipt['loss_demoted_to_unavailable'] = True
@@ -428,7 +504,10 @@ finally:
     if master is not None:
         os.close(master)
         master = None
-    for process in [viewer, server]:
+    if companion_master is not None:
+        os.close(companion_master)
+        companion_master = None
+    for process in [viewer, companion, server]:
         if process is not None and process.poll() is None:
             try:
                 process.terminate()
@@ -440,7 +519,7 @@ finally:
                     process.wait(timeout=5)
             except (OSError, subprocess.SubprocessError) as error:
                 receipt.setdefault('cleanup_errors', []).append({'pid': process.pid, 'error': str(error)})
-    for fd in [reader, writer, master, slave]:
+    for fd in [reader, writer, master, slave, companion_reader, companion_writer, companion_master, companion_slave]:
         if fd is not None:
             os.close(fd)
     for handle in logs:
@@ -449,7 +528,7 @@ finally:
     receipt['owned_processes_closed'] = [
         process.closure() if isinstance(process, ManagedDaemon) else
         {'pid': process.pid, 'exit_code': process.poll(), 'not_running': process.poll() is not None}
-        for process in [viewer, server] if process is not None and process.pid is not None
+        for process in [viewer, companion, server] if process is not None and process.pid is not None
     ]
     try:
         groups = {item['pid'] for item in receipt['owned_processes_closed']}
@@ -468,6 +547,7 @@ finally:
         (receipt.get('interactive_switch_qualified') or receipt.get('remote_selection_unavailable'))
         and receipt.get('loss_demoted_to_unavailable')
         and receipt['cleanup_qualified']
+        and (not args.companion or receipt.get('concurrent_viewer_isolation_qualified'))
         and not receipt.get('error')
     )
     checkpoint()

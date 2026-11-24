@@ -214,6 +214,11 @@ python3 scripts/qualify-codex-selection.py \
 Add `--webmux-binary /absolute/path/to/built/webmux --webmux-sha256 HASH` to
 exercise the actual WebMux launcher and signed consumer channel instead of
 reading the native pipe directly. The helper must be built from this branch.
+Add `--companion` in managed mode to require a second native viewer on that same
+daemon: it must remain on C while the primary switches A → B → A, then switch to
+B without changing the primary's selected A. Both must demote on daemon loss.
+This concurrent-viewer mechanism control passed on the earlier artifact; the
+current native host policy still requires its own rerun.
 `--profile remote-negative` requires selection to stay unavailable over an
 explicit remote fixture socket. `--profile legacy-remote` retains the original
 positive publication test for the earlier artifact only.
@@ -229,8 +234,8 @@ from waitable child exit codes. Startup helpers are signaled only after their
 account and fixture working directory are verified. Existing user sessions are
 not targets. Failure receipts and logs are retained, including cleanup failures.
 
-Concurrent-viewer isolation, reconnect, host-boundary controls and current-head
-native/consumer qualification remain release gates. Automatic native resume
+Reconnect, host-boundary controls and current-head native/consumer qualification
+remain release gates. Automatic native resume
 remains gated.
 Task-management MCP handoff (#707), active coding work and four-session survival
 (#710) require their own complete qualification.
