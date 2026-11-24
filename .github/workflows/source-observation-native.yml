@@ -2,6 +2,12 @@ name: Native Windows source observation diagnostics
 
 on:
   workflow_dispatch:
+    inputs:
+      samples:
+        description: 'Original full-suite samples in one invocation; any failure fails qualification'
+        type: choice
+        options: ['1', '2']
+        default: '1'
   pull_request:
     paths:
       - '.github/workflows/source-observation-native.yml'
@@ -50,26 +56,35 @@ jobs:
         working-directory: webmux/server
         env:
           WEBMUX_SOURCE_TIMINGS: '1'
+          SOURCE_SAMPLE_COUNT: ${{ inputs.samples || '1' }}
         run: |
-          # One run, original deadlines and package concurrency; preserve failures.
-          go test -race -json ./... | Tee-Object -FilePath "$env:SOURCE_RECEIPTS/tests.jsonl"
+          $sampleCount = [int]$env:SOURCE_SAMPLE_COUNT
+          if ($sampleCount -notin @(1, 2)) { throw 'Unsupported qualification sample count.' }
+          # One invocation, original per-observation deadlines and package concurrency.
+          # This is diagnostic sampling, never an automatic retry after a failure.
+          go test -race "-count=$sampleCount" -json ./... | Tee-Object -FilePath "$env:SOURCE_RECEIPTS/tests.jsonl"
           $testExit = $LASTEXITCODE
           $timings = @()
-          $passes = @()
+          $passes = @{
+            TestSourceExactCommitDirtyAndDetached = 0
+            TestSourceUsesActualRepositoryAndAccount = 0
+          }
           Get-Content "$env:SOURCE_RECEIPTS/tests.jsonl" | ForEach-Object {
             $event = $_ | ConvertFrom-Json
             if ($event.Output -match 'SOURCE_GIT_TIMING (\{.*\})') {
               $timing = $Matches[1] | ConvertFrom-Json
               $timings += @{ test = $event.Test; timing = $timing }
             }
-            if ($event.Action -eq 'pass' -and $event.Test -in @('TestSourceExactCommitDirtyAndDetached', 'TestSourceUsesActualRepositoryAndAccount')) {
-              $passes += $event.Test
+            if ($event.Action -eq 'pass' -and $null -ne $event.Test -and $passes.ContainsKey([string]$event.Test)) {
+              $passes[[string]$event.Test]++
             }
           }
-          @{ testExit = $testExit; originalTestPasses = $passes; timings = $timings } |
+          @{ testExit = $testExit; sampleCount = $sampleCount; originalTestPassCounts = $passes; timings = $timings } |
             ConvertTo-Json -Depth 6 | Set-Content -Encoding utf8 "$env:SOURCE_RECEIPTS/phases.json"
           if ($testExit -ne 0) { throw 'Native test failure retained; no automatic retry.' }
-          if ($timings.Count -eq 0 -or $passes.Count -ne 2) { throw 'Missing original test or phase evidence.' }
+          if ($timings.Count -eq 0 -or $passes.Values.Where({ $_ -ne $sampleCount }).Count -ne 0) {
+            throw 'Missing original test samples or phase evidence.'
+          }
       - name: Preserve original native evidence
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
