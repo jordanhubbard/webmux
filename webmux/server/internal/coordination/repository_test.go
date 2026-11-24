@@ -148,3 +148,42 @@ func TestRepositoryWitnessTraceRetainsIdentityAndDeadline(t *testing.T) {
 		t.Fatal("trace changed cancellation refusal", err, events)
 	}
 }
+
+func TestRepositoryIdentityRefusesLateCancellation(t *testing.T) {
+	for _, phase := range []string{"repository.roots", "repository.branch", "repository.ignorecase"} {
+		t.Run(phase, func(t *testing.T) {
+			directory := repositoryFixture(t)
+			ctx, cancel := context.WithCancel(t.Context())
+			defer cancel()
+			observed := false
+			ctx = gitobserve.WithTrace(ctx, func(event gitobserve.Event) {
+				if event.Phase == phase {
+					observed = true
+					cancel()
+				}
+			})
+			binding, err := InspectRepository(ctx, directory)
+			if !observed {
+				t.Fatal("did not reach late witness phase")
+			}
+			if !errors.Is(err, ErrRepository) || binding != nil {
+				t.Fatal("canceled witness published repository identity", binding, err)
+			}
+		})
+	}
+}
+
+func TestRepositoryIdentityAllowsDetachedAndMissingIgnorecase(t *testing.T) {
+	directory := repositoryFixture(t)
+	gitFixture(t, directory, "config", "--local", "core.ignorecase", "false")
+	gitFixture(t, directory, "config", "--local", "--unset", "core.ignorecase")
+	attached, err := InspectRepository(t.Context(), directory)
+	if err != nil || attached == nil || attached.CaseFold || attached.Branch == "(detached)" {
+		t.Fatal("missing optional ignorecase refused attached repository", attached, err)
+	}
+	gitFixture(t, directory, "checkout", "--detach", "HEAD")
+	detached, err := InspectRepository(t.Context(), directory)
+	if err != nil || detached == nil || detached.ID != attached.ID || detached.Branch != "(detached)" || detached.CaseFold {
+		t.Fatal("detached repository with missing optional ignorecase refused", detached, err)
+	}
+}

@@ -93,7 +93,8 @@ func InspectRepository(parent context.Context, directory string) (*Binding, erro
 	}
 	folded, _ := run("repository.ignorecase", "config", "--local", "--get", "core.ignorecase")
 	binding := &Binding{ID: digest([]byte("webmux-repository/v1\n" + canonical + "\n" + strings.Join(witnesses, "\n"))), Repository: canonical, Worktree: root, Branch: branch, Source: "verified-git", CaseFold: folded == "true"}
-	if !validBinding(binding) {
+	// Optional branch/config misses must not turn cancellation into an identity.
+	if ctx.Err() != nil || !validBinding(binding) {
 		return nil, ErrRepository
 	}
 	return binding, nil
