@@ -14,8 +14,11 @@ Additional phases require:
 - Restart the same receiver home, key, node ID and port. Require rediscovery,
   inventory access and exactly the same single configured peer.
 - Stop only the owned controller, set its fixture browsing policy to false and
-  restart it normally. Require browsing stopped, no candidates and continuing
-  inventory access through the retained configured peer.
+  restart it normally. Require both browsing and advertising policies disabled,
+  no candidates, no UDP sockets owned by that Linux controller process and
+  continuing inventory access through the retained configured peer. The API's
+  `started` field describes an initialized discovery object, including one with
+  both policies disabled; it does not prove active browsing.
 
 The post-restart and rejoin observation bounds are 38 seconds (one 30-second
 browse refresh plus eight seconds of observation allowance). Departure has a

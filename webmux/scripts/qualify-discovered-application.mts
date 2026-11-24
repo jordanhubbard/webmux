@@ -254,7 +254,7 @@ sys.stdout.write(result.stdout);sys.stderr.write(result.stderr);sys.exit(result.
     lifecycle.departureSnapshots = snapshots;
     const discovery = async () => {
       const r = await api('/discovered-nodes'); expect(r.status).toBe(200);
-      return await r.json() as { policy: { browse: boolean }; started: boolean; error: string; candidates: Candidate[] };
+      return await r.json() as { policy: { browse: boolean; advertise: boolean }; started: boolean; error: string; candidates: Candidate[] };
     };
     // Require a live observation after controller restart before testing absence.
     await expect.poll(async () => (await discovery()).candidates.some(c => c.claimed_id === nodeID && c.port === movedPort),
@@ -296,9 +296,27 @@ f.write_text(p['policy']);f.chmod(0o600)`, { root: remoteRoot, policy: disabledP
       { timeout: 20_000 }).toBe(200);
     const disabled = await discovery();
     expect(disabled.policy.browse).toBe(false);
-    expect(disabled.started).toBe(false);
+    expect(disabled.policy.advertise).toBe(false);
     expect(disabled.error).toBe('');
     expect(disabled.candidates).toEqual([]);
+    // `started` means the discovery object initialized, including disabled
+    // objects. Independently inspect this owned Linux process's actual sockets.
+    const udpSockets = JSON.parse(remote(`import json,pathlib,sys
+r=pathlib.Path(json.load(sys.stdin)['root']);pid=int((r/'pid').read_text());proc=pathlib.Path('/proc')/str(pid)
+assert (proc/'exe').resolve(strict=True)==r/'webmux'
+inodes=set()
+for fd in (proc/'fd').iterdir():
+ try:target=fd.readlink().as_posix()
+ except FileNotFoundError:continue
+ if target.startswith('socket:['):inodes.add(target[8:-1])
+owned=[]
+for family in ('udp','udp6'):
+ for row in (proc/'net'/family).read_text().splitlines()[1:]:
+  fields=row.split()
+  if fields[9] in inodes:owned.append({'family':family,'port':int(fields[1].split(':')[1],16)})
+print(json.dumps(owned))`, { root: remoteRoot }));
+    lifecycle.disabledControllerUDPSockets = udpSockets;
+    expect(udpSockets).toEqual([]);
     expect((await directory()).servers).toEqual([migrated]);
     expect((await api(`/servers/${enrolled.id}/sessions`)).status).toBe(200);
     lifecycle.disabledDiscovery = disabled;
