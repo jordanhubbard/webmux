@@ -10,9 +10,11 @@ import (
 )
 
 // Event deliberately contains no argv, paths, environment, output or error text.
-// Start includes OS process creation; Wait includes Git work and scheduling.
+// Prepare includes executable lookup and command setup. Start includes OS
+// process creation; Wait includes Git work and scheduling.
 // These timings alone cannot distinguish CPU scheduling from Git execution.
 type Event struct {
+	Prepare     time.Duration `json:"prepare_ns"`
 	Phase       string        `json:"phase"`
 	Start       time.Duration `json:"start_ns"`
 	Wait        time.Duration `json:"wait_ns"`
@@ -32,15 +34,17 @@ func WithTrace(ctx context.Context, observe func(Event)) context.Context {
 
 // Run is equivalent to command.Run, with timing only when explicitly requested.
 // Phase must be a fixed label selected by the caller, never repository data.
-func Run(ctx context.Context, phase string, command *exec.Cmd) error {
+// Capture preparedAt immediately before exec.CommandContext, which may look up
+// the Git executable synchronously before process creation starts.
+func Run(ctx context.Context, phase string, preparedAt time.Time, command *exec.Cmd) error {
 	observe, _ := ctx.Value(traceKey{}).(func(Event))
 	if observe == nil {
 		return command.Run()
 	}
-	event := Event{Phase: phase, ExitCode: -1}
+	event := Event{Phase: phase, Prepare: time.Since(preparedAt), ExitCode: -1}
 	if deadline, ok := ctx.Deadline(); ok {
 		event.HasDeadline = true
-		event.Remaining = time.Until(deadline)
+		event.Remaining = deadline.Sub(preparedAt)
 	}
 	started := time.Now()
 	err := command.Start()

@@ -44,7 +44,7 @@ func TestTracePreservesCommandsAndCancellation(t *testing.T) {
 			if mode == "missing" {
 				command = exec.CommandContext(ctx, "webmux-missing-git-diagnostic-fixture")
 			}
-			err := Run(ctx, "fixture", command)
+			err := Run(ctx, "fixture", time.Now(), command)
 			if len(events) != 1 || events[0].Phase != "fixture" {
 				t.Fatal(events)
 			}
@@ -77,7 +77,7 @@ func TestExpiredDeadlineStaysExpired(t *testing.T) {
 	defer cancel()
 	var event Event
 	ctx = WithTrace(ctx, func(e Event) { event = e })
-	err := Run(ctx, "expired", exec.CommandContext(ctx, os.Args[0]))
+	err := Run(ctx, "expired", time.Now(), exec.CommandContext(ctx, os.Args[0]))
 	if !errors.Is(err, context.DeadlineExceeded) || !event.HasDeadline || event.Remaining >= 0 || event.Outcome != "deadline" {
 		t.Fatal(event, err)
 	}

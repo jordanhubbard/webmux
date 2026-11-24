@@ -45,13 +45,14 @@ func InspectRepository(parent context.Context, directory string) (*Binding, erro
 	run := func(phase string, args ...string) (string, error) {
 		fixed := []string{"--no-optional-locks", "-c", "core.fsmonitor=false", "-C", directory}
 		fixed = append(fixed, args...)
+		preparedAt := time.Now()
 		command := exec.CommandContext(ctx, "git", fixed...)
 		command.Env = env
 		command.WaitDelay = 200 * time.Millisecond
 		var out bytes.Buffer
 		command.Stdout = &limitedRepositoryOutput{buffer: &out}
 		command.Stderr = &bytes.Buffer{}
-		if err := gitobserve.Run(ctx, phase, command); err != nil {
+		if err := gitobserve.Run(ctx, phase, preparedAt, command); err != nil {
 			return "", ErrRepository
 		}
 		return strings.TrimSpace(out.String()), nil
