@@ -18,6 +18,7 @@ import select
 import signal
 import socket
 import struct
+import sys
 import subprocess
 import tempfile
 import termios
@@ -28,7 +29,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--binary', required=True)
 parser.add_argument('--output', required=True)
 parser.add_argument('--expected-sha256', required=True, help='SHA-256 from the native build receipt')
-parser.add_argument('--profile', required=True, choices=['managed', 'legacy-remote', 'remote-negative'])
+parser.add_argument('--profile', required=True, choices=['managed', 'legacy-remote', 'remote-negative', 'forwarded-default'])
 parser.add_argument('--daemon-binary', help='Managed profile: exact installed daemon executable, read only')
 parser.add_argument('--daemon-sha256', help='Managed profile: independently recorded executable SHA-256')
 parser.add_argument('--webmux-binary', help='Exercise the actual WebMux launcher and signed recovery channel')
@@ -37,6 +38,7 @@ parser.add_argument('--companion', action='store_true', help='Require independen
 parser.add_argument('--reconnect', action='store_true', help='Require selection to return after replacing only the isolated managed daemon')
 parser.add_argument('--host-cache', action='store_true', help='Also require real authenticated host-RPC snapshots of each selected/lost state')
 args = parser.parse_args()
+negative_profile = args.profile in ('remote-negative', 'forwarded-default')
 if not re.fullmatch(r'[0-9a-f]{64}', args.expected_sha256):
     parser.error('--expected-sha256 must be 64 lowercase hexadecimal characters')
 if args.profile == 'managed' and (not args.daemon_binary or not re.fullmatch(r'[0-9a-f]{64}', args.daemon_sha256 or '')):
@@ -58,7 +60,8 @@ home = root / 'home'
 project = root / 'project'
 home.mkdir(mode=0o700)
 project.mkdir(mode=0o700)
-socket_path = home / 'app-server-control' / 'app-server-control.sock' if args.profile == 'managed' else root / 'control.sock'
+socket_path = home / 'app-server-control' / 'app-server-control.sock' if args.profile in ('managed', 'forwarded-default') else root / 'control.sock'
+backend_socket_path = root / 'backend.sock' if args.profile == 'forwarded-default' else socket_path
 model_guard = socket.socket()
 model_guard.bind(('127.0.0.1', 0))
 model_port = model_guard.getsockname()[1]
@@ -86,7 +89,7 @@ receipt = {'schema': 1, 'passed': False, 'fixture_root': str(root), 'selection_e
            'host_cache_qualified': False,
            'active_work_qualified': False, 'four_session_survival_qualified': False,
            'fixture_kind': 'synthetic saved rollouts; actual native CLI and app-server; no model execution'}
-server = viewer = None
+server = viewer = forwarder = None
 retired_processes = []
 companion = None
 companion_reader = companion_writer = companion_master = companion_slave = None
@@ -451,16 +454,62 @@ try:
         server.launch()
     else:
         server_log = private_log('server.log')
-        server = subprocess.Popen([str(binary), 'app-server', '--listen', f'unix://{socket_path}'],
+        server = subprocess.Popen([str(binary), 'app-server', '--listen', f'unix://{backend_socket_path}'],
             stdin=subprocess.DEVNULL, stdout=server_log, stderr=subprocess.STDOUT, cwd=project, env=env, start_new_session=True)
     receipt['daemon_pid'] = server.pid
     until = time.monotonic()+30
-    while not socket_path.exists():
+    while not backend_socket_path.exists():
         if server.poll() is not None:
             raise RuntimeError('isolated server exited before publishing its socket')
         if time.monotonic() > until:
             raise TimeoutError('isolated server socket not ready')
         time.sleep(0.1)
+    if args.profile == 'forwarded-default':
+        # A real byte relay bound directly at the advertised default socket is
+        # indistinguishable from a remote forward by directory permissions.
+        # It must remain Remote/manual even though its backend speaks real Codex.
+        socket_path.parent.mkdir(mode=0o700)
+        relay = root / 'owned-negative-forwarder.py'
+        relay.write_text("""import os, selectors, socket, sys, threading
+listener = socket.socket(socket.AF_UNIX)
+listener.bind(sys.argv[1])
+os.chmod(sys.argv[1], 0o600)
+listener.listen()
+def forward(client):
+    backend = socket.socket(socket.AF_UNIX)
+    try:
+        backend.connect(sys.argv[2])
+        with selectors.DefaultSelector() as selected:
+            selected.register(client, selectors.EVENT_READ, backend)
+            selected.register(backend, selectors.EVENT_READ, client)
+            while True:
+                for key, _ in selected.select():
+                    data = key.fileobj.recv(65536)
+                    if not data:
+                        return
+                    key.data.sendall(data)
+                    print('FORWARDED_CLIENT' if key.fileobj is client else 'FORWARDED_BACKEND', len(data), flush=True)
+    except OSError:
+        pass
+    finally:
+        client.close()
+        backend.close()
+while True:
+    client, _ = listener.accept()
+    threading.Thread(target=forward, args=(client,), daemon=True).start()
+""")
+        forwarder = subprocess.Popen([sys.executable, str(relay), str(socket_path), str(backend_socket_path)],
+            stdin=subprocess.DEVNULL, stdout=private_log('negative-forwarder.log'), stderr=subprocess.STDOUT,
+            cwd=project, env=env, start_new_session=True)
+        until = time.monotonic()+10
+        while not socket_path.exists():
+            assert forwarder.poll() is None, 'owned negative forwarder exited'
+            if time.monotonic() >= until:
+                raise TimeoutError('owned negative forwarder socket not ready')
+            time.sleep(.05)
+        assert not socket_path.is_symlink(), 'default-path negative must be a directly bound forward'
+        receipt['forwarded_default_socket'] = str(socket_path)
+        receipt['forwarder_pid'] = forwarder.pid
     receipt['synthetic_threads'] = ids
     if webmux_binary is None:
         reader, writer = os.pipe()
@@ -522,10 +571,17 @@ try:
         companion_writer = None
         os.close(companion_slave)
         companion_slave = None
-    if args.profile == 'remote-negative':
+    if negative_profile:
         pump(20)
         assert receipt['selection_events'] and all(item['thread_id'] is None for item in receipt['selection_events'])
         receipt['remote_selection_unavailable'] = True
+        if args.profile == 'forwarded-default':
+            assert forwarder.poll() is None, 'owned negative forwarder exited before qualification'
+            forwarded = (root / 'negative-forwarder.log').read_text()
+            assert 'FORWARDED_CLIENT' in forwarded and 'FORWARDED_BACKEND' in forwarded, 'no bidirectional native traffic through default forward'
+            rendered = re.sub(rb'\x1b\[[0-?]*[ -/]*[@-~]', b'', (root / 'terminal.log').read_bytes())
+            assert b'Synthetic selection fixture 0' in rendered, 'forwarded native conversation was not rendered'
+            receipt['forwarded_default_classification_qualified'] = True
     else:
         pump(40, ids[0])
         verify_host_selection(ids[0])
@@ -561,7 +617,7 @@ try:
             assert all(item['thread_id'] == ids[0] for item in receipt['selection_events'][primary_count:])
             receipt['concurrent_viewer_isolation_qualified'] = True
     assert viewer.poll() is None and server.poll() is None
-    receipt['interactive_switch_qualified'] = args.profile != 'remote-negative'
+    receipt['interactive_switch_qualified'] = not negative_profile
     checkpoint()
     # Only the owned isolated server is terminated to verify selection demotion.
     companion_target = None
@@ -569,11 +625,11 @@ try:
     server.terminate()
     server.wait(timeout=10)
     previous_count = len(receipt['selection_events'])
-    pump(20, None) if args.profile != 'remote-negative' else pump(2)
+    pump(20, None) if not negative_profile else pump(2)
     pump(2)
     if args.companion:
         assert receipt['companion_events'][-1]['thread_id'] is None
-    assert args.profile == 'remote-negative' or len(receipt['selection_events']) > previous_count
+    assert negative_profile or len(receipt['selection_events']) > previous_count
     assert all(item['thread_id'] is None for item in receipt['selection_events'][previous_count:])
     receipt['loss_demoted_to_unavailable'] = True
     verify_host_selection(None)
@@ -611,7 +667,7 @@ finally:
     if companion_master is not None:
         os.close(companion_master)
         companion_master = None
-    for process in [viewer, companion, server]:
+    for process in [viewer, companion, forwarder, server]:
         if process is not None and process.poll() is None:
             try:
                 process.terminate()
@@ -632,7 +688,7 @@ finally:
     receipt['owned_processes_closed'] = retired_processes + [
         process.closure() if isinstance(process, ManagedDaemon) else
         {'pid': process.pid, 'exit_code': process.poll(), 'not_running': process.poll() is not None}
-        for process in [viewer, companion, server] if process is not None and process.pid is not None
+        for process in [viewer, companion, forwarder, server] if process is not None and process.pid is not None
     ]
     try:
         groups = {item['pid'] for item in receipt['owned_processes_closed']}

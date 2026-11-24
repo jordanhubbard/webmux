@@ -3065,3 +3065,12 @@ Native fixture controls and the narrower live-process check are recorded in
 They qualify conversation discovery only. Authenticated Windows coding and
 recovery remain open: the first ARM64 Codex 0.169.0 tool attempt failed before
 command dispatch with a sandbox runner `pipe-in` connection timeout.
+
+
+The selection qualifier's `--profile forwarded-default` binds an owned byte relay
+directly at the private fixture's advertised default Codex socket. It requires
+bidirectional native traffic, rendering of the actual synthetic conversation,
+and only unavailable selection events. Socket ownership and permissions must
+not promote that forward into execution-host confidence. The fixture backend,
+relay, viewer and owned helper groups must all settle. This checks default-path
+classification; it does not qualify SSH transport or any model work.
