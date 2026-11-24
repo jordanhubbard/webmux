@@ -323,7 +323,7 @@ class Fixture:
             project.mkdir(mode=0o700)
             projects.append(project)
             self.sessions.append({'project': project, 'thread': str(uuid.uuid4()), 'nonce': uuid.uuid4().hex})
-        config = f'model = {json.dumps(self.args.model)}\ncheck_for_update_on_startup = false\nweb_search = "disabled"\napproval_policy = "never"\nsandbox_mode = "workspace-write"\n[features]\nenable_mcp_apps = false\n'
+        config = f'model = {json.dumps(self.args.model)}\ncheck_for_update_on_startup = false\nweb_search = "disabled"\napproval_policy = "never"\nsandbox_mode = "workspace-write"\n[features]\nenable_mcp_apps = false\n[tui]\nscreen_reader_detection_done = true\n'
         for project in projects:
             config += f'[projects.{json.dumps(str(project))}]\ntrust_level = "trusted"\n'
         (self.home / 'config.toml').write_text(config)
