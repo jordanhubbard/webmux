@@ -42,6 +42,18 @@ class ContinuityControls(unittest.TestCase):
             with self.subTest(key=key, value=value), self.assertRaises(module.Refusal):
                 module.verify_continuity(cohort(), after)
 
+    def test_viewer_migration_requires_same_execution_and_a_new_viewer(self):
+        before = cohort()[0]
+        after = cohort(2)[0]
+        after['viewer_epoch'] = 'replacement-viewer'
+        module.verify_viewer_migration(before, after)
+        with self.assertRaises(module.Refusal):
+            module.verify_viewer_migration(before, cohort(2)[0])
+        for key in ('turn_id', 'thread_id', 'provider_epoch', 'daemon_epoch'):
+            changed = dict(after, **{key: 'replaced'})
+            with self.subTest(key=key), self.assertRaises(module.Refusal):
+                module.verify_viewer_migration(before, changed)
+
     def test_only_actual_command_output_of_the_original_turn_counts(self):
         marker = 'WM_CODING_nonce_'
         data = {'turns': [{'id': 'original', 'items': [

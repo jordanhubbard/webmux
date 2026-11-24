@@ -3101,6 +3101,13 @@ python3 scripts/qualify-four-codex-sessions.py \
   --model ACCOUNT_MODEL --output /new/private/receipt.json
 ```
 
+After those controller phases preserve the four original viewer epochs, a
+separately recorded migration phase replaces each fixture viewer. The original
+model turn, provider and execution-daemon epochs must persist, work must advance
+through the replacement viewer's actual authenticated management tool, and the
+worktree tool inventory and `list_worktrees` results must retain parity. Worktree
+creation is not qualified by a read-only listing.
+
 The four original model turns must finish after their private STOP files are
 created. Success also requires process settlement; same-account process epochs
 and actual private working directories fence any cleanup signals. Original

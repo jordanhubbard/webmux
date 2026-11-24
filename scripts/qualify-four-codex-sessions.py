@@ -73,6 +73,15 @@ def work_counter(data, turn_id, nonce):
     return max(counters, default=0)
 
 
+def verify_viewer_migration(before, after):
+    require(before['viewer_epoch'] != after['viewer_epoch'], 'viewer-was-not-replaced')
+    for key in ('session_id', 'thread_id', 'turn_id', 'provider_epoch', 'daemon_epoch'):
+        require(before[key] == after[key], 'migration-changed-'+key)
+    require(after['turn_status'] == 'inProgress', 'migration-interrupted-original-turn')
+    require(after['thread_id'] == after['management_thread_id'] == after['selection_thread_id'], 'migration-thread-evidence')
+    require(after['work_counter'] > before['work_counter'], 'migration-work-did-not-progress')
+
+
 class Fixture:
     def __init__(self, args):
         self.args = args
@@ -262,6 +271,7 @@ class Fixture:
             # Fail before submitting model work if its actual authenticated
             # management registration is already broken.
             self.read_management(session)
+            session['worktree_read_before'] = self.read_worktrees(session)
         self.receipt['fixtures_ready'] = True
         self.save()
 
@@ -299,6 +309,54 @@ class Fixture:
         cwd = Path(unquote(parsed.path)) if parsed.scheme == 'file' else Path(raw_cwd)
         require(cwd.is_absolute() and cwd.resolve() == session['project'], 'management-project-result')
         return texts[0]
+
+    def read_worktrees(self, session):
+        inventory = self.native_rpc('mcpServerStatus/list', {'threadId': session['thread'], 'serverName': 'codex_tui', 'detail': 'toolsAndAuthOnly'})
+        servers = [row for row in inventory['data'] if row['name'] == 'codex_tui']
+        require(len(servers) == 1, 'worktree-management-registration')
+        tools = servers[0].get('tools', {})
+        names = set(tools) if isinstance(tools, dict) else {tool['name'] for tool in tools}
+        require({'create_worktree', 'list_worktrees', 'get_worktree_creation_status'} <= names, 'worktree-tools-unavailable')
+        result = self.native_rpc('mcpServer/tool/call', {'threadId': session['thread'], 'server': 'codex_tui', 'tool': 'list_worktrees', 'arguments': {}})
+        require(not result.get('isError'), 'worktree-read-failed')
+        texts = [json.loads(row['text']) for row in result.get('content', []) if row.get('type') == 'text']
+        require(len(texts) == 1 and isinstance(texts[0].get('data'), list) and texts[0].get('nextCursor') is None, 'worktree-read-shape')
+        return hashlib.sha256(json.dumps(texts[0], sort_keys=True, separators=(',', ':')).encode()).hexdigest()
+
+    def migrate_viewers(self):
+        self.receipt['viewer_migrations'] = []
+        for session in self.sessions:
+            before = self.snapshot(session)
+            require(self.epoch(session['viewer']) == before['viewer_epoch'], 'owned-viewer-epoch-before-migration')
+            # Only this freshly-created fixture viewer is killed. Its model turn
+            # belongs to the separate managed daemon and must continue unchanged.
+            os.kill(session['viewer'], signal.SIGKILL)
+            self.wait(lambda: self.api('/api/session-recovery/'+session['id']).get('shell_ready'), 'fixture-viewer-shell-return')
+            self.tmux('send-keys', '-t', '='+session['target'], '-l', f'codex --no-alt-screen resume {session["thread"]}')
+            self.tmux('send-keys', '-t', '='+session['target'], 'Enter')
+            old_viewer = session['viewer']
+            def replacement():
+                try:
+                    owner = self.management_owner(session)
+                except subprocess.CalledProcessError:
+                    return None
+                return owner if owner[0] != old_viewer else None
+            viewer, port = self.wait(replacement, 'replacement-management-owner')
+            images = self.run(['/usr/sbin/lsof', '-a', '-p', str(viewer), '-d', 'txt', '-Fn']).stdout.splitlines()
+            require('n'+str(self.args.native) in images, 'replacement-native-image')
+            session['viewer'], session['management_port'] = viewer, port
+            session['viewer_epoch'] = self.epoch(viewer)
+            self.wait(lambda: self.selection(session) == session['thread'], 'replacement-selected-thread')
+            def advanced():
+                current = self.snapshot(session)
+                return current if current['work_counter'] > before['work_counter'] else None
+            after = self.wait(advanced, 'replacement-original-work-progress', seconds=40)
+            verify_viewer_migration(before, after)
+            worktrees = self.read_worktrees(session)
+            require(worktrees == session['worktree_read_before'], 'replacement-worktree-read-parity')
+            self.receipt['viewer_migrations'].append({'before': before, 'after': after,
+                'worktree_read_sha256': worktrees, 'actual_management_read': True})
+            self.save()
 
     def start_work(self):
         for session in self.sessions:
@@ -354,6 +412,7 @@ class Fixture:
             self.api('/api/sessions/'+session['id']+'/reconnect', {})
         previous = self.phase('provider-reconnect', previous)
         verify_continuity(baseline, previous)
+        self.migrate_viewers()
         # Let the original four model requests finish their own coding checks.
         for session in self.sessions:
             (session['project'] / 'STOP').touch(exist_ok=False)
@@ -534,6 +593,9 @@ def main():
         fixture.receipt['passed'] = passed and settled
         fixture.receipt['active_work_qualified'] = passed and settled
         fixture.receipt['four_session_survival_qualified'] = passed and settled
+        fixture.receipt['active_viewer_handoff_qualified'] = passed and settled
+        fixture.receipt['worktree_read_parity_qualified'] = passed and settled
+        fixture.receipt['worktree_creation_qualified'] = False
         fixture.save()
         fixture.output.close()
     print(json.dumps({'passed': fixture.receipt['passed'], 'fixture_root': str(fixture.root), 'failure': fixture.receipt.get('failure')}))
