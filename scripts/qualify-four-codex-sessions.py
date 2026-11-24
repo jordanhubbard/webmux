@@ -122,6 +122,7 @@ class Fixture:
             'profile': getattr(args, 'profile', 'full'),
             'fixture_root': str(self.root), 'source': subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=self.repo, text=True).strip(),
             'native_sha256': args.native_sha256, 'webmux_sha256': args.webmux_sha256,
+            'code_mode_host_sha256': getattr(args, 'code_mode_host_sha256', None),
             'qualifier_sha256': digest(Path(__file__)), 'phases': [],
             'worker_start': {'load': list(os.getloadavg()), 'cpus': os.cpu_count(),
                 'free_disk_bytes': shutil.disk_usage(self.root).free, 'machine': os.uname().machine},
@@ -696,7 +697,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ('native', 'webmux', 'node', 'auth-home', 'output'):
         parser.add_argument('--'+name, type=Path, required=True)
-    for name in ('native-sha256', 'webmux-sha256', 'model'):
+    for name in ('native-sha256', 'webmux-sha256', 'code-mode-host-sha256', 'model'):
         parser.add_argument('--'+name, required=True)
     parser.add_argument('--profile', choices=('full', 'controller'), default='full',
         help='Controller profile preserves all original viewers; full additionally qualifies viewer replacement')
@@ -710,6 +711,10 @@ def main():
         expected = getattr(args, name+'_sha256')
         require(re.fullmatch('[0-9a-f]{64}', expected) and digest(binary) == expected, name+'-hash-mismatch')
         setattr(args, name, binary)
+    host = args.native.with_name('codex-code-mode-host')
+    require(host.is_file() and os.access(host, os.X_OK), 'adjacent-code-mode-host-required')
+    require(re.fullmatch('[0-9a-f]{64}', args.code_mode_host_sha256) and
+        digest(host) == args.code_mode_host_sha256, 'code-mode-host-hash-mismatch')
     args.auth_home = args.auth_home.resolve(strict=True)
     args.node = args.node.resolve(strict=True)
     if args.ssh_host:

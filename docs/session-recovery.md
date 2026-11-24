@@ -3082,6 +3082,11 @@ original producer is about 954 MB. This outer fixture allowance does not change
 native readiness, management RPC or production source deadlines. Lifecycle
 elapsed times and failures remain in the receipt.
 
+Coding qualification also requires the producer's matching executable
+`codex-code-mode-host` adjacent to the supplied CLI, with its independent hash.
+Missing or mismatched runtime helpers are refused before fixture creation or
+model dispatch; a CLI-only metadata qualifier does not establish coding ability.
+
 Each actual TUI first loads a distinct synthetic saved conversation and must
 publish its selected ID through the actual WebMux launcher. Every registered
 management listener must belong to the expected native executable. The fixture
@@ -3108,6 +3113,7 @@ For example, after the matching native handoff and selection builds pass:
 python3 scripts/qualify-four-codex-sessions.py \
   --native /absolute/verified/codex --native-sha256 NATIVE_SHA256 \
   --webmux /absolute/verified/webmux --webmux-sha256 WEBMUX_SHA256 \
+  --code-mode-host-sha256 MATCHING_HELPER_SHA256 \
   --node /absolute/node24 --auth-home /original/account/.codex \
   --model ACCOUNT_MODEL --output /new/private/receipt.json
 ```
