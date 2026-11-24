@@ -3116,3 +3116,11 @@ controls and TypeScript checks do not qualify native continuity. A native run
 is still required; this fixture covers local durable providers and managed
 native viewers. SSH transports, installed/legacy viewer migration, worktree-tool
 parity and the four current user sessions require their own evidence.
+
+The selection qualifier's `--profile forwarded-default` binds an owned byte relay
+directly at the private fixture's advertised default Codex socket. It requires
+bidirectional native traffic, rendering of the actual synthetic conversation,
+and only unavailable selection events. Socket ownership and permissions must
+not promote that forward into execution-host confidence. The fixture backend,
+relay, viewer and owned helper groups must all settle. This checks default-path
+classification; it does not qualify SSH transport or any model work.
