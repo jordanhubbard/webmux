@@ -360,6 +360,15 @@ class Fixture:
             # management registration is already broken.
             self.read_management(session)
             session['worktree_read_before'] = self.read_worktrees(session)
+            self.receipt.setdefault('setup_viewers', []).append({
+                'session_id': session['id'], 'thread_id': session['thread'],
+                'provider_pid': session['provider'], 'provider_epoch': session['provider_epoch'],
+                'viewer_pid': session['viewer'], 'viewer_epoch': session['viewer_epoch'],
+                'management_port': session['management_port'], 'actual_management_read': True,
+                'native_selection_verified': True, 'native_image_verified': True,
+                'project_sha256': hashlib.sha256(str(session['project']).encode()).hexdigest(),
+                'worktree_read_sha256': session['worktree_read_before']})
+            self.save()
         self.receipt['fixtures_ready'] = True
         self.save()
 

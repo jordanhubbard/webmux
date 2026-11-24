@@ -3087,6 +3087,10 @@ publish its selected ID through the actual WebMux launcher. Every registered
 management listener must belong to the expected native executable. The fixture
 calls each thread's real authenticated `codex_tui/read_thread` before submitting
 any model request. A broken baseline ends qualification before disruption.
+Each completed baseline is journaled with thread/session IDs, viewer/provider
+epochs, management listener port, and project/worktree-read digests before the
+next viewer starts. Login-profile PATH changes cannot select another CLI: the
+fixture uses an absolute private Go alias and an explicit private native lookup.
 
 The fixture then submits one new coding request per thread, asking the model to
 write a small Python program, check assertions, and run a bounded foreground loop.
