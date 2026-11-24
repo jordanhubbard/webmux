@@ -4,6 +4,8 @@ package recovery
 
 import (
 	"bufio"
+	"encoding/binary"
+	"io"
 	"os"
 	"os/exec"
 	"strconv"
@@ -11,9 +13,34 @@ import (
 )
 
 func newCodexSelectionObserver(binary, cwd string, args []string) *codexSelectionObserver {
-	if !codexSelectionEligible(binary, cwd, args) {
+	if !codexSelectionDirectExecutable(binary) || !codexSelectionEligible(binary, cwd, args) {
 		return nil
 	}
+	return newCodexSelectionPipe()
+}
+
+// Script launchers may advertise the native child's help while closing extra
+// descriptors when they spawn it. Never inject a private FD through an
+// unqualified launcher: the native child would fail before opening its TUI.
+func codexSelectionDirectExecutable(file string) bool {
+	reader, err := os.Open(file)
+	if err != nil {
+		return false
+	}
+	defer reader.Close()
+	var magic [4]byte
+	if _, err := io.ReadFull(reader, magic[:]); err != nil {
+		return false
+	}
+	switch binary.BigEndian.Uint32(magic[:]) {
+	case 0x7f454c46, 0xfeedface, 0xcefaedfe, 0xfeedfacf, 0xcffaedfe,
+		0xcafebabe, 0xbebafeca, 0xcafebabf, 0xbfbafeca:
+		return true // ELF, thin Mach-O, or universal Mach-O.
+	}
+	return false
+}
+
+func newCodexSelectionPipe() *codexSelectionObserver {
 	reader, writer, err := os.Pipe()
 	if err != nil {
 		return nil
