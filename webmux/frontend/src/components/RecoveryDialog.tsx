@@ -112,6 +112,8 @@ export function RecoveryDialog({ sessionId, onClose }: { sessionId: string; onCl
           <dt>Recorded native session</dt><dd>{activity.native_session_id || 'No reliable native session ID was recorded.'}</dd>
           <dt>Conversation evidence</dt><dd>{activity.native_evidence === 'process-state'
             ? 'Observed in the running CLI process’s native state.'
+            : activity.native_evidence === 'native-selection'
+              ? 'Selected in the running Codex viewer and verified against its saved conversation. Choose Resume to reconnect.'
             : activity.native_evidence === 'native-hook'
               ? 'Reported by the coding CLI when the conversation started. Hooks can stop reporting later changes; automatic resume is unavailable.'
             : activity.native_evidence === 'launch-selector'

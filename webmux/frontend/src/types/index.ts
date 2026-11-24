@@ -58,7 +58,7 @@ export interface RecoveryActivity {
   command?: string; cwd?: string; source: string; observed_at: string; running: boolean;
   replayable: boolean; cli?: string; cli_version?: string; native_session_id?: string;
   native_state_file?: string;
-  native_evidence?: 'launch-selector' | 'process-state' | 'native-hook' | 'unavailable';
+  native_evidence?: 'launch-selector' | 'process-state' | 'native-hook' | 'native-selection' | 'unavailable';
   configuration?: { version?: number; roots: Record<string, string>; manual_reason?: string };
 }
 
