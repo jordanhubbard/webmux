@@ -62,7 +62,7 @@ test('real Mosh carries an automatic browser request without logging and acknowl
       // Fixture-only cleanup bound; ordinary Mosh roaming policy is unchanged.
       'export MOSH_SERVER_NETWORK_TMOUT=15', 'unset TMUX TMUX_PANE',
       'case "$SSH_ORIGINAL_COMMAND" in',
-      `  *--recovery-rpc) printf '%s\\n' recovery-rpc >> ${quote(path.join(root, 'operations'))} ;;`,
+      `  *--recovery-rpc*) printf '%s\\n' recovery-rpc >> ${quote(path.join(root, 'operations'))} ;;`,
       `  *--auth-callback) printf '%s\\n' auth-callback >> ${quote(path.join(root, 'operations'))} ;;`,
       'esac', 'exec /bin/sh -c "$SSH_ORIGINAL_COMMAND"',
     ].join('\n') + '\n', { mode: 0o700 });

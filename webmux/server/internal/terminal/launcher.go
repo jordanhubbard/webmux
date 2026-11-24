@@ -414,14 +414,16 @@ func ConnectBrowser(payload string) error {
 	if prepareRemoteRecovery(&value) {
 		// Provisioning happened over authenticated stdin before this terminal
 		// attaches. The attach argv contains only the stable provider identity.
-	} else if remoteBrowserAvailable(value.Request, value.KeyPath) {
-		if value.Request.Transport == "mosh" {
-			value.Args = append(value.Args, "webmux", "--browser-shell")
-		} else {
-			value.Args = append(value.Args, "webmux --browser-shell")
+	} else {
+		fmt.Fprintln(os.Stderr, "[WebMux] WARNING: This SSH terminal is not protected against disconnects or WebMux restarts. Durable recovery could not be initialized; install WebMux and tmux on the execution host and reconnect before starting work.")
+		if remoteBrowserAvailable(value.Request, value.KeyPath) {
+			if value.Request.Transport == "mosh" {
+				value.Args = append(value.Args, "webmux", "--browser-shell")
+			} else {
+				value.Args = append(value.Args, "webmux --browser-shell")
+			}
 		}
 	}
-	// Browser integration is optional. A failed capability probe does not mean
-	// the terminal connection will fail; keep the normal shell fallback silent.
+	// Keep ordinary SSH available, but make the missing durability explicit.
 	return browseropen.Execute(value.Path, append([]string{value.Path}, value.Args...), os.Environ())
 }

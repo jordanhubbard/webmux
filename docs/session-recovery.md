@@ -13,6 +13,23 @@ until full qualification. #318 remains open. See the current
 below retain their original scope and must not be read as completing the remaining
 native managed-reboot or remote acceptance work.
 
+## SSH helper discovery (#703)
+
+SSH windows need WebMux and tmux installed on the execution host to preserve
+running work across controller restarts. Interactive shell startup files do not
+establish the PATH used by noninteractive SSH capability and recovery requests.
+Recovery requests append `~/.local/bin`, `/opt/homebrew/bin` and `/usr/local/bin`
+to that PATH, and also check the user and system `Applications/WebMux.app`
+locations. Capability checks, RPC and provider attachment use the same resolver.
+Existing PATH entries retain precedence; login profiles are never sourced into
+the authenticated RPC stream.
+
+When durable recovery cannot be initialized, the terminal prints an explicit
+warning before opening an ordinary SSH login. Such a login can lose its running
+applications on disconnect or controller restart. Installing the missing helper
+does not protect an already running ordinary SSH login: reconnect that window
+before starting work. A fresh shell prompt does not establish recovered work.
+
 ## Restarting an unresponsive local application (#693)
 
 Opening **Recover** displays a history preview. A connected provider proves that

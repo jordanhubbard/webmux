@@ -13,7 +13,7 @@ func TestRecoveryChannelUsesFixedSSHHelperWithNoCredentialPayloadInArguments(t *
 		t.Fatal(err)
 	}
 	joined := strings.Join(args, " ")
-	if !strings.Contains(joined, "BatchMode=yes") || !strings.Contains(joined, "StrictHostKeyChecking=yes") || !strings.Contains(joined, "-p 2222") || !strings.Contains(joined, "ControlPath=/private/control-socket") || args[len(args)-1] != "webmux --recovery-rpc" || strings.Contains(joined, request.RecoveryKey) {
+	if !strings.Contains(joined, "BatchMode=yes") || !strings.Contains(joined, "StrictHostKeyChecking=yes") || !strings.Contains(joined, "-p 2222") || !strings.Contains(joined, "ControlPath=/private/control-socket") || args[len(args)-1] != remoteHelperCommand("--recovery-rpc") || strings.Contains(joined, request.RecoveryKey) {
 		t.Fatal("incorrect execution-host control channel", args)
 	}
 	// The browser-connect child gets its key through its inherited environment,
