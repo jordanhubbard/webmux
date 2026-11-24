@@ -180,11 +180,36 @@ before the first report or overwrite a later selected conversation.
 
 The matching native source is retained on the
 [Codex prototype branch](https://github.com/jordanhubbard/codex/tree/fix/tui-selected-thread-observer).
-The pipe controls and WebMux adapter have scoped tests; a complete native TUI
-build and real switch/loss/reconnect qualification are still required. This
-evidence does not yet enable automatic native resume. It also does not repair
-viewer-owned task-management MCP handoff (#707) or establish four-session
-survival (#710).
+The pipe controls and WebMux adapter have scoped tests. Native build
+[`2edf03e`](https://github.com/jordanhubbard/codex/actions/runs/45319456514)
+compiled the full TUI and CLI and passed all five observer controls on macOS
+arm64. Its native publisher also passed a real CLI/PTY A → B → A switch and
+daemon-loss test with synthetic saved conversations. The receipt includes
+monotonic PID-bound observations, selection demotion, and closure of the owned
+viewer, daemon and background helper process groups. No model turn ran.
+
+Reproduce that publisher qualification from the application directory with
+Python 3, `lsof`, and the exact native artifact and SHA-256 from its build receipt:
+
+```sh
+python3 scripts/qualify-codex-selection.py \
+  --binary /absolute/path/to/codex-selection-prototype \
+  --expected-sha256 BUILD_RECEIPT_SHA256 \
+  --output /absolute/path/to/new-receipt.json
+```
+
+The script creates its own private `CODEX_HOME`, synthetic history and execution
+socket. It uses a private pipe for selection and a PTY for UI input, checks the
+binary hash before starting processes, retains fixture logs, and requires
+complete owned-process cleanup before marking a receipt passed. Startup Git
+helpers can run; cleanup verifies their user and fixture working directory
+before signaling their owned process group. Existing user sessions are not
+targets. Failure receipts are retained, including failures during cleanup.
+
+Full WebMux-launcher integration, concurrent-viewer isolation and reconnect
+qualification remain release gates. Automatic native resume remains gated.
+Task-management MCP handoff (#707), active coding work and four-session survival
+(#710) require their own complete qualification.
 Codex (direct process) and Cursor now have process-state observers. OpenCode
 1.19.5 exposes no selected conversation outside its interface
 ([details](#opencode-conversation-switches-2026-11-12)), so OpenCode recovery
