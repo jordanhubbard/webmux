@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/jordanhubbard/webmux/server/internal/coordination"
+	"github.com/jordanhubbard/webmux/server/internal/gitobserve"
 )
 
 func sourceFixture(t *testing.T) (string, *Bindings, *coordination.Binding) {
@@ -30,7 +31,7 @@ func sourceFixture(t *testing.T) (string, *Bindings, *coordination.Binding) {
 	}
 	sourceRun(t, directory, "add", "tracked.txt")
 	sourceRun(t, directory, "commit", "-m", "initial")
-	repo, err := coordination.InspectRepository(t.Context(), directory)
+	repo, err := coordination.InspectRepository(sourceContext(t), directory)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -45,7 +46,7 @@ func sourceFixture(t *testing.T) (string, *Bindings, *coordination.Binding) {
 
 func sourceRun(t *testing.T, directory string, args ...string) string {
 	t.Helper()
-	output, err := sourceGit(t.Context(), directory, args...)
+	output, err := sourceGit(sourceContext(t), directory, args...)
 	if err != nil {
 		t.Fatalf("fixture Git operation failed: %s, %v", output, err)
 	}
@@ -56,7 +57,7 @@ func TestSourceExactCommitDirtyAndDetached(t *testing.T) {
 	directory, bindings, repo := sourceFixture(t)
 	observe := func(dirty, detached bool) SourceObservation {
 		t.Helper()
-		got, err := bindings.ObserveSource(t.Context(), "alice", repo)
+		got, err := bindings.ObserveSource(sourceContext(t), "alice", repo)
 		if err != nil || got.Schema != SourceSchema || got.Commit != sourceRun(t, directory, "rev-parse", "HEAD") ||
 			got.Dirty != dirty || got.Detached != detached || got.BindingRevision == "" || got.ObservedAt.IsZero() ||
 			got.RepositoryID != repo.ID || got.Repository != repo.Repository || got.Worktree != repo.Worktree ||
@@ -93,7 +94,7 @@ func TestSourceUsesActualRepositoryAndAccount(t *testing.T) {
 	otherDirectory, _, _ := sourceFixture(t)
 	// Ensure distinct roots even when fixture commit timestamps coincide.
 	sourceRun(t, otherDirectory, "commit", "--amend", "-m", "different root")
-	other, err := coordination.InspectRepository(t.Context(), otherDirectory)
+	other, err := coordination.InspectRepository(sourceContext(t), otherDirectory)
 	if err != nil || other.ID == repo.ID {
 		t.Fatal("invalid independent-root control", err)
 	}
@@ -110,7 +111,7 @@ func TestSourceUsesActualRepositoryAndAccount(t *testing.T) {
 		{"different selected repository", "alice", other},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			got, err := bindings.ObserveSource(t.Context(), test.account, test.repo)
+			got, err := bindings.ObserveSource(sourceContext(t), test.account, test.repo)
 			encoded, _ := json.Marshal(got)
 			if err == nil || got.Schema != "" || got.Worktree != "" || got.Commit != "" ||
 				bytes.Contains(encoded, []byte(repo.Repository)) || strings.Contains(err.Error(), repo.Worktree) {
@@ -120,13 +121,13 @@ func TestSourceUsesActualRepositoryAndAccount(t *testing.T) {
 	}
 	// Account authorization precedes validation of the source path.
 	changed.Worktree = "relative/unavailable/private-source"
-	if _, err := bindings.ObserveSource(t.Context(), "bob", &changed); !errors.Is(err, ErrUnmapped) {
+	if _, err := bindings.ObserveSource(sourceContext(t), "bob", &changed); !errors.Is(err, ErrUnmapped) {
 		t.Fatal("foreign account reached source inspection", err)
 	}
 	if got, err := bindings.ObserveSource(nil, "alice", repo); !errors.Is(err, ErrInvalid) || got.Schema != "" {
 		t.Fatal("missing source context returned metadata", err)
 	}
-	ctx, cancel := context.WithCancel(t.Context())
+	ctx, cancel := context.WithCancel(sourceContext(t))
 	cancel()
 	if got, err := bindings.ObserveSource(ctx, "alice", repo); !errors.Is(err, context.Canceled) || !errors.Is(err, ErrSource) || got.Schema != "" {
 		t.Fatal("cancelled source observation returned success or lost cancellation", err)
@@ -142,7 +143,7 @@ func TestSourceDoesNotFollowInheritedGitRouting(t *testing.T) {
 	} {
 		t.Setenv(name, value)
 	}
-	got, err := bindings.ObserveSource(t.Context(), "alice", repo)
+	got, err := bindings.ObserveSource(sourceContext(t), "alice", repo)
 	if err != nil || filepath.Clean(got.Worktree) != filepath.Clean(directory) || got.Repository != repo.Repository {
 		t.Fatalf("inherited Git routing changed selected source: %+v, %v", got, err)
 	}
@@ -169,7 +170,7 @@ func TestNativeLocalSourceObservation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	repo, err := coordination.InspectRepository(t.Context(), cwd)
+	repo, err := coordination.InspectRepository(sourceContext(t), cwd)
 	if err != nil || repo.Worktree != os.Getenv("WEBMUX_MAC_SOURCE_EXPECTED_ROOT") {
 		t.Fatal("native source worktree does not match explicit expectation")
 	}
@@ -179,7 +180,7 @@ func TestNativeLocalSourceObservation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	got, err := bindings.ObserveSource(t.Context(), "alice", repo)
+	got, err := bindings.ObserveSource(sourceContext(t), "alice", repo)
 	if err != nil || got.Commit != os.Getenv("WEBMUX_MAC_SOURCE_EXPECTED_COMMIT") ||
 		got.Dirty != (os.Getenv("WEBMUX_MAC_SOURCE_EXPECTED_DIRTY") == "1") {
 		t.Fatal("native source observation does not match explicit expectation", err)
@@ -195,4 +196,22 @@ func TestNativeLocalSourceObservation(t *testing.T) {
 	if err := file.Close(); err != nil {
 		t.Fatal(err)
 	}
+}
+
+// Enabled only by the native diagnostic runner; successful production requests
+// do not write logs, and fixture metadata never enters the timing receipt.
+func sourceContext(t *testing.T) context.Context {
+	t.Helper()
+	ctx := t.Context()
+	if os.Getenv("WEBMUX_SOURCE_TIMINGS") != "1" {
+		return ctx
+	}
+	return gitobserve.WithTrace(ctx, func(event gitobserve.Event) {
+		encoded, err := json.Marshal(event)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		t.Logf("SOURCE_GIT_TIMING %s", encoded)
+	})
 }

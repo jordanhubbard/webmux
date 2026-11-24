@@ -1,0 +1,101 @@
+name: Native Windows source observation diagnostics
+
+on:
+  workflow_dispatch:
+    inputs:
+      samples:
+        description: 'Original full-suite samples in one invocation; any failure fails qualification'
+        type: choice
+        options: ['1', '2']
+        default: '1'
+  pull_request:
+    paths:
+      - '.github/workflows/source-observation-native.yml'
+      - 'webmux/server/internal/gitobserve/**'
+      - 'webmux/server/internal/coordination/repository*'
+      - 'webmux/server/internal/maccoord/source*'
+
+permissions:
+  contents: read
+
+jobs:
+  source:
+    name: Native Windows Git phase timings
+    runs-on: windows-2022
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version-file: webmux/server/go.mod
+          cache-dependency-path: webmux/server/go.sum
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: '24'
+      - name: Record native worker and exact source
+        shell: pwsh
+        run: |
+          if (-not [Runtime.InteropServices.RuntimeInformation]::IsOSPlatform([Runtime.InteropServices.OSPlatform]::Windows)) {
+            throw 'Requires native Windows.'
+          }
+          $receipts = Join-Path $env:RUNNER_TEMP 'webmux-source-observation'
+          New-Item -ItemType Directory -Path $receipts -ErrorAction Stop | Out-Null
+          "SOURCE_RECEIPTS=$receipts" >> $env:GITHUB_ENV
+          @{
+            source = (git rev-parse HEAD).Trim()
+            head = '${{ github.event.pull_request.head.sha || github.sha }}'
+            run = $env:GITHUB_RUN_ID
+            go = (go version)
+            git = (git --version)
+            cpus = [Environment]::ProcessorCount
+            os = Get-CimInstance Win32_OperatingSystem | Select-Object Caption, Version, FreePhysicalMemory, TotalVisibleMemorySize
+            disk = Get-CimInstance Win32_LogicalDisk -Filter 'DriveType=3' | Select-Object DeviceID, Size, FreeSpace
+          } | ConvertTo-Json -Depth 5 | Set-Content -Encoding utf8 "$receipts/worker.json"
+      - name: Observe original tests under full race package concurrency
+        shell: pwsh
+        working-directory: webmux/server
+        env:
+          WEBMUX_SOURCE_TIMINGS: '1'
+          SOURCE_SAMPLE_COUNT: ${{ inputs.samples || '1' }}
+        run: |
+          $sampleCount = [int]$env:SOURCE_SAMPLE_COUNT
+          if ($sampleCount -notin @(1, 2)) { throw 'Unsupported qualification sample count.' }
+          # One invocation, original per-observation deadlines and package concurrency.
+          # This is diagnostic sampling, never an automatic retry after a failure.
+          go test -race "-count=$sampleCount" -json ./... | Tee-Object -FilePath "$env:SOURCE_RECEIPTS/tests.jsonl"
+          $testExit = $LASTEXITCODE
+          $timings = @()
+          $passes = @{
+            TestSourceExactCommitDirtyAndDetached = 0
+            TestSourceUsesActualRepositoryAndAccount = 0
+          }
+          Get-Content "$env:SOURCE_RECEIPTS/tests.jsonl" | ForEach-Object {
+            $event = $_ | ConvertFrom-Json
+            if ($event.Output -match 'SOURCE_GIT_TIMING (\{.*\})') {
+              $timing = $Matches[1] | ConvertFrom-Json
+              $timings += @{ test = $event.Test; timing = $timing }
+            }
+            if ($event.Action -eq 'pass' -and $null -ne $event.Test -and $passes.ContainsKey([string]$event.Test)) {
+              $passes[[string]$event.Test]++
+            }
+          }
+          @{ testExit = $testExit; sampleCount = $sampleCount; originalTestPassCounts = $passes; timings = $timings } |
+            ConvertTo-Json -Depth 6 | Set-Content -Encoding utf8 "$env:SOURCE_RECEIPTS/phases.json"
+          # Both original tests construct and validate a real repository.
+          # Require all witness phases, including the independent-root path.
+          foreach ($test in $passes.Keys) {
+            $phases = @($timings | Where-Object { $_.test -eq $test } | ForEach-Object { $_.timing.phase })
+            foreach ($phase in @('repository.shallow', 'repository.toplevel', 'repository.origin', 'repository.roots', 'repository.branch', 'repository.ignorecase')) {
+              if ($phase -notin $phases) { throw "Missing witness phase $phase for $test; original trace retained." }
+            }
+          }
+          if ($testExit -ne 0) { throw 'Native test failure retained; no automatic retry.' }
+          if ($timings.Count -eq 0 -or $passes.Values.Where({ $_ -ne $sampleCount }).Count -ne 0) {
+            throw 'Missing original test samples or phase evidence.'
+          }
+      - name: Preserve original native evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: windows-source-observation
+          path: ${{ runner.temp }}/webmux-source-observation
