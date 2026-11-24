@@ -81,6 +81,14 @@ jobs:
           }
           @{ testExit = $testExit; sampleCount = $sampleCount; originalTestPassCounts = $passes; timings = $timings } |
             ConvertTo-Json -Depth 6 | Set-Content -Encoding utf8 "$env:SOURCE_RECEIPTS/phases.json"
+          # Both original tests construct and validate a real repository.
+          # Require all witness phases, including the independent-root path.
+          foreach ($test in $passes.Keys) {
+            $phases = @($timings | Where-Object { $_.test -eq $test } | ForEach-Object { $_.timing.phase })
+            foreach ($phase in @('repository.shallow', 'repository.toplevel', 'repository.origin', 'repository.roots', 'repository.branch', 'repository.ignorecase')) {
+              if ($phase -notin $phases) { throw "Missing witness phase $phase for $test; original trace retained." }
+            }
+          }
           if ($testExit -ne 0) { throw 'Native test failure retained; no automatic retry.' }
           if ($timings.Count -eq 0 -or $passes.Values.Where({ $_ -ne $sampleCount }).Count -ne 0) {
             throw 'Missing original test samples or phase evidence.'

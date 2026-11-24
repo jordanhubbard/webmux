@@ -2,6 +2,11 @@ package coordination
 
 import (
 	"context"
+	"errors"
+	"slices"
+	"time"
+
+	"github.com/jordanhubbard/webmux/server/internal/gitobserve"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -105,5 +110,41 @@ func TestRepositoryRemoteAtSignInPathDoesNotChooseHost(t *testing.T) {
 	}
 	if _, ok := canonicalRepositoryRemote("user@:repo"); ok {
 		t.Fatal("accepted missing host")
+	}
+}
+
+// Exercise the actual witness path, including its optional config miss. A
+// source-only trace cannot diagnose a failure in these earlier commands.
+func TestRepositoryWitnessTraceRetainsIdentityAndDeadline(t *testing.T) {
+	directory := repositoryFixture(t)
+	plain, err := InspectRepository(t.Context(), directory)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var events []gitobserve.Event
+	traced, err := InspectRepository(gitobserve.WithTrace(t.Context(), func(event gitobserve.Event) {
+		events = append(events, event)
+	}), directory)
+	if err != nil || traced == nil || plain.ID != traced.ID || plain.Worktree != traced.Worktree {
+		t.Fatal("trace changed repository identity", err)
+	}
+	var phases []string
+	for _, event := range events {
+		phases = append(phases, event.Phase)
+		if !event.HasDeadline || event.Remaining <= 0 || event.Remaining > 2*time.Second {
+			t.Fatal("witness deadline changed", event)
+		}
+	}
+	if !slices.Equal(phases, []string{"repository.shallow", "repository.toplevel", "repository.origin", "repository.roots", "repository.branch", "repository.ignorecase"}) {
+		t.Fatal("missing witness evidence", phases)
+	}
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+	events = nil
+	_, err = InspectRepository(gitobserve.WithTrace(ctx, func(event gitobserve.Event) {
+		events = append(events, event)
+	}), directory)
+	if !errors.Is(err, ErrRepository) || len(events) != 1 || events[0].Outcome != "canceled" {
+		t.Fatal("trace changed cancellation refusal", err, events)
 	}
 }
