@@ -3100,7 +3100,12 @@ fixture uses an absolute private Go alias and an explicit private native lookup.
 The fixture then submits one new coding request per thread, asking the model to
 write a small Python program, check assertions, and run a bounded foreground loop.
 Progress counts only when returned as command output by that same thread's
-native management tool. Prompt text, command source, file growth alone, another
+native management tool. Both plain `commandExecution` output and Code Mode
+`exec`/`wait` delegated command-result JSON are supported. Code Mode summaries,
+arbitrary console dictionaries and command arguments cannot contribute. Each
+actual Python worker must also be found by the kernel in its unique project
+with `proof.py` in its command, and its process epoch and program digest must
+remain unchanged through controller phases and viewer migration. Prompt text, command source, file growth alone, another
 turn and a completed turn cannot establish continuing work. The exact original
 thread and turn IDs, native viewer, durable provider and execution-daemon epochs
 must remain unchanged while all four work counters advance after orderly

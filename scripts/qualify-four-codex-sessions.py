@@ -51,13 +51,16 @@ def verify_continuity(before, after):
     require(len({row['thread_id'] for row in before}) == 4, 'distinct-threads-required')
     require(len({row['viewer_epoch'] for row in before}) == 4, 'distinct-viewers-required')
     require(len({row['provider_epoch'] for row in before}) == 4, 'distinct-providers-required')
+    require(len({row['work_epoch'] for row in before}) == 4, 'distinct-coding-workers-required')
     require(len({row['daemon_epoch'] for row in before}) == 1, 'one-shared-native-daemon-required')
     for row in [*before, *after]:
         require(type(row['work_counter']) is int and row['work_counter'] > 0, 'native-work-counter-required')
+        require(isinstance(row['work_epoch'], str) and row['work_epoch'], 'live-coding-worker-required')
+        require(isinstance(row['work_script_sha256'], str) and re.fullmatch('[0-9a-f]{64}', row['work_script_sha256']), 'coding-script-digest-required')
         require(row['turn_status'] == 'inProgress', 'turn-no-longer-active')
         require(row['management_thread_id'] == row['selection_thread_id'] == row['thread_id'], 'thread-evidence-disagrees')
     for original, current in zip(before, after, strict=True):
-        for key in ('session_id', 'thread_id', 'turn_id', 'viewer_epoch', 'provider_epoch', 'daemon_epoch'):
+        for key in ('session_id', 'thread_id', 'turn_id', 'viewer_epoch', 'provider_epoch', 'daemon_epoch', 'work_epoch', 'work_script_sha256'):
             require(original[key] == current[key], 'continuity-' + key)
         require(current['turn_status'] == 'inProgress', 'turn-no-longer-active')
         require(current['management_thread_id'] == current['thread_id'], 'management-thread-mismatch')
@@ -66,17 +69,52 @@ def verify_continuity(before, after):
 
 
 def work_counter(data, turn_id, nonce):
-    # A prompt, command source, file heartbeat or another turn cannot contribute.
-    outputs = [item.get('output', {}).get('text', '') for turn in data.get('turns', []) if turn.get('id') == turn_id
-        for item in turn.get('items', []) if item.get('type') == 'commandExecution']
-    pattern = re.compile(r'^' + re.escape('WM_CODING_'+nonce+'_') + r'(\d+)\r?$', re.MULTILINE)
-    counters = [int(match.group(1)) for output in outputs if isinstance(output, str) for match in pattern.finditer(output)]
+    # Only actual native tool results from this turn can contribute. Code Mode
+    # wraps delegated exec_command/write_stdin results as JSON text; arguments,
+    # model summaries and arbitrary console dictionaries are not command output.
+    pattern = re.compile(r'^' + re.escape('WM_CODING_'+nonce+'_') + r'(\d{1,6})\r?$', re.MULTILINE)
+    counters = []
+    def output_lines(text):
+        if isinstance(text, str):
+            for match in pattern.finditer(text):
+                counters.append(int(match.group(1)))
+    def native_result(value, depth=0):
+        if depth > 8:
+            return
+        if isinstance(value, dict):
+            if isinstance(value.get('chunk_id'), str) and isinstance(value.get('output'), str):
+                # The native Code Mode adapter escapes line breaks inside its
+                # delegated command-output field in addition to JSON encoding.
+                output_lines(value['output'].replace('\\r\\n', '\n').replace('\\n', '\n'))
+            elif value.get('type') in ('input_text', 'text'):
+                native_result(value.get('text'), depth+1)
+        elif isinstance(value, list):
+            for item in value:
+                native_result(item, depth+1)
+        elif isinstance(value, str):
+            for text in [value, *value.splitlines()]:
+                try:
+                    parsed = json.loads(text)
+                except (ValueError, TypeError):
+                    continue
+                if parsed != value:
+                    native_result(parsed, depth+1)
+    for turn in data.get('turns', []):
+        if turn.get('id') != turn_id:
+            continue
+        for item in turn.get('items', []):
+            text = item.get('output', {}).get('text', '')
+            if item.get('type') == 'commandExecution':
+                output_lines(text)
+            elif item.get('type') == 'functionCallOutput' and item.get('name') in ('exec', 'wait') and item.get('namespace') in (None, 'functions'):
+                native_result(text)
     return max(counters, default=0)
 
 
 def verify_viewer_migration(before, after):
+    require(isinstance(before['work_epoch'], str) and before['work_epoch'] and isinstance(after['work_epoch'], str) and after['work_epoch'], 'migration-live-worker-required')
     require(before['viewer_epoch'] != after['viewer_epoch'], 'viewer-was-not-replaced')
-    for key in ('session_id', 'thread_id', 'turn_id', 'provider_epoch', 'daemon_epoch'):
+    for key in ('session_id', 'thread_id', 'turn_id', 'provider_epoch', 'daemon_epoch', 'work_epoch', 'work_script_sha256'):
         require(before[key] == after[key], 'migration-changed-'+key)
     require(after['turn_status'] == 'inProgress', 'migration-interrupted-original-turn')
     require(after['thread_id'] == after['management_thread_id'] == after['selection_thread_id'], 'migration-thread-evidence')
@@ -468,7 +506,7 @@ class Fixture:
     def start_work(self):
         for session in self.sessions:
             marker = 'WM_CODING_'+session['nonce']+'_'
-            prompt = f'''This is an isolated continuity coding test. Work only in this project. Write proof.py implementing a small correct prime-number predicate with assertions for 1,2,9,17, then run it. In that same Python foreground process, after the assertions, iterate i from 1 through 300: print "{marker}" followed by i with flush=True, sleep one second, and stop early if a file named STOP exists in this project. Keep that foreground command running and wait for it; do not background it, shorten the loop, request another agent, or finish your turn while it runs. Once STOP appears, verify the file and report the assertions. No network or other projects.'''
+            prompt = f'''This is an isolated continuity coding test. Work only in this project. Write proof.py implementing a small correct prime-number predicate with assertions for 1,2,9,17, then run it. In that same Python foreground process, after the assertions, iterate i from 1 through 300: print "{marker}" followed by i with flush=True, sleep one second, and stop early if a file named STOP exists in this project. Keep that foreground command running and wait for it; do not background it, shorten the loop, request another agent, or finish your turn while it runs. Do not create STOP yourself or modify proof.py while it runs. When polling exec_command/write_stdin in Code Mode, forward the raw result with text(result), including stdout; do not summarize it. Use short polling/yield intervals so output remains visible. Once STOP appears, verify the file and report the assertions. No network or other projects.'''
             self.receipt['model_requests_attempted'] += 1
             self.save()
             response = self.native_rpc('turn/start', {'threadId': session['thread'], 'input': [{'type': 'text', 'text': prompt}]})
@@ -476,16 +514,46 @@ class Fixture:
             self.receipt['model_requests_submitted'] += 1
             self.save()
 
+    def coding_worker(self, session, counter):
+        if 'work_pid' not in session:
+            if not counter:
+                return None, None
+            result = self.run(['/usr/sbin/lsof', '-nP', '-a', '-u', str(os.getuid()), '-d', 'cwd', '-Fpcn'])
+            workers, pid, name = [], None, ''
+            for line in result.stdout.splitlines():
+                if line.startswith('p'):
+                    pid, name = int(line[1:]), ''
+                elif line.startswith('c'):
+                    name = line[1:]
+                elif line.startswith('n') and pid and name.lower().startswith('python') and Path(line[1:]).resolve() == session['project']:
+                    workers.append(pid)
+            require(len(workers) <= 1, 'ambiguous-coding-worker')
+            if not workers:
+                return None, None
+            pid = workers[0]
+            command = self.run(['/bin/ps', '-ww', '-p', str(pid), '-o', 'command=']).stdout
+            require('proof.py' in command, 'coding-worker-program')
+            script = session['project'] / 'proof.py'
+            require(script.is_file() and not script.is_symlink() and session['nonce'] in script.read_text(), 'coding-worker-script')
+            session.update(work_pid=pid, work_epoch=self.epoch(pid), work_script_sha256=digest(script))
+            self.record_process('coding-worker', pid)
+        require(self.epoch(session['work_pid']) == session['work_epoch'], 'coding-worker-replaced')
+        require(digest(session['project'] / 'proof.py') == session['work_script_sha256'], 'running-coding-script-changed')
+        return session['work_epoch'], session['work_script_sha256']
+
     def snapshot(self, session):
         turns = self.native_rpc('thread/turns/list', {'threadId': session['thread'], 'limit': 1, 'sortDirection': 'desc'})['data']
         require(len(turns) == 1 and turns[0]['id'] == session['turn'] and turns[0]['status'] == 'inProgress', 'exact-coding-turn-not-active')
         data = self.read_management(session)
         management_turns = data.get('turns', [])
         require(len(management_turns) == 1 and management_turns[0]['id'] == session['turn'] and management_turns[0]['status'] == 'inProgress', 'management-active-turn-result')
+        counter = work_counter(data, session['turn'], session['nonce'])
+        work_epoch, script_sha = self.coding_worker(session, counter)
         return {'viewer_pid': session['viewer'], 'provider_pid': session['provider'], 'daemon_pid': self.daemon_pid,
             'session_id': session['id'], 'thread_id': session['thread'], 'turn_id': session['turn'],
             'turn_status': turns[0]['status'], 'management_thread_id': data['thread']['id'],
-            'selection_thread_id': self.selection(session), 'work_counter': work_counter(data, session['turn'], session['nonce']),
+            'selection_thread_id': self.selection(session), 'work_counter': counter,
+            'work_pid': session.get('work_pid'), 'work_epoch': work_epoch, 'work_script_sha256': script_sha,
             'viewer_epoch': self.epoch(session['viewer']), 'provider_epoch': self.epoch(session['provider']),
             'daemon_epoch': self.epoch(self.daemon_pid)}
 
@@ -494,7 +562,7 @@ class Fixture:
             rows = [self.snapshot(session) for session in self.sessions]
             if before and any(row['work_counter'] <= old['work_counter'] for old, row in zip(before, rows, strict=True)):
                 return None
-            return rows if all(row['work_counter'] > 0 for row in rows) else None
+            return rows if all(row['work_counter'] > 0 and row['work_epoch'] for row in rows) else None
         rows = self.wait(collect, 'actual-coding-progress-'+name, seconds=120 if before is None else 40)
         if before:
             verify_continuity(before, rows)
