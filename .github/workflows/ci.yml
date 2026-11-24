@@ -103,6 +103,8 @@ jobs:
           - os: windows-2022
             runner: windows-2022
     env:
+      # Retain sanitized Git phase logs if an original source test fails (#695).
+      WEBMUX_SOURCE_TIMINGS: '1'
       HOMEBREW_NO_AUTO_UPDATE: '1'
       HOMEBREW_NO_INSTALL_CLEANUP: '1'
       HOMEBREW_NO_AUTOREMOVE: '1'
@@ -481,6 +483,8 @@ jobs:
   windows:
     name: Windows Tests and Build
     runs-on: windows-2022
+    env:
+      WEBMUX_SOURCE_TIMINGS: '1'
 
     steps:
       - name: Checkout
