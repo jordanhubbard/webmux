@@ -116,6 +116,8 @@ class Fixture:
             'fixture_root': str(self.root), 'source': subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=self.repo, text=True).strip(),
             'native_sha256': args.native_sha256, 'webmux_sha256': args.webmux_sha256,
             'qualifier_sha256': digest(Path(__file__)), 'phases': [],
+            'worker_start': {'load': list(os.getloadavg()), 'cpus': os.cpu_count(),
+                'free_disk_bytes': shutil.disk_usage(self.root).free, 'machine': os.uname().machine},
             'model_requests_attempted': 0, 'model_requests_submitted': 0, 'coding_requests_replayed': 0, 'native_daemon_restarts': 0,
             'scope': 'four isolated local durable providers; actual native model coding turns; no SSH or installed-user-session claim'}
         self.output = args.output.open('x')
@@ -208,6 +210,7 @@ class Fixture:
             config += f'[projects.{json.dumps(str(project))}]\ntrust_level = "trusted"\n'
         (self.home / 'config.toml').write_text(config)
         os.chmod(self.home / 'config.toml', 0o600)
+        self.receipt['native_config_sha256_before'] = digest(self.home / 'config.toml')
         package = self.home / 'packages/app-server-daemon'
         (package / 'fixture/bin').mkdir(parents=True)
         (package / 'fixture/bin/codex').symlink_to(self.args.native)
@@ -429,6 +432,8 @@ class Fixture:
                 return True
             self.wait(complete, 'original-model-turn-completion', seconds=90)
         self.receipt['original_turns_completed'] = 4
+        self.receipt['native_config_sha256_after'] = digest(self.home / 'config.toml')
+        require(self.receipt['native_config_sha256_after'] == self.receipt['native_config_sha256_before'], 'native-config-file-changed')
 
     def fixture_processes(self):
         # Retain only same-account processes whose actual cwd is in our fresh
@@ -590,6 +595,7 @@ def main():
         except (Refusal, OSError, ValueError, subprocess.SubprocessError) as error:
             settled = False
             fixture.receipt['cleanup'] = {'passed': False, 'failure': type(error).__name__}
+        fixture.receipt['worker_end'] = {'load': list(os.getloadavg()), 'free_disk_bytes': shutil.disk_usage(fixture.root).free}
         fixture.receipt['passed'] = passed and settled
         fixture.receipt['active_work_qualified'] = passed and settled
         fixture.receipt['four_session_survival_qualified'] = passed and settled
