@@ -547,6 +547,14 @@ class Fixture:
         data = self.read_management(session)
         management_turns = data.get('turns', [])
         require(len(management_turns) == 1 and management_turns[0]['id'] == session['turn'] and management_turns[0]['status'] == 'inProgress', 'management-active-turn-result')
+        # Preserve the last real management response for diagnosis before any
+        # cleanup can retire the viewer. Fixture history only, never user tasks.
+        name = 'work-read-' + session['thread'] + '.json'
+        fd = os.open(self.root / name, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | os.O_NOFOLLOW, 0o600)
+        with os.fdopen(fd, 'w') as record:
+            json.dump(data, record)
+        self.receipt.setdefault('work_read_receipts', {})[session['thread']] = name
+        self.save()
         counter = work_counter(data, session['turn'], session['nonce'])
         work_epoch, script_sha = self.coding_worker(session, counter)
         return {'viewer_pid': session['viewer'], 'provider_pid': session['provider'], 'daemon_pid': self.daemon_pid,
