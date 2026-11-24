@@ -6,7 +6,6 @@ import (
 	"errors"
 	"net/url"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -30,6 +29,7 @@ func InspectRepository(parent context.Context, directory string) (*Binding, erro
 	}
 	ctx, cancel := context.WithTimeout(parent, 2*time.Second)
 	defer cancel()
+	ctx = gitobserve.EnsureCommandScope(ctx)
 	env := []string{}
 	for _, entry := range os.Environ() {
 		name, _, _ := strings.Cut(entry, "=")
@@ -46,27 +46,40 @@ func InspectRepository(parent context.Context, directory string) (*Binding, erro
 		fixed := []string{"--no-optional-locks", "-c", "core.fsmonitor=false", "-C", directory}
 		fixed = append(fixed, args...)
 		preparedAt := time.Now()
-		command := exec.CommandContext(ctx, "git", fixed...)
+		command, preparation := gitobserve.CommandContext(ctx, fixed...)
 		command.Env = env
 		command.WaitDelay = 200 * time.Millisecond
 		var out bytes.Buffer
 		command.Stdout = &limitedRepositoryOutput{buffer: &out}
 		command.Stderr = &bytes.Buffer{}
-		if err := gitobserve.Run(ctx, phase, preparedAt, command); err != nil {
+		if err := gitobserve.Run(ctx, phase, preparedAt, command, preparation); err != nil {
 			return "", ErrRepository
 		}
 		return strings.TrimSpace(out.String()), nil
 	}
-	shallow, err := run("repository.shallow", "rev-parse", "--is-shallow-repository")
-	if err != nil || shallow != "false" {
-		return nil, ErrRepository
-	}
-	root, err := run("repository.toplevel", "rev-parse", "--show-toplevel")
-	if err != nil || !filepath.IsAbs(root) {
-		return nil, ErrRepository
-	}
-	remote, err := run("repository.origin", "config", "--local", "--get", "remote.origin.url")
+	// Read the same six witnesses with three processes. Keep all preparation and
+	// Git work inside the existing shared two-second budget.
+	layout, err := run("repository.layout", "rev-parse", "--is-shallow-repository", "--show-toplevel", "--abbrev-ref", "HEAD")
 	if err != nil {
+		return nil, ErrRepository
+	}
+	parts := strings.Split(layout, "\n")
+	if len(parts) != 3 || strings.TrimSpace(parts[0]) != "false" {
+		return nil, ErrRepository
+	}
+	root, branch := strings.TrimSpace(parts[1]), strings.TrimSpace(parts[2])
+	if !filepath.IsAbs(root) || branch == "" {
+		return nil, ErrRepository
+	}
+	if branch == "HEAD" {
+		branch = "(detached)"
+	}
+	config, err := run("repository.config", "config", "--local", "--null", "--get-regexp", `^(remote\.origin\.url|core\.ignorecase)$`)
+	if err != nil {
+		return nil, ErrRepository
+	}
+	remote, folded, ok := repositoryConfigValues(config)
+	if !ok {
 		return nil, ErrRepository
 	}
 	canonical, ok := canonicalRepositoryRemote(remote)
@@ -87,17 +100,34 @@ func InspectRepository(parent context.Context, directory string) (*Binding, erro
 		}
 	}
 	sort.Strings(witnesses)
-	branch, err := run("repository.branch", "symbolic-ref", "--short", "-q", "HEAD")
-	if err != nil {
-		branch = "(detached)"
-	}
-	folded, _ := run("repository.ignorecase", "config", "--local", "--get", "core.ignorecase")
 	binding := &Binding{ID: digest([]byte("webmux-repository/v1\n" + canonical + "\n" + strings.Join(witnesses, "\n"))), Repository: canonical, Worktree: root, Branch: branch, Source: "verified-git", CaseFold: folded == "true"}
-	// Optional branch/config misses must not turn cancellation into an identity.
+	// A completed final command must not turn cancellation into an identity.
 	if ctx.Err() != nil || !validBinding(binding) {
 		return nil, ErrRepository
 	}
 	return binding, nil
+}
+
+// --null --get-regexp separates each key from its value with a newline, and
+// terminates each record with NUL. As with --get, the last local value wins.
+func repositoryConfigValues(data string) (remote, folded string, ok bool) {
+	if !strings.HasSuffix(data, "\x00") {
+		return "", "", false
+	}
+	for _, record := range strings.Split(strings.TrimSuffix(data, "\x00"), "\x00") {
+		// A valueless entry is emitted as just its key. Preserve --get's
+		// empty-string interpretation rather than treating it as "true".
+		key, value, _ := strings.Cut(record, "\n")
+		switch key {
+		case "remote.origin.url":
+			remote, ok = strings.TrimSpace(value), true
+		case "core.ignorecase":
+			folded = strings.TrimSpace(value)
+		default:
+			return "", "", false
+		}
+	}
+	return remote, folded, ok
 }
 
 type limitedRepositoryOutput struct{ buffer *bytes.Buffer }

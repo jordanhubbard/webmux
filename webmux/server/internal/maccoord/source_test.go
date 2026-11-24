@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/jordanhubbard/webmux/server/internal/coordination"
 	"github.com/jordanhubbard/webmux/server/internal/gitobserve"
@@ -146,6 +147,40 @@ func TestSourceDoesNotFollowInheritedGitRouting(t *testing.T) {
 	got, err := bindings.ObserveSource(sourceContext(t), "alice", repo)
 	if err != nil || filepath.Clean(got.Worktree) != filepath.Clean(directory) || got.Repository != repo.Repository {
 		t.Fatalf("inherited Git routing changed selected source: %+v, %v", got, err)
+	}
+}
+
+func TestSourceExecutableScopeFollowsAuthorizationAndObservation(t *testing.T) {
+	_, bindings, repo := sourceFixture(t)
+	var events []gitobserve.Event
+	ctx := gitobserve.WithTrace(t.Context(), func(event gitobserve.Event) { events = append(events, event) })
+	if _, err := bindings.ObserveSource(ctx, "bob", repo); !errors.Is(err, ErrUnmapped) || len(events) != 0 {
+		t.Fatal("unauthorized account reached executable preparation", err, events)
+	}
+	for range 2 {
+		events = nil
+		if _, err := bindings.ObserveSource(ctx, "alice", repo); err != nil {
+			t.Fatal(err)
+		}
+		witnesses := map[string]int{}
+		if len(events) == 0 || events[0].Phase != "repository.layout" || events[0].ExecutableResolution != "initial" {
+			t.Fatal("observation did not start a fresh witness lookup", events)
+		}
+		for i, event := range events {
+			budget := 5 * time.Second
+			if strings.HasPrefix(event.Phase, "repository.") {
+				witnesses[event.Phase]++
+				budget = 2 * time.Second
+			}
+			if !event.HasDeadline || event.Remaining <= 0 || event.Remaining > budget || (i > 0 && event.ExecutableResolution != "reused") {
+				t.Fatal("executable scope changed shared deadlines or repeated resolution", event)
+			}
+		}
+		for _, phase := range []string{"repository.layout", "repository.config", "repository.roots"} {
+			if witnesses[phase] != 2 {
+				t.Fatal("observation skipped repository revalidation", witnesses)
+			}
+		}
 	}
 }
 
