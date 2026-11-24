@@ -166,9 +166,11 @@ The versioned channel reports only the launched PID, a monotonic sequence and th
 settled selected UUID (or null). It carries no prompts, paths, credentials or
 control requests. The native side closes inheritance before daemon bootstrap,
 uses atomic nonblocking writes, and reports no selection for disconnected,
-transitional, read-only or nonlocal views. Only embedded execution and private,
-same-account Unix execution sockets qualify as local. WebSocket and cloud
-backends remain manual even when their address is loopback.
+transitional, read-only or nonlocal views. The prototype admits embedded execution and the local-daemon target over a
+private same-account Unix socket. Explicit remote targets, WebSocket and cloud
+backends remain manual. A Unix socket can itself be forwarded: managed-process
+verification of the local-daemon classification, including its default-path
+alias, remains an execution-host qualification gate.
 
 The receiving wrapper rejects wrong-process, replayed, oversized or unsupported
 records. It independently checks the selected UUID against the invocation
@@ -180,34 +182,56 @@ before the first report or overwrite a later selected conversation.
 
 The matching native source is retained on the
 [Codex prototype branch](https://github.com/jordanhubbard/codex/tree/fix/tui-selected-thread-observer).
-The pipe controls and WebMux adapter have scoped tests. Native build
-[`2edf03e`](https://github.com/jordanhubbard/codex/actions/runs/45319456514)
-compiled the full TUI and CLI and passed all five observer controls on macOS
-arm64. Its native publisher also passed a real CLI/PTY A → B → A switch and
-daemon-loss test with synthetic saved conversations. The receipt includes
-monotonic PID-bound observations, selection demotion, and closure of the owned
-viewer, daemon and background helper process groups. No model turn ran.
+Native build [`2edf03e`](https://github.com/jordanhubbard/codex/actions/runs/45319456514)
+compiled the full TUI and CLI and passed five observer controls on macOS arm64.
+It passed actual CLI/PTY A → B → A switches and daemon-loss demotion using
+synthetic saved conversations, first over an explicit fixture socket, then on a
+separate managed instance of the installed daemon binary. A further managed run
+passed through the actual WebMux Go launcher, which created the native pipe,
+verified native records and emitted signed recovery events. The qualification
+verified each signature and launch instance and required all owned process
+groups, including startup Git helpers, to settle. No model turn ran.
 
-Reproduce that publisher qualification from the application directory with
-Python 3, `lsof`, and the exact native artifact and SHA-256 from its build receipt:
+The subsequent native draft rejects explicit remote targets and direct private
+sockets outside Codex's guarded execution directory. Its full native build and
+positive/negative execution-host qualification are pending. The earlier artifact
+results establish plumbing; they do not qualify this newer host policy.
+
+Reproduce a managed-profile publisher run from the application directory using
+Python 3, `lsof`, the exact native artifact/build receipt, and an independently
+hashed installed daemon executable:
 
 ```sh
 python3 scripts/qualify-codex-selection.py \
+  --profile managed \
   --binary /absolute/path/to/codex-selection-prototype \
   --expected-sha256 BUILD_RECEIPT_SHA256 \
+  --daemon-binary /absolute/path/to/installed/codex \
+  --daemon-sha256 INSTALLED_DAEMON_SHA256 \
   --output /absolute/path/to/new-receipt.json
 ```
 
-The script creates its own private `CODEX_HOME`, synthetic history and execution
-socket. It uses a private pipe for selection and a PTY for UI input, checks the
-binary hash before starting processes, retains fixture logs, and requires
-complete owned-process cleanup before marking a receipt passed. Startup Git
-helpers can run; cleanup verifies their user and fixture working directory
-before signaling their owned process group. Existing user sessions are not
-targets. Failure receipts are retained, including failures during cleanup.
+Add `--webmux-binary /absolute/path/to/built/webmux --webmux-sha256 HASH` to
+exercise the actual WebMux launcher and signed consumer channel instead of
+reading the native pipe directly. The helper must be built from this branch.
+`--profile remote-negative` requires selection to stay unavailable over an
+explicit remote fixture socket. `--profile legacy-remote` retains the original
+positive publication test for the earlier artifact only.
 
-Full WebMux-launcher integration, concurrent-viewer isolation and reconnect
-qualification remain release gates. Automatic native resume remains gated.
+The script creates a private `CODEX_HOME`, synthetic history, configuration and
+execution socket. Managed mode seeds a private package selection pointing to the
+read-only supplied daemon executable, disables its updater before launch, and
+uses the actual lifecycle CLI to start and stop that separate instance. It
+attaches the TUI through the verified managed default-path alias. It checks all
+binary hashes before launch and requires complete owned-process cleanup before
+marking a receipt passed. A detached daemon's absence is recorded separately
+from waitable child exit codes. Startup helpers are signaled only after their
+account and fixture working directory are verified. Existing user sessions are
+not targets. Failure receipts and logs are retained, including cleanup failures.
+
+Concurrent-viewer isolation, reconnect, host-boundary controls and current-head
+native/consumer qualification remain release gates. Automatic native resume
+remains gated.
 Task-management MCP handoff (#707), active coding work and four-session survival
 (#710) require their own complete qualification.
 Codex (direct process) and Cursor now have process-state observers. OpenCode
