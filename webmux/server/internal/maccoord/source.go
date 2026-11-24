@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/jordanhubbard/webmux/server/internal/coordination"
+	"github.com/jordanhubbard/webmux/server/internal/gitobserve"
 )
 
 const SourceSchema = "webmux.mac.source-observation.v1"
@@ -129,11 +130,25 @@ func sourceGit(ctx context.Context, directory string, args ...string) ([]byte, e
 	}
 	env = append(env, "GIT_CONFIG_NOSYSTEM=1", "GIT_CONFIG_GLOBAL="+null, "GIT_TERMINAL_PROMPT=0", "GIT_OPTIONAL_LOCKS=0")
 	fixed := []string{"--no-optional-locks", "-c", "core.fsmonitor=false", "-c", "core.untrackedCache=false", "-C", directory}
+	preparedAt := time.Now()
 	command := exec.CommandContext(ctx, "git", append(fixed, args...)...)
 	command.Env, command.Stderr, command.WaitDelay = env, io.Discard, 200*time.Millisecond
 	var output sourceOutput
 	command.Stdout = &output
-	if err := command.Run(); err != nil {
+	phase := "source.fixture"
+	operation := ""
+	if len(args) != 0 {
+		operation = args[0]
+	}
+	switch operation {
+	case "rev-parse":
+		phase = "source.head"
+	case "symbolic-ref":
+		phase = "source.ref"
+	case "status":
+		phase = "source.status"
+	}
+	if err := gitobserve.Run(ctx, phase, preparedAt, command); err != nil {
 		return nil, err
 	}
 	return output.Bytes(), nil
