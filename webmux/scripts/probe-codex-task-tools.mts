@@ -33,7 +33,7 @@ export interface ProbeDependencies {
 }
 export interface ProbeReceipt {
   schema: string; scope: string; observed_at: string; thread_id?: string;
-  passed: boolean; active_work_qualified: boolean; four_session_survival_qualified: false;
+  passed: boolean; active_work_qualified: false; active_turn_identity_verified: boolean; four_session_survival_qualified: false;
   viewer_pid: number; daemon_pid: number; process_epochs?: { viewer: string; daemon: string };
   expected_cwd_sha256?: string; endpoint_port?: number; cwd_matches?: boolean;
   management_tool_called?: string; turn_id?: string; probe_sha256?: string;
@@ -131,7 +131,7 @@ export async function probe(options: ProbeOptions, dependencies: Partial<ProbeDe
   const receipt: ProbeReceipt = {
     schema: 'webmux.codex-task-tools-probe.v1', scope: 'one-local-daemon-thread-readiness',
     observed_at: new Date().toISOString(), thread_id: options.thread, passed: false,
-    active_work_qualified: false, four_session_survival_qualified: false,
+    active_work_qualified: false, active_turn_identity_verified: false, four_session_survival_qualified: false,
     viewer_pid: options.viewerPid, daemon_pid: options.daemonPid,
   };
   let channel: RpcChannel | undefined;
@@ -192,7 +192,8 @@ export async function probe(options: ProbeOptions, dependencies: Partial<ProbeDe
     receipt.endpoint_port = port;
     receipt.cwd_matches = true;
     receipt.management_tool_called = 'codex_tui/read_thread';
-    receipt.active_work_qualified = Boolean(options.turn);
+    // Two status reads prove identity, not that coding work continued.
+    receipt.active_turn_identity_verified = Boolean(options.turn);
     if (options.turn) receipt.turn_id = options.turn;
     receipt.passed = true;
   } catch (error) {

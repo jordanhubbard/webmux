@@ -98,9 +98,11 @@ test('replacement of a viewer epoch after a successful tool call fails qualifica
   assert.deepEqual(result.failure, { stage: 'process', code: 'epoch-changed' });
 });
 
-test('active-work scope requires the exact same in-progress turn on both sides', async () => {
+test('active turn identity requires both reads and does not claim continuing work', async () => {
   const good = fixture();
-  assert.equal((await probe({ ...options, turn }, good.dependencies)).active_work_qualified, true);
+  const matched = await probe({ ...options, turn }, good.dependencies);
+  assert.equal(matched.active_turn_identity_verified, true);
+  assert.equal(matched.active_work_qualified, false);
   for (const replacement of [{ id: turn, status: 'completed' }, { id: thread, status: 'inProgress' }]) {
     let reads = 0;
     const f = fixture({ call: async method => method === 'thread/turns/list' && ++reads === 2 ? { data: [replacement] } : responses(method) });
