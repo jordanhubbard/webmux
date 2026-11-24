@@ -148,6 +148,39 @@ resume requires process-state evidence; launch selectors, native hook
 observations and older records without provenance remain available only for an
 explicit exact-session choice. Native hooks can stop reporting when settings
 change, so their observations do not acquire automatic execution confidence.
+
+### Daemon-backed Codex selection channel (qualification pending)
+
+A shared Codex execution daemon owns rollout files independently of its terminal
+viewers. A viewer's launch selector is therefore insufficient after an in-process
+conversation switch. The experimental native patch for
+[#706](https://github.com/jordanhubbard/webmux/issues/706) adds
+`--selection-observer-fd` to the TUI. WebMux probes support before supplying an
+anonymous pipe unique to that launched viewer. Released clients without the
+option retain their existing behavior; caller-supplied channels are preserved.
+
+The versioned channel reports only the launched PID, a monotonic sequence and the
+settled selected UUID (or null). It carries no prompts, paths, credentials or
+control requests. The native side closes inheritance before daemon bootstrap,
+uses atomic nonblocking writes, and reports no selection for disconnected,
+transitional, read-only or nonlocal views. Only embedded execution and private,
+same-account Unix execution sockets qualify as local. WebSocket and cloud
+backends remain manual even when their address is loopback.
+
+The receiving wrapper rejects wrong-process, replayed, oversized or unsupported
+records. It independently checks the selected UUID against the invocation
+account's native store and original project before signing `native-selection`
+evidence for that terminal. Channel loss or an unverified selection removes
+confidence while retaining the previous UUID as a manual choice. Once this
+channel has reported, process-file fallback cannot overwrite it after a switch.
+
+The matching native source is retained on the
+[Codex prototype branch](https://github.com/jordanhubbard/codex/tree/fix/tui-selected-thread-observer).
+The pipe controls and WebMux adapter have scoped tests; a complete native TUI
+build and real switch/loss/reconnect qualification are still required. This
+evidence does not yet enable automatic native resume. It also does not repair
+viewer-owned task-management MCP handoff (#707) or establish four-session
+survival (#710).
 Codex (direct process) and Cursor now have process-state observers. OpenCode
 1.19.5 exposes no selected conversation outside its interface
 ([details](#opencode-conversation-switches-2026-11-12)), so OpenCode recovery
