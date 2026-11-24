@@ -6,8 +6,8 @@ import { createRequire } from 'node:module';
 import { once } from 'node:events';
 import { ProbeFailure, connect, owns, probe } from './probe-codex-task-tools.mjs';
 
-const thread = '01a20a46-3d74-7690-9dc2-33e19a3e0751';
-const turn = '01a20aea-1a4c-7271-9795-d0b8d3e820e6';
+const thread = '11111111-1111-4111-8111-111111111111';
+const turn = '22222222-2222-4222-8222-222222222222';
 const options = { socket: '/private/owned/socket', cwd: '/owned/project', thread, viewerPid: 42, daemonPid: 43 };
 
 // These are refusal/receipt controls with injected inspectors, not native proof.
