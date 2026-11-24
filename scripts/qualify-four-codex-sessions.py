@@ -192,7 +192,8 @@ class Fixture:
             + 'host = '+repr(self.args.ssh_host)+'\n'
             + 'if len(args) < 2 or not any(value == host or value.endswith("@"+host) for value in args) or args[-1] == host or args[-1].endswith("@"+host):\n    raise SystemExit("Fixture SSH destination or remote command is missing")\n'
             + 'args[-1] = '+repr(prefix)+' + args[-1]\n'
-            + 'os.execv("/usr/bin/ssh", ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=5", "-o", "ControlMaster=no", "-o", "ControlPath=none", "-o", "ControlPersist=no", *args])\n')
+            + 'trace = ["-vv", "-E", '+repr(str(self.root / 'ssh-capability-debug.log'))+'] if "--recovery-capabilities" in args[-1] else []\n'
+            + 'os.execv("/usr/bin/ssh", ["ssh", *trace, "-o", "BatchMode=yes", "-o", "ConnectTimeout=5", "-o", "ControlMaster=no", "-o", "ControlPath=none", "-o", "ControlPersist=no", *args])\n')
         os.chmod(shim, 0o700)
         self.env['PATH'] = str(shimdir) + os.pathsep + self.env['PATH']
 
