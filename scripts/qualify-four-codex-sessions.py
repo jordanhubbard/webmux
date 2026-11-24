@@ -102,6 +102,9 @@ class Fixture:
         nativebin = self.root / 'bin'
         nativebin.mkdir()
         (nativebin / 'codex').symlink_to(args.native)
+        launcher = self.root / 'viewer-launch'
+        launcher.mkdir(mode=0o700)
+        (launcher / 'codex').symlink_to(args.webmux)
         self.env['PATH'] = str(nativebin) + os.pathsep + self.env.get('PATH', '')
         self.env['WEBMUX_BROWSER_ORIGINAL_PATH'] = self.env['PATH']
         self.env['WEBMUX_RECOVERY_CACHE_HOME'] = str(self.root / 'host-cache')
@@ -361,8 +364,11 @@ class Fixture:
         self.save()
 
     def viewer_command(self, session):
-        # Explicitly select this managed daemon even from a real SSH login.
-        return shlex.join(['codex', '--remote', 'unix://'+str(self.socket), '--no-alt-screen', 'resume', session['thread']])
+        # Login profiles can replace PATH. Invoke the exact Go launcher alias
+        # and pin its pre-integration lookup to the private native executable.
+        return shlex.join(['/usr/bin/env', 'WEBMUX_BROWSER_ORIGINAL_PATH='+str(self.root / 'bin'),
+            str(self.root / 'viewer-launch/codex'), '--remote', 'unix://'+str(self.socket),
+            '--no-alt-screen', 'resume', session['thread']])
 
     def tmux(self, *args):
         require(self.root in self.tmuxsocket.parents, 'private-tmux-boundary')
