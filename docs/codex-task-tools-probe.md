@@ -1,6 +1,6 @@
 # Codex task-tool readiness probe
 
-`scripts/probe-codex-task-tools.mjs` checks one existing thread on a local macOS
+`webmux/scripts/probe-codex-task-tools.mts` checks one existing thread on a local macOS
 Codex daemon. It is a prerequisite for the four-session survival qualification
 in [#710](https://github.com/jordanhubbard/webmux/issues/710), not that complete
 qualification. It never restarts a controller, viewer or daemon, resumes a
@@ -12,7 +12,7 @@ UUID and original execution directory. `WM_PROOF_*` below are operator-supplied
 values, not discovery by project label or timestamp.
 
 ```sh
-node scripts/probe-codex-task-tools.mjs \
+node webmux/scripts/probe-codex-task-tools.mts \
   --socket "$WM_PROOF_SOCKET" --thread "$WM_PROOF_THREAD" \
   --cwd "$WM_PROOF_PROJECT" --viewer-pid "$WM_PROOF_VIEWER_PID" \
   --daemon-pid "$WM_PROOF_DAEMON_PID" --output "$WM_PROOF_NEW_RECEIPT"

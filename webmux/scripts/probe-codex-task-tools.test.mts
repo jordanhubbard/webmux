@@ -4,24 +4,27 @@ import fs from 'node:fs/promises';
 import http from 'node:http';
 import { createRequire } from 'node:module';
 import { once } from 'node:events';
-import { ProbeFailure, connect, owns, probe } from './probe-codex-task-tools.mjs';
+import { ProbeFailure, connect, owns, probe } from './probe-codex-task-tools.mts';
+import type { ProbeDependencies, RpcMethod } from './probe-codex-task-tools.mts';
+import type { WebSocketServer as ServerType } from 'ws';
 
 const thread = '11111111-1111-4111-8111-111111111111';
 const turn = '22222222-2222-4222-8222-222222222222';
 const options = { socket: '/private/owned/socket', cwd: '/owned/project', thread, viewerPid: 42, daemonPid: 43 };
 
 // These are refusal/receipt controls with injected inspectors, not native proof.
-function fixture(overrides = {}) {
-  const calls = [];
-  const epochs = new Map();
+type Call = { method: RpcMethod; params: Record<string, unknown> };
+function fixture(overrides: { call?: (method: RpcMethod, params: Record<string, unknown>, calls: Call[]) => Promise<unknown>; inspectors?: Partial<ProbeDependencies> } = {}) {
+  const calls: Call[] = [];
+  const epochs = new Map<number, number>();
   let closed = 0;
-  const dependencies = {
-    authorizeSocket: async socket => socket,
-    realpath: async value => value,
-    epoch: async pid => { epochs.set(pid, (epochs.get(pid) ?? 0) + 1); return `epoch-${pid}`; },
+  const dependencies: ProbeDependencies = {
+    authorizeSocket: async (socket: string) => socket,
+    realpath: async (value: string) => value,
+    epoch: async (pid: number) => { epochs.set(pid, (epochs.get(pid) ?? 0) + 1); return `epoch-${pid}`; },
     owns: async () => true,
     connect: async () => ({
-      call: async (method, params) => {
+      call: async (method: RpcMethod, params: Record<string, unknown>) => {
         calls.push({ method, params });
         if (overrides.call) return overrides.call(method, params, calls);
         return responses(method);
@@ -33,7 +36,7 @@ function fixture(overrides = {}) {
   return { dependencies, calls, epochs, closed: () => closed };
 }
 
-function responses(method) {
+function responses(method: string): Record<string, unknown> {
   switch (method) {
     case 'thread/read': return { thread: { id: thread, cwd: options.cwd } };
     case 'thread/turns/list': return { data: [{ id: turn, status: 'inProgress' }] };
@@ -50,7 +53,7 @@ test('a real management result is required; readiness never claims four-session 
   assert.equal(result.active_work_qualified, false);
   assert.equal(result.four_session_survival_qualified, false);
   assert.equal(f.closed(), 1);
-  assert.ok(f.calls.some(call => call.method === 'mcpServer/tool/call' && call.params.arguments.threadId === thread));
+  assert.ok(f.calls.some(call => call.method === 'mcpServer/tool/call' && (call.params.arguments as { threadId?: string })?.threadId === thread));
   assert.ok(f.calls.every(call => !/resume|start|write|reload|queue/.test(call.method)));
   assert.ok(!JSON.stringify(result).includes('SECRET_RESPONSE_CONTENT'));
   assert.ok(!JSON.stringify(result).includes(options.cwd));
@@ -90,7 +93,7 @@ test('the daemon socket must belong to the specified execution process', async (
 
 test('replacement of a viewer epoch after a successful tool call fails qualification', async () => {
   let viewerReads = 0;
-  const f = fixture({ inspectors: { epoch: async pid => pid === options.viewerPid ? `viewer-${++viewerReads}` : 'daemon' } });
+  const f = fixture({ inspectors: { epoch: async (pid: number) => pid === options.viewerPid ? `viewer-${++viewerReads}` : 'daemon' } });
   const result = await probe(options, f.dependencies);
   assert.deepEqual(result.failure, { stage: 'process', code: 'epoch-changed' });
 });
@@ -124,14 +127,14 @@ test('unclassified errors cannot leak transport messages or credentials', async 
 });
 
 test('failed or malformed initialize closes the actual Unix WebSocket connection', { skip: process.platform === 'win32' }, async () => {
-  const require = createRequire(new URL('../webmux/package.json', import.meta.url));
-  const { WebSocketServer } = require('ws');
+  const require = createRequire(new URL('../package.json', import.meta.url));
+  const { WebSocketServer } = require('ws') as { WebSocketServer: typeof ServerType };
   for (const malformed of [false, true]) {
     const directory = await fs.mkdtemp('/tmp/wm-codex-probe-');
     const socket = `${directory}/s`;
     const httpServer = http.createServer();
     const server = new WebSocketServer({ server: httpServer });
-    let closed;
+    let closed: Promise<unknown> | undefined;
     server.once('connection', ws => {
       closed = once(ws, 'close');
       ws.once('message', bytes => {
@@ -144,13 +147,13 @@ test('failed or malformed initialize closes the actual Unix WebSocket connection
       await once(httpServer, 'listening');
       await assert.rejects(connect(socket), error => error instanceof ProbeFailure && error.code === (malformed ? 'invalid-envelope' : -32603));
       assert.ok(closed);
-      let timer;
+      let timer: ReturnType<typeof setTimeout> | undefined;
       try { await Promise.race([closed, new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('client connection leaked')), 2000); })]); }
       finally { clearTimeout(timer); }
     } finally {
       for (const ws of server.clients) ws.terminate();
-      await new Promise(resolve => server.close(resolve));
-      await new Promise(resolve => httpServer.close(() => resolve()));
+      await new Promise<void>(resolve => server.close(() => resolve()));
+      await new Promise<void>(resolve => httpServer.close(() => resolve()));
       await fs.rm(directory, { recursive: true, force: true });
     }
   }
@@ -162,8 +165,8 @@ test('native macOS listener ownership uses numeric loopback addresses', { skip: 
   try {
     server.listen(0, '127.0.0.1');
     await once(server, 'listening');
-    const port = server.address().port;
+    const address = server.address(); assert(address && typeof address !== 'string'); const port = address.port;
     assert.equal(await owns(process.pid, [`-iTCP:${port}`, '-sTCP:LISTEN'], `127.0.0.1:${port}`), true);
     assert.equal(await owns(process.ppid, [`-iTCP:${port}`, '-sTCP:LISTEN'], `127.0.0.1:${port}`), false);
-  } finally { await new Promise(resolve => server.close(resolve)); }
+  } finally { await new Promise<void>(resolve => server.close(() => resolve())); }
 });
