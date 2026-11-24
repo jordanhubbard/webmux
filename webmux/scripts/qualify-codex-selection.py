@@ -3,9 +3,11 @@
 This is UI selection evidence, not actual model/coding-work or survival evidence.
 """
 import argparse
+import base64
 import datetime
 import fcntl
 import hashlib
+import hmac
 import json
 import os
 from pathlib import Path
@@ -25,9 +27,18 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--binary', required=True)
 parser.add_argument('--output', required=True)
 parser.add_argument('--expected-sha256', required=True, help='SHA-256 from the native build receipt')
+parser.add_argument('--profile', required=True, choices=['managed', 'legacy-remote', 'remote-negative'])
+parser.add_argument('--daemon-binary', help='Managed profile: exact installed daemon executable, read only')
+parser.add_argument('--daemon-sha256', help='Managed profile: independently recorded executable SHA-256')
+parser.add_argument('--webmux-binary', help='Exercise the actual WebMux launcher and signed recovery channel')
+parser.add_argument('--webmux-sha256', help='SHA-256 of the exact WebMux launcher build')
 args = parser.parse_args()
 if not re.fullmatch(r'[0-9a-f]{64}', args.expected_sha256):
     parser.error('--expected-sha256 must be 64 lowercase hexadecimal characters')
+if args.profile == 'managed' and (not args.daemon_binary or not re.fullmatch(r'[0-9a-f]{64}', args.daemon_sha256 or '')):
+    parser.error('managed profile requires --daemon-binary and --daemon-sha256')
+if args.webmux_binary and not re.fullmatch(r'[0-9a-f]{64}', args.webmux_sha256 or ''):
+    parser.error('--webmux-binary requires --webmux-sha256')
 binary = Path(args.binary).resolve()
 output = Path(args.output).resolve()
 assert not output.exists(), 'preserve prior receipts'
@@ -36,7 +47,7 @@ home = root / 'home'
 project = root / 'project'
 home.mkdir(mode=0o700)
 project.mkdir(mode=0o700)
-socket_path = root / 'control.sock'
+socket_path = home / 'app-server-control' / 'app-server-control.sock' if args.profile == 'managed' else root / 'control.sock'
 model_guard = socket.socket()
 model_guard.bind(('127.0.0.1', 0))
 model_port = model_guard.getsockname()[1]
@@ -59,6 +70,8 @@ trust_level = "trusted"
 ''')
 os.chmod(home / 'config.toml', 0o600)
 receipt = {'schema': 1, 'passed': False, 'fixture_root': str(root), 'selection_events': [],
+           'profile': args.profile,
+           'observer': 'webmux-signed-recovery' if args.webmux_binary else 'native-pipe',
            'active_work_qualified': False, 'four_session_survival_qualified': False,
            'fixture_kind': 'synthetic saved rollouts; actual native CLI and app-server; no model execution'}
 server = viewer = None
@@ -66,6 +79,9 @@ master = slave = reader = writer = None
 logs = []
 pipe_buffer = b''
 terminal_tail = b''
+packet_buffer = b''
+wrapper_key = uuid.uuid4().hex + uuid.uuid4().hex
+wrapper_instance = uuid.uuid4().hex
 output.parent.mkdir(parents=True, exist_ok=True)
 receipt_file = output.open('x')
 os.chmod(output, 0o600)
@@ -78,6 +94,92 @@ def checkpoint():
     receipt_file.flush()
 
 checkpoint()
+
+def binary_hash(path):
+    digest = hashlib.sha256()
+    with path.open('rb') as source:
+        for chunk in iter(lambda: source.read(1024*1024), b''):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+def epoch(pid):
+    result = subprocess.run(['ps', '-p', str(pid), '-o', 'lstart=,uid=,pgid='],
+        capture_output=True, text=True, timeout=5)
+    return result.stdout.strip() if result.returncode == 0 else None
+
+class ManagedDaemon:
+    """A daemon managed by its real lifecycle CLI, not a waitable broker child."""
+    def __init__(self, executable):
+        self.executable = executable
+        self.pid = None
+        self.identity = None
+        self.stop_exit_code = None
+
+    def launch(self):
+        package = home / 'packages' / 'app-server-daemon'
+        (package / 'fixture' / 'bin').mkdir(parents=True)
+        (package / 'fixture' / 'bin' / 'codex').symlink_to(self.executable)
+        (package / 'current').symlink_to('fixture')
+        settings = home / 'app-server-daemon' / 'settings.json'
+        settings.parent.mkdir(mode=0o700)
+        settings.write_text(json.dumps({'remoteControlEnabled': False, 'featureOverrides': {},
+            'shutdownGraceSeconds': 2, 'updater': {'autoUpdateEnabled': False, 'updateIntervalMinutes': 60}}))
+        os.chmod(settings, 0o600)
+        try:
+            result = self.command('start')
+        except (OSError, subprocess.SubprocessError):
+            # A CLI can fail after publishing its detached child. Retain that
+            # owned PID for lifecycle cleanup rather than losing the handle.
+            record_path = settings.parent / 'daemon.pid'
+            if record_path.exists():
+                record = json.loads(record_path.read_text())
+                self.pid = record['pid']
+                self.identity = epoch(self.pid)
+            raise
+        value = json.loads(result.stdout)
+        self.pid = value['pid']
+        self.identity = epoch(self.pid)
+        assert self.identity and value['status'] == 'started'
+        assert self.identity.split()[-2:] == [str(os.getuid()), str(self.pid)]
+        assert Path(value['socketPath']) == socket_path
+        assert Path(value['managedCodexPath']).resolve() == self.executable
+        record = json.loads((settings.parent / 'daemon.pid').read_text())
+        assert record['pid'] == self.pid
+        assert not (settings.parent / 'daemon-updater.pid').exists()
+        receipt['managed_start'] = {'exit_code': result.returncode, 'pid': self.pid,
+            'epoch': self.identity, 'socket_path': str(socket_path), 'updater_disabled': True}
+
+    def command(self, action):
+        result = subprocess.run([str(self.executable), 'app-server', 'daemon', action],
+            stdin=subprocess.DEVNULL, capture_output=True, text=True, cwd=project, env=env, timeout=30)
+        (root / f'managed-{action}.log').write_text(result.stdout + result.stderr)
+        os.chmod(root / f'managed-{action}.log', 0o600)
+        result.check_returncode()
+        return result
+
+    def poll(self):
+        return None if self.pid is not None and epoch(self.pid) == self.identity else 0
+
+    def terminate(self):
+        if self.poll() is None:
+            self.stop_exit_code = self.command('stop').returncode
+
+    def kill(self):
+        if self.poll() is None:
+            os.kill(self.pid, signal.SIGKILL)
+
+    def wait(self, timeout):
+        deadline = time.monotonic() + timeout
+        while self.poll() is None:
+            if time.monotonic() >= deadline:
+                raise subprocess.TimeoutExpired('owned managed daemon closure', timeout)
+            time.sleep(0.1)
+        return 0
+
+    def closure(self):
+        return {'pid': self.pid, 'exit_code': None, 'not_running': self.poll() is not None,
+            'observation': 'process epoch no longer present; detached daemon is not a waitable child',
+            'lifecycle_stop_exit_code': self.stop_exit_code}
 
 def private_log(name):
     handle = open(root / name, 'xb', buffering=0)
@@ -130,10 +232,10 @@ def settle_groups(groups):
     return members
 
 def pump(duration, expected='unmatched'):
-    global pipe_buffer, terminal_tail
+    global pipe_buffer, terminal_tail, packet_buffer
     until = time.monotonic() + duration
     while time.monotonic() < until:
-        events, _, _ = select.select([reader, master], [], [], min(0.1, max(0, until-time.monotonic())))
+        events, _, _ = select.select([fd for fd in [reader, master] if fd is not None], [], [], min(0.1, max(0, until-time.monotonic())))
         for fd in events:
             try:
                 data = os.read(fd, 65536)
@@ -158,6 +260,38 @@ def pump(duration, expected='unmatched'):
                         return item
             elif data:
                 terminal_log.write(data)
+                matched = False
+                if args.webmux_binary:
+                    packet_buffer += data
+                    prefix = b'\x1b]777;webmux-recovery;'
+                    while prefix in packet_buffer:
+                        start = packet_buffer.index(prefix)
+                        end = packet_buffer.find(b'\x07', start)
+                        if end < 0:
+                            packet_buffer = packet_buffer[start:]
+                            assert len(packet_buffer) <= 64*1024, 'oversized recovery packet'
+                            break
+                        encoded = packet_buffer[start+len(prefix):end]
+                        packet_buffer = packet_buffer[end+1:]
+                        item = json.loads(base64.urlsafe_b64decode(encoded + b'=' * (-len(encoded) % 4)))
+                        signature = item.pop('signature')
+                        canonical = json.dumps(item, separators=(',', ':'), ensure_ascii=False).replace('<', '\\u003c').replace('>', '\\u003e').replace('&', '\\u0026').encode()
+                        actual = base64.urlsafe_b64encode(hmac.new(wrapper_key.encode(), canonical, hashlib.sha256).digest()).rstrip(b'=').decode()
+                        assert hmac.compare_digest(signature, actual), 'invalid WebMux recovery signature'
+                        assert item.get('instance') == wrapper_instance
+                        if item.get('kind') != 'cli':
+                            continue
+                        evidence = item.get('native_evidence')
+                        if evidence not in ['native-selection', 'unavailable']:
+                            continue
+                        thread = item.get('session_id') if evidence == 'native-selection' else None
+                        assert item.get('cwd') == str(project) and item.get('cli') == 'codex'
+                        receipt['selection_events'].append({'thread_id': thread, 'native_evidence': evidence,
+                            'signature_verified': True, 'instance_verified': True})
+                        checkpoint()
+                        matched = matched or thread == expected
+                    if prefix not in packet_buffer:
+                        packet_buffer = packet_buffer[-len(prefix):]
                 scan = terminal_tail + data
                 responses = [(b'\x1b[6n', b'\x1b[1;1R'), (b'\x1b[c', b'\x1b[?1;2c'),
                     (b'\x1b[>c', b'\x1b[>0;1;0c'), (b'\x1b[?u', b'\x1b[?0u'),
@@ -167,19 +301,27 @@ def pump(duration, expected='unmatched'):
                         if match.end() > len(terminal_tail):
                             os.write(master, reply)
                 terminal_tail = scan[-64:]
+                if matched:
+                    return receipt['selection_events'][-1]
         if viewer.poll() is not None and expected != 'unmatched':
             raise RuntimeError(f'viewer exited {viewer.returncode} before expected selection')
     if expected != 'unmatched':
         raise TimeoutError(f'no observer selection {expected} within {duration}s')
 
 try:
-    digest = hashlib.sha256()
-    with binary.open('rb') as source:
-        for chunk in iter(lambda: source.read(1024*1024), b''):
-            digest.update(chunk)
-    receipt['binary_sha256'] = digest.hexdigest()
+    receipt['binary_sha256'] = binary_hash(binary)
     if receipt['binary_sha256'] != args.expected_sha256:
         raise RuntimeError('native binary does not match the expected build receipt hash')
+    webmux_binary = Path(args.webmux_binary).resolve() if args.webmux_binary else None
+    if webmux_binary is not None:
+        receipt['webmux_binary_sha256'] = binary_hash(webmux_binary)
+        if receipt['webmux_binary_sha256'] != args.webmux_sha256:
+            raise RuntimeError('WebMux binary does not match its expected build hash')
+    daemon_binary = Path(args.daemon_binary).resolve() if args.profile == 'managed' else None
+    if daemon_binary is not None:
+        receipt['daemon_binary_sha256'] = binary_hash(daemon_binary)
+        if receipt['daemon_binary_sha256'] != args.daemon_sha256:
+            raise RuntimeError('managed daemon binary does not match its expected hash')
     ids = [str(uuid.uuid4()) for _ in range(2)]
     # Use the upstream app_test_support rollout fixture format. Empty thread/start
     # sessions have no persisted rollout and cannot exercise a saved-chat resume.
@@ -204,50 +346,77 @@ try:
         ]
         path.write_text(''.join(json.dumps(line)+'\n' for line in lines))
         os.chmod(path, 0o600)
-    server_log = private_log('server.log')
-    server = subprocess.Popen([str(binary), 'app-server', '--listen', f'unix://{socket_path}'],
-        stdin=subprocess.DEVNULL, stdout=server_log, stderr=subprocess.STDOUT, cwd=project, env=env, start_new_session=True)
+    if daemon_binary is not None:
+        server = ManagedDaemon(daemon_binary)
+        server.launch()
+    else:
+        server_log = private_log('server.log')
+        server = subprocess.Popen([str(binary), 'app-server', '--listen', f'unix://{socket_path}'],
+            stdin=subprocess.DEVNULL, stdout=server_log, stderr=subprocess.STDOUT, cwd=project, env=env, start_new_session=True)
     receipt['daemon_pid'] = server.pid
     until = time.monotonic()+30
     while not socket_path.exists():
         if server.poll() is not None:
-            raise RuntimeError(f'isolated server exited {server.returncode}')
+            raise RuntimeError('isolated server exited before publishing its socket')
         if time.monotonic() > until:
             raise TimeoutError('isolated server socket not ready')
         time.sleep(0.1)
     receipt['synthetic_threads'] = ids
-    reader, writer = os.pipe()
+    if webmux_binary is None:
+        reader, writer = os.pipe()
     master, slave = pty.openpty()
     fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack('HHHH', 40, 120, 0, 0))
     def own_terminal():
         os.setsid()
         fcntl.ioctl(0, termios.TIOCSCTTY, 0)
     terminal_log = private_log('terminal.log')
-    viewer = subprocess.Popen([str(binary), '--remote', f'unix://{socket_path}', '--selection-observer-fd', str(writer),
-        '--no-alt-screen', 'resume', ids[0]], stdin=slave, stdout=slave, stderr=slave,
-        cwd=project, env=env, pass_fds=(writer,), preexec_fn=own_terminal)
+    launch = [str(binary)]
+    observer_flags = ['--selection-observer-fd', str(writer)]
+    if webmux_binary is not None:
+        native_dir = root / 'native-bin'
+        wrapper_dir = root / 'wrapper-bin'
+        native_dir.mkdir()
+        wrapper_dir.mkdir()
+        (native_dir / 'codex').symlink_to(binary)
+        (wrapper_dir / 'codex').symlink_to(webmux_binary)
+        env.update(WEBMUX_BROWSER_ORIGINAL_PATH=str(native_dir) + os.pathsep + env.get('PATH', ''),
+            WEBMUX_RECOVERY_INSTANCE=wrapper_instance, WEBMUX_RECOVERY_SESSION=str(uuid.uuid4()),
+            WEBMUX_RECOVERY_KEY=wrapper_key, WEBMUX_RECOVERY_HELPER=str(webmux_binary),
+            WEBMUX_RECOVERY_CACHE_HOME=str(root / 'recovery-cache'),
+            WEBMUX_COORDINATION_CACHE_HOME=str(root / 'coordination-cache'))
+        launch = [str(wrapper_dir / 'codex')]
+        observer_flags = []  # The actual Go launcher must create and own its native pipe.
+    viewer = subprocess.Popen(launch + ['--remote', f'unix://{socket_path}'] + observer_flags +
+        ['--no-alt-screen', 'resume', ids[0]], stdin=slave, stdout=slave, stderr=slave,
+        cwd=project, env=env, pass_fds=(writer,) if writer is not None else (), preexec_fn=own_terminal)
     receipt['viewer_pid'] = viewer.pid
-    os.close(writer)
+    if writer is not None:
+        os.close(writer)
     writer = None
     os.close(slave)
     slave = None
-    pump(40, ids[0])
-    for thread_id in [ids[1], ids[0]]:
-        pump(0.3)
-        os.write(master, b'\x1b[200~' + f'/resume {thread_id}'.encode() + b'\x1b[201~')
-        pump(0.5)
-        os.write(master, b'\r')
-        pump(30, thread_id)
+    if args.profile == 'remote-negative':
+        pump(20)
+        assert receipt['selection_events'] and all(item['thread_id'] is None for item in receipt['selection_events'])
+        receipt['remote_selection_unavailable'] = True
+    else:
+        pump(40, ids[0])
+        for thread_id in [ids[1], ids[0]]:
+            pump(0.3)
+            os.write(master, b'\x1b[200~' + f'/resume {thread_id}'.encode() + b'\x1b[201~')
+            pump(0.5)
+            os.write(master, b'\r')
+            pump(30, thread_id)
     assert viewer.poll() is None and server.poll() is None
-    receipt['interactive_switch_qualified'] = True
+    receipt['interactive_switch_qualified'] = args.profile != 'remote-negative'
     checkpoint()
     # Only the owned isolated server is terminated to verify selection demotion.
     server.terminate()
     server.wait(timeout=10)
     previous_count = len(receipt['selection_events'])
-    pump(20, None)
+    pump(20, None) if args.profile != 'remote-negative' else pump(2)
     pump(2)
-    assert len(receipt['selection_events']) > previous_count
+    assert args.profile == 'remote-negative' or len(receipt['selection_events']) > previous_count
     assert all(item['thread_id'] is None for item in receipt['selection_events'][previous_count:])
     receipt['loss_demoted_to_unavailable'] = True
 except Exception as error:
@@ -278,8 +447,9 @@ finally:
         handle.close()
     model_guard.close()
     receipt['owned_processes_closed'] = [
-        {'pid': process.pid, 'exit_code': process.poll()}
-        for process in [viewer, server] if process is not None
+        process.closure() if isinstance(process, ManagedDaemon) else
+        {'pid': process.pid, 'exit_code': process.poll(), 'not_running': process.poll() is not None}
+        for process in [viewer, server] if process is not None and process.pid is not None
     ]
     try:
         groups = {item['pid'] for item in receipt['owned_processes_closed']}
@@ -291,11 +461,11 @@ finally:
         receipt['remaining_owned_group_members'] = None
     receipt['cleanup_qualified'] = (
         not receipt.get('cleanup_errors') and receipt['remaining_owned_group_members'] == [] and all(
-            item['exit_code'] is not None for item in receipt['owned_processes_closed']
+            item['not_running'] for item in receipt['owned_processes_closed']
         )
     )
     receipt['passed'] = bool(
-        receipt.get('interactive_switch_qualified')
+        (receipt.get('interactive_switch_qualified') or receipt.get('remote_selection_unavailable'))
         and receipt.get('loss_demoted_to_unavailable')
         and receipt['cleanup_qualified']
         and not receipt.get('error')
