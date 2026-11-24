@@ -18,13 +18,13 @@ def cohort(counter=1):
     return [dict(session_id=f'session-{i}', thread_id=f'thread-{i}', turn_id=f'turn-{i}',
         viewer_epoch=f'viewer-{i}', provider_epoch=f'provider-{i}', daemon_epoch='daemon',
         turn_status='inProgress', management_thread_id=f'thread-{i}', selection_thread_id=f'thread-{i}',
-        work_counter=counter, work_epoch=f'worker-{i}', work_script_sha256=f'{i:064x}') for i in range(4)]
+        work_item_id=f'item-{i}', work_witness='authenticated-native-command-output-stream', work_counter=counter, work_epoch=f'worker-{i}', work_script_sha256=f'{i:064x}') for i in range(4)]
 
 
 class ContinuityControls(unittest.TestCase):
     def test_four_independent_original_turns_must_progress(self):
         module.verify_continuity(cohort(), cohort(2))
-        for key in ('session_id', 'thread_id', 'turn_id', 'viewer_epoch', 'provider_epoch', 'daemon_epoch', 'work_epoch', 'work_script_sha256'):
+        for key in ('session_id', 'thread_id', 'turn_id', 'viewer_epoch', 'provider_epoch', 'daemon_epoch', 'work_epoch', 'work_script_sha256', 'work_item_id'):
             after = cohort(2)
             after[2][key] += '-replacement'
             with self.subTest(key=key), self.assertRaises(module.Refusal):
@@ -56,7 +56,7 @@ class ContinuityControls(unittest.TestCase):
         module.verify_viewer_migration(before, after)
         with self.assertRaises(module.Refusal):
             module.verify_viewer_migration(before, cohort(2)[0])
-        for key in ('turn_id', 'thread_id', 'provider_epoch', 'daemon_epoch', 'work_epoch', 'work_script_sha256'):
+        for key in ('turn_id', 'thread_id', 'provider_epoch', 'daemon_epoch', 'work_epoch', 'work_script_sha256', 'work_item_id'):
             changed = dict(after, **{key: 'replaced'})
             with self.subTest(key=key), self.assertRaises(module.Refusal):
                 module.verify_viewer_migration(before, changed)

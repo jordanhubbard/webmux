@@ -4,8 +4,9 @@
 Uses the supplied native build and installed authentication by reference. Creates
 fresh projects and saved conversations, submits each coding request exactly once,
 and never resumes/replays user work. A shell heartbeat alone cannot qualify:
-progress must be returned by the same thread's actual native MCP read while the
-original model turn remains in progress. All failures and fixture files remain.
+progress must arrive through authenticated native command-output notifications,
+matched to the same command item in actual MCP reads while the original turn
+runs. All failures and fixture files remain.
 """
 import argparse
 import datetime
@@ -57,10 +58,11 @@ def verify_continuity(before, after):
         require(type(row['work_counter']) is int and row['work_counter'] > 0, 'native-work-counter-required')
         require(isinstance(row['work_epoch'], str) and row['work_epoch'], 'live-coding-worker-required')
         require(isinstance(row['work_script_sha256'], str) and re.fullmatch('[0-9a-f]{64}', row['work_script_sha256']), 'coding-script-digest-required')
+        require(row.get('work_witness') == 'authenticated-native-command-output-stream' and isinstance(row.get('work_item_id'), str), 'native-command-stream-required')
         require(row['turn_status'] == 'inProgress', 'turn-no-longer-active')
         require(row['management_thread_id'] == row['selection_thread_id'] == row['thread_id'], 'thread-evidence-disagrees')
     for original, current in zip(before, after, strict=True):
-        for key in ('session_id', 'thread_id', 'turn_id', 'viewer_epoch', 'provider_epoch', 'daemon_epoch', 'work_epoch', 'work_script_sha256'):
+        for key in ('session_id', 'thread_id', 'turn_id', 'viewer_epoch', 'provider_epoch', 'daemon_epoch', 'work_epoch', 'work_script_sha256', 'work_item_id'):
             require(original[key] == current[key], 'continuity-' + key)
         require(current['turn_status'] == 'inProgress', 'turn-no-longer-active')
         require(current['management_thread_id'] == current['thread_id'], 'management-thread-mismatch')
@@ -114,7 +116,7 @@ def work_counter(data, turn_id, nonce):
 def verify_viewer_migration(before, after):
     require(isinstance(before['work_epoch'], str) and before['work_epoch'] and isinstance(after['work_epoch'], str) and after['work_epoch'], 'migration-live-worker-required')
     require(before['viewer_epoch'] != after['viewer_epoch'], 'viewer-was-not-replaced')
-    for key in ('session_id', 'thread_id', 'turn_id', 'provider_epoch', 'daemon_epoch', 'work_epoch', 'work_script_sha256'):
+    for key in ('session_id', 'thread_id', 'turn_id', 'provider_epoch', 'daemon_epoch', 'work_epoch', 'work_script_sha256', 'work_item_id'):
         require(before[key] == after[key], 'migration-changed-'+key)
     require(after['turn_status'] == 'inProgress', 'migration-interrupted-original-turn')
     require(after['thread_id'] == after['management_thread_id'] == after['selection_thread_id'], 'migration-thread-evidence')
@@ -364,7 +366,11 @@ class Fixture:
         require(Path(started['managedCodexPath']).resolve() == self.args.native, 'managed-native-image')
         self.socket = self.home / 'app-server-control/app-server-control.sock'
         require(Path(started['socketPath']) == self.socket, 'managed-native-socket')
-        self.rpc = subprocess.Popen([str(self.args.node), str(self.repo / 'webmux/scripts/codex-fixture-rpc.mts'), str(self.socket)],
+        watches = self.root / 'output-watches.json'
+        watches.write_text(json.dumps([{'thread': row['thread'], 'nonce': row['nonce']} for row in self.sessions]))
+        os.chmod(watches, 0o600)
+        self.output_witness = self.root / 'command-output-witness.json'
+        self.rpc = subprocess.Popen([str(self.args.node), str(self.repo / 'webmux/scripts/codex-fixture-rpc.mts'), str(self.socket), str(watches), str(self.output_witness)],
             cwd=self.root, env=self.env, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
             stderr=self.log('native-rpc.log'), text=True, bufsize=1, start_new_session=True)
         self.record_process('native-rpc-client', self.rpc.pid)
@@ -505,6 +511,12 @@ class Fixture:
 
     def start_work(self):
         for session in self.sessions:
+            # Attach this fixture-only observer before submitting any model work.
+            # No overrides and no turn input: subscribe to the already loaded actor.
+            attached = self.native_rpc('thread/resume', {'threadId': session['thread']})
+            require(attached['thread']['id'] == session['thread'], 'output-observer-thread')
+            self.read_management(session)
+            require(self.read_worktrees(session) == session['worktree_read_before'], 'observer-worktree-parity')
             marker = 'WM_CODING_'+session['nonce']+'_'
             prompt = f'''This is an isolated continuity coding test. Work only in this project. Write proof.py implementing a small correct prime-number predicate with assertions for 1,2,9,17, then run it. In that same Python foreground process, after the assertions, iterate i from 1 through 300: print "{marker}" followed by i with flush=True, sleep one second, and stop early if a file named STOP exists in this project. Keep that foreground command running and wait for it; do not background it, shorten the loop, request another agent, or finish your turn while it runs. Do not create STOP yourself or modify proof.py while it runs. When polling exec_command/write_stdin in Code Mode, forward the raw result with text(result), including stdout; do not summarize it. Use short polling/yield intervals so output remains visible. Once STOP appears, verify the file and report the assertions. No network or other projects.'''
             self.receipt['model_requests_attempted'] += 1
@@ -555,12 +567,24 @@ class Fixture:
             json.dump(data, record)
         self.receipt.setdefault('work_read_receipts', {})[session['thread']] = name
         self.save()
-        counter = work_counter(data, session['turn'], session['nonce'])
+        commands = [item for item in management_turns[0].get('items', [])
+            if item.get('type') == 'commandExecution' and 'proof.py' in item.get('command', '') and item.get('status') == 'inProgress']
+        require(len(commands) <= 1, 'ambiguous-active-coding-command')
+        counter = 0
+        if commands:
+            item_id = commands[0]['id']
+            require(session.get('work_item_id', item_id) == item_id, 'coding-command-item-replaced')
+            session['work_item_id'] = item_id
+            rows = json.loads(self.output_witness.read_text()) if self.output_witness.exists() else []
+            matching = [row for row in rows if row['threadId'] == session['thread'] and row['turnId'] == session['turn'] and row['itemId'] == item_id]
+            require(len(matching) <= 1, 'ambiguous-output-witness')
+            counter = matching[0]['counter'] if matching else 0
         work_epoch, script_sha = self.coding_worker(session, counter)
         return {'viewer_pid': session['viewer'], 'provider_pid': session['provider'], 'daemon_pid': self.daemon_pid,
             'session_id': session['id'], 'thread_id': session['thread'], 'turn_id': session['turn'],
             'turn_status': turns[0]['status'], 'management_thread_id': data['thread']['id'],
             'selection_thread_id': self.selection(session), 'work_counter': counter,
+            'work_item_id': session.get('work_item_id'), 'work_witness': 'authenticated-native-command-output-stream',
             'work_pid': session.get('work_pid'), 'work_epoch': work_epoch, 'work_script_sha256': script_sha,
             'viewer_epoch': self.epoch(session['viewer']), 'provider_epoch': self.epoch(session['provider']),
             'daemon_epoch': self.epoch(self.daemon_pid)}

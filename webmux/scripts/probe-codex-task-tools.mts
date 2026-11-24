@@ -21,7 +21,7 @@ export class ProbeFailure extends Error {
 }
 
 type JsonObject = Record<string, unknown>;
-export type RpcMethod = 'turn/start' | 'thread/read' | 'thread/turns/list' | 'mcpServerStatus/list' | 'mcpServer/tool/call';
+export type RpcMethod = 'thread/resume' | 'turn/start' | 'thread/read' | 'thread/turns/list' | 'mcpServerStatus/list' | 'mcpServer/tool/call';
 export interface RpcChannel { call(method: RpcMethod, params: JsonObject): Promise<unknown>; close(): void; }
 export interface ProbeOptions { socket?: string; cwd?: string; thread?: string; viewerPid: number; daemonPid: number; turn?: string; }
 export interface ProbeDependencies {
@@ -79,7 +79,7 @@ export async function authorizeSocket(socket: string): Promise<string> {
   return real;
 }
 
-export async function connect(socket: string): Promise<RpcChannel> {
+export async function connect(socket: string, onNotification?: (message: JsonObject) => void): Promise<RpcChannel> {
   const require = createRequire(new URL('../package.json', import.meta.url));
   const WebSocket = require('ws') as typeof WebSocketType;
   const lock: unknown = JSON.parse(await fs.readFile(new URL('../package-lock.json', import.meta.url), 'utf8'));
@@ -104,7 +104,12 @@ export async function connect(socket: string): Promise<RpcChannel> {
     if (!message) { fail(new ProbeFailure('rpc', 'invalid-envelope')); return; }
     if (message.method && message.id !== undefined) { fail(new ProbeFailure('rpc', 'interactive-request')); return; }
     const request = typeof message.id === 'number' ? pending.get(message.id) : undefined;
-    if (!request) return; // Never persist unrelated daemon notifications.
+    if (!request) {
+      if (message.id === undefined && typeof message.method === 'string') {
+        try { onNotification?.(message); } catch { fail(new ProbeFailure('rpc', 'notification-witness')); }
+      }
+      return; // Default readiness probes discard every notification.
+    }
     pending.delete(message.id as number);
     clearTimeout(request.timer);
     if (message.error) { const code = object(message.error)?.code; request.reject(new ProbeFailure(request.method, typeof code === 'number' && Number.isInteger(code) ? code : 'rpc-error')); }
