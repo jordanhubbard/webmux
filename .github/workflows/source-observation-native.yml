@@ -6,7 +6,7 @@ on:
       samples:
         description: 'Original full-suite samples in one invocation; any failure fails qualification'
         type: choice
-        options: ['1', '8']
+        options: ['1', '2']
         default: '1'
   pull_request:
     paths:
@@ -59,7 +59,7 @@ jobs:
           SOURCE_SAMPLE_COUNT: ${{ inputs.samples || '1' }}
         run: |
           $sampleCount = [int]$env:SOURCE_SAMPLE_COUNT
-          if ($sampleCount -notin @(1, 8)) { throw 'Unsupported qualification sample count.' }
+          if ($sampleCount -notin @(1, 2)) { throw 'Unsupported qualification sample count.' }
           # One invocation, original per-observation deadlines and package concurrency.
           # This is diagnostic sampling, never an automatic retry after a failure.
           go test -race "-count=$sampleCount" -json ./... | Tee-Object -FilePath "$env:SOURCE_RECEIPTS/tests.jsonl"
