@@ -11,6 +11,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/jordanhubbard/webmux/server/internal/gitobserve"
 )
 
 var ErrRepository = errors.New("verified repository identity is unavailable; an explicit execution-host mapping is required")
@@ -40,7 +42,7 @@ func InspectRepository(parent context.Context, directory string) (*Binding, erro
 		null = "NUL"
 	}
 	env = append(env, "GIT_CONFIG_NOSYSTEM=1", "GIT_CONFIG_GLOBAL="+null, "GIT_TERMINAL_PROMPT=0", "GIT_OPTIONAL_LOCKS=0")
-	run := func(args ...string) (string, error) {
+	run := func(phase string, args ...string) (string, error) {
 		fixed := []string{"--no-optional-locks", "-c", "core.fsmonitor=false", "-C", directory}
 		fixed = append(fixed, args...)
 		command := exec.CommandContext(ctx, "git", fixed...)
@@ -49,20 +51,20 @@ func InspectRepository(parent context.Context, directory string) (*Binding, erro
 		var out bytes.Buffer
 		command.Stdout = &limitedRepositoryOutput{buffer: &out}
 		command.Stderr = &bytes.Buffer{}
-		if err := command.Run(); err != nil {
+		if err := gitobserve.Run(ctx, phase, command); err != nil {
 			return "", ErrRepository
 		}
 		return strings.TrimSpace(out.String()), nil
 	}
-	shallow, err := run("rev-parse", "--is-shallow-repository")
+	shallow, err := run("repository.shallow", "rev-parse", "--is-shallow-repository")
 	if err != nil || shallow != "false" {
 		return nil, ErrRepository
 	}
-	root, err := run("rev-parse", "--show-toplevel")
+	root, err := run("repository.toplevel", "rev-parse", "--show-toplevel")
 	if err != nil || !filepath.IsAbs(root) {
 		return nil, ErrRepository
 	}
-	remote, err := run("config", "--local", "--get", "remote.origin.url")
+	remote, err := run("repository.origin", "config", "--local", "--get", "remote.origin.url")
 	if err != nil {
 		return nil, ErrRepository
 	}
@@ -70,7 +72,7 @@ func InspectRepository(parent context.Context, directory string) (*Binding, erro
 	if !ok {
 		return nil, ErrRepository
 	}
-	roots, err := run("rev-list", "--max-parents=0", "--max-count=33", "HEAD")
+	roots, err := run("repository.roots", "rev-list", "--max-parents=0", "--max-count=33", "HEAD")
 	if err != nil {
 		return nil, ErrRepository
 	}
@@ -84,11 +86,11 @@ func InspectRepository(parent context.Context, directory string) (*Binding, erro
 		}
 	}
 	sort.Strings(witnesses)
-	branch, err := run("symbolic-ref", "--short", "-q", "HEAD")
+	branch, err := run("repository.branch", "symbolic-ref", "--short", "-q", "HEAD")
 	if err != nil {
 		branch = "(detached)"
 	}
-	folded, _ := run("config", "--local", "--get", "core.ignorecase")
+	folded, _ := run("repository.ignorecase", "config", "--local", "--get", "core.ignorecase")
 	binding := &Binding{ID: digest([]byte("webmux-repository/v1\n" + canonical + "\n" + strings.Join(witnesses, "\n"))), Repository: canonical, Worktree: root, Branch: branch, Source: "verified-git", CaseFold: folded == "true"}
 	if !validBinding(binding) {
 		return nil, ErrRepository
