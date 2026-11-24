@@ -1,0 +1,548 @@
+#!/usr/bin/env python3
+"""Own four real Codex coding turns across an isolated WebMux lifecycle.
+
+Uses the supplied native build and installed authentication by reference. Creates
+fresh projects and saved conversations, submits each coding request exactly once,
+and never resumes/replays user work. A shell heartbeat alone cannot qualify:
+progress must be returned by the same thread's actual native MCP read while the
+original model turn remains in progress. All failures and fixture files remain.
+"""
+import argparse
+import datetime
+import hashlib
+import json
+import os
+from pathlib import Path
+import re
+import select
+import shlex
+import shutil
+import signal
+import socket
+import subprocess
+import tempfile
+import time
+import urllib.request
+from urllib.parse import unquote, urlsplit
+import uuid
+
+
+class Refusal(RuntimeError):
+    pass
+
+
+def require(condition, code):
+    if not condition:
+        raise Refusal(code)
+
+
+def digest(path):
+    value = hashlib.sha256()
+    with path.open('rb') as stream:
+        for block in iter(lambda: stream.read(1024 * 1024), b''):
+            value.update(block)
+    return value.hexdigest()
+
+
+def verify_continuity(before, after):
+    """No caller-provided pass flags; compare exact native/OS observations."""
+    require(len(before) == len(after) == 4, 'exactly-four-sessions-required')
+    require(len({row['thread_id'] for row in before}) == 4, 'distinct-threads-required')
+    require(len({row['viewer_epoch'] for row in before}) == 4, 'distinct-viewers-required')
+    require(len({row['provider_epoch'] for row in before}) == 4, 'distinct-providers-required')
+    require(len({row['daemon_epoch'] for row in before}) == 1, 'one-shared-native-daemon-required')
+    for row in [*before, *after]:
+        require(type(row['work_counter']) is int and row['work_counter'] > 0, 'native-work-counter-required')
+        require(row['turn_status'] == 'inProgress', 'turn-no-longer-active')
+        require(row['management_thread_id'] == row['selection_thread_id'] == row['thread_id'], 'thread-evidence-disagrees')
+    for original, current in zip(before, after, strict=True):
+        for key in ('session_id', 'thread_id', 'turn_id', 'viewer_epoch', 'provider_epoch', 'daemon_epoch'):
+            require(original[key] == current[key], 'continuity-' + key)
+        require(current['turn_status'] == 'inProgress', 'turn-no-longer-active')
+        require(current['management_thread_id'] == current['thread_id'], 'management-thread-mismatch')
+        require(current['selection_thread_id'] == current['thread_id'], 'selection-thread-mismatch')
+        require(current['work_counter'] > original['work_counter'], 'work-did-not-progress')
+
+
+def work_counter(data, turn_id, nonce):
+    # A prompt, command source, file heartbeat or another turn cannot contribute.
+    outputs = [item.get('output', {}).get('text', '') for turn in data.get('turns', []) if turn.get('id') == turn_id
+        for item in turn.get('items', []) if item.get('type') == 'commandExecution']
+    pattern = re.compile(r'^' + re.escape('WM_CODING_'+nonce+'_') + r'(\d+)\r?$', re.MULTILINE)
+    counters = [int(match.group(1)) for output in outputs if isinstance(output, str) for match in pattern.finditer(output)]
+    return max(counters, default=0)
+
+
+class Fixture:
+    def __init__(self, args):
+        self.args = args
+        self.repo = Path(__file__).resolve().parents[1]
+        self.root = Path(tempfile.mkdtemp(prefix='wm-four-', dir='/tmp')).resolve()
+        self.home = self.root / 'native'
+        self.webhome = self.root / 'webmux'
+        self.home.mkdir(mode=0o700)
+        self.webhome.mkdir(mode=0o700)
+        self.tmuxdir = self.root / 'tmux'
+        self.tmuxdir.mkdir(mode=0o700)
+        self.tmuxsocket = self.tmuxdir / f'tmux-{os.getuid()}' / 'default'
+        self.env = {key: os.environ[key] for key in ('PATH', 'USER', 'LANG', 'TMPDIR') if key in os.environ}
+        self.env.update(HOME=str(self.root), CODEX_HOME=str(self.home), TMUX_TMPDIR=str(self.tmuxdir),
+            TERM='xterm-256color', COLORTERM='truecolor', SHELL='/bin/bash',
+            WEBMUX_HOME=str(self.webhome), WEBMUX_COORDINATION_DISABLED='1', WEBMUX_ROOT='')
+        nativebin = self.root / 'bin'
+        nativebin.mkdir()
+        (nativebin / 'codex').symlink_to(args.native)
+        self.env['PATH'] = str(nativebin) + os.pathsep + self.env.get('PATH', '')
+        self.env['WEBMUX_BROWSER_ORIGINAL_PATH'] = self.env['PATH']
+        self.env['WEBMUX_RECOVERY_CACHE_HOME'] = str(self.root / 'host-cache')
+        self.controller = self.rpc = None
+        self.daemon_start_attempted = False
+        self.daemon_pid = None
+        self.daemon_epoch = None
+        self.streams = []
+        self.sessions = []
+        self.counter = 0
+        self.receipt = {'schema': 'webmux.four-codex-continuity.v1', 'passed': False,
+            'four_session_survival_qualified': False, 'active_work_qualified': False,
+            'fixture_root': str(self.root), 'source': subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=self.repo, text=True).strip(),
+            'native_sha256': args.native_sha256, 'webmux_sha256': args.webmux_sha256,
+            'qualifier_sha256': digest(Path(__file__)), 'phases': [],
+            'model_requests_attempted': 0, 'model_requests_submitted': 0, 'coding_requests_replayed': 0, 'native_daemon_restarts': 0,
+            'scope': 'four isolated local durable providers; actual native model coding turns; no SSH or installed-user-session claim'}
+        self.output = args.output.open('x')
+        os.chmod(args.output, 0o600)
+        self.save()
+
+    def save(self):
+        self.output.seek(0)
+        json.dump(self.receipt, self.output, indent=2)
+        self.output.write('\n')
+        self.output.truncate()
+        self.output.flush()
+
+    def log(self, name):
+        stream = (self.root / name).open('xb', buffering=0)
+        os.chmod(stream.name, 0o600)
+        self.streams.append(stream)
+        return stream
+
+    def run(self, argv, **kw):
+        return subprocess.run(argv, env=self.env, cwd=self.root, stdin=subprocess.DEVNULL,
+            capture_output=True, text=True, timeout=15, check=True, **kw)
+
+    def epoch(self, pid):
+        data = self.run(['/bin/ps', '-p', str(pid), '-o', 'uid=,lstart=,comm=']).stdout.strip()
+        require(data.split()[0] == str(os.getuid()), 'process-account')
+        return hashlib.sha256(f'{pid}\n{data}'.encode()).hexdigest()
+
+    def wait(self, predicate, code, seconds=45):
+        deadline = time.monotonic() + seconds
+        while time.monotonic() < deadline:
+            value = predicate()
+            if value:
+                return value
+            time.sleep(.2)
+        raise Refusal(code)
+
+    def api(self, route, data=None, method=None):
+        request = urllib.request.Request(self.base + route, method=method,
+            data=json.dumps(data).encode() if data is not None else None,
+            headers={'Content-Type': 'application/json'})
+        with urllib.request.urlopen(request, timeout=15) as response:
+            value = response.read()
+            return json.loads(value) if value else None
+
+    def ready(self):
+        try:
+            return self.api('/api/health').get('status') == 'ok'
+        except OSError:
+            return False
+
+    def start_controller(self):
+        require(self.controller is None or self.controller.poll() is not None, 'controller-already-live')
+        self.controller = subprocess.Popen([str(self.args.webmux), '-listen', self.address],
+            env=self.env, cwd=self.root, stdin=subprocess.DEVNULL,
+            stdout=self.log(f'controller-{len(self.receipt["phases"])}.log'), stderr=subprocess.STDOUT,
+            start_new_session=True)
+        self.wait(self.ready, 'controller-startup')
+        return self.epoch(self.controller.pid)
+
+    def stop_controller(self, abrupt=False):
+        require(self.controller is not None and self.controller.poll() is None, 'owned-controller-not-live')
+        self.controller.kill() if abrupt else self.controller.terminate()
+        return self.controller.wait(timeout=20)
+
+    def native_rpc(self, method, params):
+        require(self.rpc is not None and self.rpc.poll() is None, 'native-client-unavailable')
+        self.counter += 1
+        self.rpc.stdin.write(json.dumps({'id': self.counter, 'method': method, 'params': params}) + '\n')
+        self.rpc.stdin.flush()
+        require(select.select([self.rpc.stdout], [], [], 15)[0], 'native-client-deadline')
+        response = json.loads(self.rpc.stdout.readline())
+        require(response.get('id') == self.counter and not response.get('error'), 'native-rpc-failed')
+        return response['result']
+
+    def setup(self):
+        # Only the authentication file is referenced. Mutable native state and
+        # all configuration, packages, updater settings and conversations are private.
+        auth = self.args.auth_home / 'auth.json'
+        require(auth.is_file() and auth.stat().st_uid == os.getuid(), 'owned-auth-file-required')
+        (self.home / 'auth.json').symlink_to(auth)
+        projects = []
+        for index in range(4):
+            project = self.root / f'project-{index}'
+            project.mkdir(mode=0o700)
+            projects.append(project)
+            self.sessions.append({'project': project, 'thread': str(uuid.uuid4()), 'nonce': uuid.uuid4().hex})
+        config = f'model = {json.dumps(self.args.model)}\ncheck_for_update_on_startup = false\nweb_search = "disabled"\napproval_policy = "never"\nsandbox_mode = "workspace-write"\n[features]\nenable_mcp_apps = false\n'
+        for project in projects:
+            config += f'[projects.{json.dumps(str(project))}]\ntrust_level = "trusted"\n'
+        (self.home / 'config.toml').write_text(config)
+        os.chmod(self.home / 'config.toml', 0o600)
+        package = self.home / 'packages/app-server-daemon'
+        (package / 'fixture/bin').mkdir(parents=True)
+        (package / 'fixture/bin/codex').symlink_to(self.args.native)
+        (package / 'current').symlink_to('fixture')
+        settings = self.home / 'app-server-daemon/settings.json'
+        settings.parent.mkdir()
+        settings.write_text(json.dumps({'remoteControlEnabled': False, 'featureOverrides': {},
+            'shutdownGraceSeconds': 2, 'updater': {'autoUpdateEnabled': False, 'updateIntervalMinutes': 60}}))
+        os.chmod(settings, 0o600)
+        # Synthetic saved history lets each actual TUI install its own native
+        # management server when the daemon first loads this fixture thread.
+        now = datetime.datetime.now(datetime.timezone.utc)
+        folder = self.home / 'sessions' / now.strftime('%Y/%m/%d')
+        folder.mkdir(parents=True)
+        for session in self.sessions:
+            stamp = now.isoformat().replace('+00:00', 'Z')
+            meta = {'id': session['thread'], 'session_id': session['thread'], 'timestamp': stamp,
+                'cwd': str(session['project']), 'originator': 'codex', 'cli_version': '0.172.0',
+                'source': 'cli', 'account_scoped': False, 'attached_thread': False,
+                'model_provider': 'openai', 'history_mode': 'legacy', 'selected_capability_roots': []}
+            records = [{'type': 'session_meta', 'payload': meta},
+                {'type': 'response_item', 'payload': {'type': 'message', 'role': 'user', 'content': [{'type': 'input_text', 'text': 'Owned continuity fixture; no prior work.'}]}},
+                {'type': 'event_msg', 'payload': {'type': 'user_message', 'message': 'Owned continuity fixture; no prior work.', 'kind': 'plain'}}]
+            rollout = folder / f'rollout-{now.strftime("%Y-%m-%dT%H-%M-%S")}-{session["thread"]}.jsonl'
+            rollout.write_text(''.join(json.dumps(dict(timestamp=stamp, **row))+'\n' for row in records))
+            os.chmod(rollout, 0o600)
+        self.daemon_start_attempted = True
+        started = json.loads(self.run([str(self.args.native), 'app-server', 'daemon', 'start']).stdout)
+        self.daemon_pid = started['pid']
+        self.daemon_epoch = self.epoch(self.daemon_pid)
+        require(started['status'] == 'started', 'managed-native-start')
+        require(Path(started['managedCodexPath']).resolve() == self.args.native, 'managed-native-image')
+        self.socket = self.home / 'app-server-control/app-server-control.sock'
+        require(Path(started['socketPath']) == self.socket, 'managed-native-socket')
+        self.rpc = subprocess.Popen([str(self.args.node), str(self.repo / 'webmux/scripts/codex-fixture-rpc.mts'), str(self.socket)],
+            cwd=self.root, env=self.env, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+            stderr=self.log('native-rpc.log'), text=True, bufsize=1, start_new_session=True)
+        shutil.copytree(self.repo / 'webmux/config.defaults', self.webhome / 'config')
+        (self.webhome / 'config/auth.yaml').write_text('auth:\n  mode: none\n  users: []\n')
+        with socket.socket() as listener:
+            listener.bind(('127.0.0.1', 0))
+            port = listener.getsockname()[1]
+        self.address = '127.0.0.1:' + str(port)
+        self.base = 'http://' + self.address
+        self.controller_epoch = self.start_controller()
+        self.api('/api/config', {'app': {'session_logging': {'enabled': True}}}, 'PUT')
+        for session in self.sessions:
+            session['id'] = str(uuid.UUID(self.api('/api/sessions', {'transport': 'local', 'cols': 140, 'rows': 45})['id']))
+            session['target'] = 'webmux-' + session['id']
+            self.wait(lambda: self.api('/api/session-recovery/'+session['id']).get('shell_ready'), 'provider-shell-ready')
+            self.tmux('send-keys', '-t', '='+session['target'], '-l', f'cd {shlex.quote(str(session["project"]))} && codex --no-alt-screen resume {session["thread"]}')
+            self.tmux('send-keys', '-t', '='+session['target'], 'Enter')
+            self.wait(lambda: self.selection(session) == session['thread'], 'native-selection-ready')
+            session['provider'] = int(self.tmux('display-message', '-p', '-t', '='+session['target'], '#{pane_pid}').strip())
+            session['provider_epoch'] = self.epoch(session['provider'])
+            session['viewer'], session['management_port'] = self.management_owner(session)
+            owners = [str(session['viewer'])]
+            images = self.run(['/usr/sbin/lsof', '-a', '-p', owners[0], '-d', 'txt', '-Fn']).stdout.splitlines()
+            require('n'+str(self.args.native) in images, 'viewer-native-image')
+            session['viewer_epoch'] = self.epoch(session['viewer'])
+            # Fail before submitting model work if its actual authenticated
+            # management registration is already broken.
+            self.read_management(session)
+        self.receipt['fixtures_ready'] = True
+        self.save()
+
+    def tmux(self, *args):
+        require(self.root in self.tmuxsocket.parents, 'private-tmux-boundary')
+        return self.run(['tmux', '-S', str(self.tmuxsocket), *args]).stdout
+
+    def selection(self, session):
+        activity = self.api('/api/session-recovery/'+session['id']).get('state', {}).get('activity', {})
+        require(not activity.get('native_session_id') or activity['native_session_id'] == session['thread'], 'unexpected-selected-thread')
+        return activity.get('native_session_id') if activity.get('native_evidence') == 'native-selection' else None
+
+    def management_owner(self, session):
+        inventory = self.native_rpc('mcpServerStatus/list', {'threadId': session['thread'], 'serverName': 'codex_tui', 'detail': 'toolsAndAuthOnly'})
+        servers = [row for row in inventory['data'] if row['name'] == 'codex_tui']
+        require(len(servers) == 1, 'one-viewer-management-server')
+        origin = urlsplit(servers[0]['httpOrigin'])
+        require(origin.scheme == 'http' and origin.hostname == '127.0.0.1' and origin.port and
+            not origin.username and not origin.password and origin.path in ('', '/') and not origin.query and not origin.fragment,
+            'loopback-management-origin')
+        owners = self.run(['/usr/sbin/lsof', '-nP', '-tiTCP:'+str(origin.port), '-sTCP:LISTEN']).stdout.split()
+        require(len(owners) == 1, 'one-management-listener-owner')
+        return int(owners[0]), origin.port
+
+    def read_management(self, session):
+        if 'viewer' in session:
+            require(self.management_owner(session) == (session['viewer'], session['management_port']), 'management-owner-changed')
+        result = self.native_rpc('mcpServer/tool/call', {'threadId': session['thread'], 'server': 'codex_tui', 'tool': 'read_thread',
+            'arguments': {'threadId': session['thread'], 'turnLimit': 1, 'includeOutputs': True, 'maxOutputCharsPerItem': 20000}})
+        require(not result.get('isError'), 'management-tool-error')
+        texts = [json.loads(row['text']) for row in result.get('content', []) if row.get('type') == 'text']
+        require(len(texts) == 1 and texts[0].get('thread', {}).get('id') == session['thread'], 'management-thread-result')
+        raw_cwd = texts[0]['thread'].get('cwd', '')
+        parsed = urlsplit(raw_cwd)
+        cwd = Path(unquote(parsed.path)) if parsed.scheme == 'file' else Path(raw_cwd)
+        require(cwd.is_absolute() and cwd.resolve() == session['project'], 'management-project-result')
+        return texts[0]
+
+    def start_work(self):
+        for session in self.sessions:
+            marker = 'WM_CODING_'+session['nonce']+'_'
+            prompt = f'''This is an isolated continuity coding test. Work only in this project. Write proof.py implementing a small correct prime-number predicate with assertions for 1,2,9,17, then run it. In that same Python foreground process, after the assertions, iterate i from 1 through 300: print "{marker}" followed by i with flush=True, sleep one second, and stop early if a file named STOP exists in this project. Keep that foreground command running and wait for it; do not background it, shorten the loop, request another agent, or finish your turn while it runs. Once STOP appears, verify the file and report the assertions. No network or other projects.'''
+            self.receipt['model_requests_attempted'] += 1
+            self.save()
+            response = self.native_rpc('turn/start', {'threadId': session['thread'], 'input': [{'type': 'text', 'text': prompt}]})
+            session['turn'] = response['turn']['id']
+            self.receipt['model_requests_submitted'] += 1
+            self.save()
+
+    def snapshot(self, session):
+        turns = self.native_rpc('thread/turns/list', {'threadId': session['thread'], 'limit': 1, 'sortDirection': 'desc'})['data']
+        require(len(turns) == 1 and turns[0]['id'] == session['turn'] and turns[0]['status'] == 'inProgress', 'exact-coding-turn-not-active')
+        data = self.read_management(session)
+        management_turns = data.get('turns', [])
+        require(len(management_turns) == 1 and management_turns[0]['id'] == session['turn'] and management_turns[0]['status'] == 'inProgress', 'management-active-turn-result')
+        return {'viewer_pid': session['viewer'], 'provider_pid': session['provider'], 'daemon_pid': self.daemon_pid,
+            'session_id': session['id'], 'thread_id': session['thread'], 'turn_id': session['turn'],
+            'turn_status': turns[0]['status'], 'management_thread_id': data['thread']['id'],
+            'selection_thread_id': self.selection(session), 'work_counter': work_counter(data, session['turn'], session['nonce']),
+            'viewer_epoch': self.epoch(session['viewer']), 'provider_epoch': self.epoch(session['provider']),
+            'daemon_epoch': self.epoch(self.daemon_pid)}
+
+    def phase(self, name, before=None):
+        def collect():
+            rows = [self.snapshot(session) for session in self.sessions]
+            if before and any(row['work_counter'] <= old['work_counter'] for old, row in zip(before, rows, strict=True)):
+                return None
+            return rows if all(row['work_counter'] > 0 for row in rows) else None
+        rows = self.wait(collect, 'actual-coding-progress-'+name, seconds=120 if before is None else 40)
+        if before:
+            verify_continuity(before, rows)
+        self.receipt['phases'].append({'name': name, 'controller_epoch': self.epoch(self.controller.pid), 'sessions': rows})
+        self.save()
+        return rows
+
+    def qualify(self):
+        self.setup()
+        self.start_work()
+        baseline = self.phase('baseline')
+        previous = baseline
+        for name, abrupt in [('orderly-restart', False), ('controller-crash', True)]:
+            old = self.epoch(self.controller.pid)
+            code = self.stop_controller(abrupt)
+            require(code == (-signal.SIGKILL if abrupt else 0), 'controller-exit-kind')
+            self.start_controller()
+            require(self.epoch(self.controller.pid) != old, 'controller-epoch-did-not-change')
+            self.receipt.setdefault('controller_exits', []).append({'phase': name, 'exit_code': code})
+            previous = self.phase(name, previous)
+        for session in self.sessions:
+            self.api('/api/sessions/'+session['id']+'/reconnect', {})
+        previous = self.phase('provider-reconnect', previous)
+        verify_continuity(baseline, previous)
+        # Let the original four model requests finish their own coding checks.
+        for session in self.sessions:
+            (session['project'] / 'STOP').touch(exist_ok=False)
+        for session in self.sessions:
+            def complete():
+                turns = self.native_rpc('thread/turns/list', {'threadId': session['thread'], 'limit': 1, 'sortDirection': 'desc'})['data']
+                require(turns and turns[0]['id'] == session['turn'], 'original-turn-replaced')
+                if turns[0]['status'] == 'inProgress':
+                    return False
+                require(turns[0]['status'] == 'completed', 'original-turn-failed')
+                proof = session['project'] / 'proof.py'
+                require(proof.is_file() and not proof.is_symlink() and proof.stat().st_size > 0, 'coding-artifact-missing')
+                self.receipt.setdefault('coding_artifacts', {})[session['thread']] = digest(proof)
+                return True
+            self.wait(complete, 'original-model-turn-completion', seconds=90)
+        self.receipt['original_turns_completed'] = 4
+
+    def fixture_processes(self):
+        # Retain only same-account processes whose actual cwd is in our fresh
+        # private root. This also finds detached execution helpers, not just TUIs.
+        result = subprocess.run(['/usr/sbin/lsof', '-nP', '-a', '-u', str(os.getuid()), '-d', 'cwd', '-Fpn'],
+            capture_output=True, text=True, timeout=10)
+        require(result.returncode in (0, 1), 'fixture-process-inspector')
+        owned, pid = {}, None
+        for line in result.stdout.splitlines():
+            if line.startswith('p'):
+                pid = int(line[1:])
+            elif line.startswith('n') and pid and pid != os.getpid():
+                path = Path(line[1:])
+                if path == self.root or self.root in path.parents:
+                    try:
+                        owned[pid] = self.epoch(pid)
+                    except subprocess.CalledProcessError:
+                        pass  # Gone between two kernel observations.
+        return owned
+
+    def cleanup(self):
+        errors = []
+        try:
+            owned = self.fixture_processes()
+        except (Refusal, OSError, subprocess.SubprocessError):
+            owned = {}
+            errors.append('fixture-process-inventory')
+        for session in self.sessions:
+            try:
+                if session['project'].is_dir():
+                    (session['project'] / 'STOP').touch(exist_ok=True)
+            except OSError:
+                errors.append('stop-file')
+        if self.rpc:
+            try:
+                self.rpc.stdin.close()
+                self.rpc.wait(timeout=5)
+            except (OSError, subprocess.TimeoutExpired):
+                self.rpc.terminate()
+                try:
+                    self.rpc.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    self.rpc.kill()
+                    self.rpc.wait(timeout=5)
+        if self.controller and self.controller.poll() is None:
+            try:
+                self.stop_controller()
+            except (OSError, subprocess.SubprocessError):
+                self.controller.kill()
+                self.controller.wait(timeout=5)
+                errors.append('controller-forced-settlement')
+        if self.tmuxsocket.exists():
+            try:
+                require(self.tmuxsocket.is_socket() and self.tmuxsocket.stat().st_uid == os.getuid(), 'private-tmux-owner')
+                self.tmux('kill-server')
+                self.wait(lambda: not self.tmuxsocket.exists(), 'private-tmux-settlement', seconds=10)
+            except (OSError, subprocess.SubprocessError, Refusal):
+                errors.append('provider-settlement')
+        try:
+            if self.daemon_start_attempted and self.daemon_pid is None:
+                # A failed lifecycle start may already have published a child.
+                record = self.home / 'app-server-daemon/daemon.pid'
+                if record.is_file():
+                    self.daemon_pid = json.loads(record.read_text())['pid']
+                    image = self.run(['/usr/sbin/lsof', '-a', '-p', str(self.daemon_pid), '-d', 'txt', '-Fn']).stdout.splitlines()
+                    require('n'+str(self.args.native) in image, 'partial-start-native-image')
+                    require(self.daemon_pid in owned, 'partial-start-native-cwd')
+                    self.daemon_epoch = self.epoch(self.daemon_pid)
+            if self.daemon_pid:
+                require(self.epoch(self.daemon_pid) == self.daemon_epoch, 'native-daemon-epoch-before-stop')
+                self.run([str(self.args.native), 'app-server', 'daemon', 'stop'])
+        except (OSError, ValueError, KeyError, subprocess.SubprocessError, Refusal):
+            errors.append('native-lifecycle-settlement')
+        # Drain all captured process epochs. Only a still-owned, same-epoch
+        # fixture process may be signalled; never use a remembered PID alone.
+        remaining = dict(owned)
+        for action in (None, signal.SIGTERM, signal.SIGKILL):
+            try:
+                current = self.fixture_processes()
+                # Include late-born helpers that appeared during provider stop.
+                for pid, identity in current.items():
+                    owned.setdefault(pid, identity)
+                remaining = {}
+                for pid, identity in owned.items():
+                    try:
+                        if self.epoch(pid) == identity:
+                            remaining[pid] = identity
+                    except subprocess.CalledProcessError:
+                        pass
+                if not remaining:
+                    break
+                if action is not None:
+                    signalled = []
+                    for pid, identity in remaining.items():
+                        if current.get(pid) != identity:
+                            errors.append('live-process-left-private-cwd')
+                            continue
+                        if self.epoch(pid) == identity:
+                            try:
+                                os.kill(pid, action)
+                                signalled.append(pid)
+                            except ProcessLookupError:
+                                pass
+                    self.receipt.setdefault('settlement_actions', []).append({'signal': action.name, 'pids': signalled})
+                deadline = time.monotonic()+5
+                while time.monotonic() < deadline:
+                    alive = {}
+                    for pid, identity in remaining.items():
+                        try:
+                            if self.epoch(pid) == identity:
+                                alive[pid] = identity
+                        except subprocess.CalledProcessError:
+                            pass
+                    remaining = alive
+                    if not remaining:
+                        break
+                    time.sleep(.1)
+            except (Refusal, OSError, subprocess.SubprocessError):
+                errors.append('owned-process-settlement-inspector')
+                break
+        if remaining:
+            errors.append('owned-process-epochs-remain')
+        self.receipt['cleanup'] = {'passed': not errors, 'failures': errors,
+            'captured_pids': list(owned), 'remaining_pids': list(remaining),
+            'private_tmux_socket': str(self.tmuxsocket)}
+        for stream in self.streams:
+            stream.close()
+        return not errors
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    for name in ('native', 'webmux', 'node', 'auth-home', 'output'):
+        parser.add_argument('--'+name, type=Path, required=True)
+    for name in ('native-sha256', 'webmux-sha256', 'model'):
+        parser.add_argument('--'+name, required=True)
+    args = parser.parse_args()
+    require(os.uname().sysname == 'Darwin', 'native-macos-required')
+    require(not args.output.exists(), 'exclusive-output-required')
+    for name in ('native', 'webmux'):
+        binary = getattr(args, name).resolve(strict=True)
+        expected = getattr(args, name+'_sha256')
+        require(re.fullmatch('[0-9a-f]{64}', expected) and digest(binary) == expected, name+'-hash-mismatch')
+        setattr(args, name, binary)
+    args.auth_home = args.auth_home.resolve(strict=True)
+    args.node = args.node.resolve(strict=True)
+    fixture = Fixture(args)
+    passed = False
+    try:
+        fixture.qualify()
+        passed = True
+    except (Refusal, OSError, ValueError, TypeError, KeyError, subprocess.SubprocessError) as error:
+        # Never put native error bodies, raw model text or capabilities in receipts.
+        fixture.receipt['failure'] = str(error) if isinstance(error, Refusal) else type(error).__name__
+        fixture.receipt['model_request_outcome_uncertain'] = fixture.receipt['model_requests_attempted'] != fixture.receipt['model_requests_submitted']
+    finally:
+        try:
+            settled = fixture.cleanup()
+        except (Refusal, OSError, ValueError, subprocess.SubprocessError) as error:
+            settled = False
+            fixture.receipt['cleanup'] = {'passed': False, 'failure': type(error).__name__}
+        fixture.receipt['passed'] = passed and settled
+        fixture.receipt['active_work_qualified'] = passed and settled
+        fixture.receipt['four_session_survival_qualified'] = passed and settled
+        fixture.save()
+        fixture.output.close()
+    print(json.dumps({'passed': fixture.receipt['passed'], 'fixture_root': str(fixture.root), 'failure': fixture.receipt.get('failure')}))
+    return 0 if fixture.receipt['passed'] else 1
+
+
+if __name__ == '__main__':
+    try:
+        raise SystemExit(main())
+    except Refusal as error:
+        print(json.dumps({'passed': False, 'preflight_failure': str(error)}))
+        raise SystemExit(1)

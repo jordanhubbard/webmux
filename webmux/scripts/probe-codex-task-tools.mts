@@ -21,7 +21,7 @@ export class ProbeFailure extends Error {
 }
 
 type JsonObject = Record<string, unknown>;
-export type RpcMethod = 'thread/read' | 'thread/turns/list' | 'mcpServerStatus/list' | 'mcpServer/tool/call';
+export type RpcMethod = 'turn/start' | 'thread/read' | 'thread/turns/list' | 'mcpServerStatus/list' | 'mcpServer/tool/call';
 export interface RpcChannel { call(method: RpcMethod, params: JsonObject): Promise<unknown>; close(): void; }
 export interface ProbeOptions { socket?: string; cwd?: string; thread?: string; viewerPid: number; daemonPid: number; turn?: string; }
 export interface ProbeDependencies {
@@ -70,7 +70,7 @@ export async function owns(pid: number, args: string[], expected: string): Promi
   return lines.includes(`p${pid}`) && lines.includes(`n${expected}`);
 }
 
-async function authorizeSocket(socket: string): Promise<string> {
+export async function authorizeSocket(socket: string): Promise<string> {
   if (process.platform !== 'darwin') throw new ProbeFailure('platform', 'native-macos-required');
   const real = await fs.realpath(socket);
   const [info, directory] = await Promise.all([fs.stat(real), fs.stat(path.dirname(real))]);

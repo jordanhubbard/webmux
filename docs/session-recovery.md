@@ -3065,3 +3065,47 @@ Native fixture controls and the narrower live-process check are recorded in
 They qualify conversation discovery only. Authenticated Windows coding and
 recovery remain open: the first ARM64 Codex 0.169.0 tool attempt failed before
 command dispatch with a sandbox runner `pipe-in` connection timeout.
+
+## Isolated four-Codex continuity qualification (#710)
+
+`scripts/qualify-four-codex-sessions.py` owns a private WebMux controller, private
+`TMUX_TMPDIR`, four durable local providers, and one separately managed native
+daemon selected from an independently hash-verified binary. It references only
+the supplied account's `auth.json`; configuration, packages, updater settings,
+projects and conversations are private. The installed controller, daemon and
+user viewers are not targets. A preexisting receipt is refused.
+
+Each actual TUI first loads a distinct synthetic saved conversation and must
+publish its selected ID through the actual WebMux launcher. Every registered
+management listener must belong to the expected native executable. The fixture
+calls each thread's real authenticated `codex_tui/read_thread` before submitting
+any model request. A broken baseline ends qualification before disruption.
+
+The fixture then submits one new coding request per thread, asking the model to
+write a small Python program, check assertions, and run a bounded foreground loop.
+Progress counts only when returned as command output by that same thread's
+native management tool. Prompt text, command source, file growth alone, another
+turn and a completed turn cannot establish continuing work. The exact original
+thread and turn IDs, native viewer, durable provider and execution-daemon epochs
+must remain unchanged while all four work counters advance after orderly
+controller restart, controller SIGKILL/restart, and explicit provider reconnect.
+No coding request is replayed, and the native daemon is never restarted to pass.
+
+For example, after the matching native handoff and selection builds pass:
+
+```sh
+python3 scripts/qualify-four-codex-sessions.py \
+  --native /absolute/verified/codex --native-sha256 NATIVE_SHA256 \
+  --webmux /absolute/verified/webmux --webmux-sha256 WEBMUX_SHA256 \
+  --node /absolute/node24 --auth-home /original/account/.codex \
+  --model ACCOUNT_MODEL --output /new/private/receipt.json
+```
+
+The four original model turns must finish after their private STOP files are
+created. Success also requires process settlement; same-account process epochs
+and actual private working directories fence any cleanup signals. Original
+failure receipts and fixture files remain available. The small Python refusal
+controls and TypeScript checks do not qualify native continuity. A native run
+is still required; this fixture covers local durable providers and managed
+native viewers. SSH transports, installed/legacy viewer migration, worktree-tool
+parity and the four current user sessions require their own evidence.
