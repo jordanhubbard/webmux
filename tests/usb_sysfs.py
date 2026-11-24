@@ -39,7 +39,15 @@ def imported_disk_with_payload(expected, discover=imported_disk):
     if disk is None:
         return None
     try:
-        with disk.open('rb', buffering=0) as source:
+        opened = disk.open('rb', buffering=0)
+    except OSError as error:
+        # Linux can expose the node before its block device is live. ENXIO
+        # from open is absence; ENXIO from an established read remains fatal.
+        if error.errno in (errno.ENOENT, errno.ENODEV, errno.ENXIO):
+            return None
+        raise
+    try:
+        with opened as source:
             actual = source.read(len(expected))
     except OSError as error:
         if error.errno in (errno.ENOENT, errno.ENODEV):
