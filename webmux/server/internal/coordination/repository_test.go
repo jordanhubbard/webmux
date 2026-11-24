@@ -113,7 +113,7 @@ func TestRepositoryRemoteAtSignInPathDoesNotChooseHost(t *testing.T) {
 	}
 }
 
-// Exercise the actual witness path, including its optional config miss. A
+// Exercise the actual witness path, including its optional config value. A
 // source-only trace cannot diagnose a failure in these earlier commands.
 func TestRepositoryWitnessTraceRetainsIdentityAndDeadline(t *testing.T) {
 	directory := repositoryFixture(t)
@@ -129,13 +129,20 @@ func TestRepositoryWitnessTraceRetainsIdentityAndDeadline(t *testing.T) {
 		t.Fatal("trace changed repository identity", err)
 	}
 	var phases []string
-	for _, event := range events {
+	for i, event := range events {
+		wantResolution := "reused"
+		if i == 0 {
+			wantResolution = "initial"
+		}
+		if event.ExecutableResolution != wantResolution {
+			t.Fatal("witness executable resolution changed", event)
+		}
 		phases = append(phases, event.Phase)
 		if !event.HasDeadline || event.Remaining <= 0 || event.Remaining > 2*time.Second {
 			t.Fatal("witness deadline changed", event)
 		}
 	}
-	if !slices.Equal(phases, []string{"repository.shallow", "repository.toplevel", "repository.origin", "repository.roots", "repository.branch", "repository.ignorecase"}) {
+	if !slices.Equal(phases, []string{"repository.layout", "repository.config", "repository.roots"}) {
 		t.Fatal("missing witness evidence", phases)
 	}
 	ctx, cancel := context.WithCancel(t.Context())
@@ -150,7 +157,7 @@ func TestRepositoryWitnessTraceRetainsIdentityAndDeadline(t *testing.T) {
 }
 
 func TestRepositoryIdentityRefusesLateCancellation(t *testing.T) {
-	for _, phase := range []string{"repository.roots", "repository.branch", "repository.ignorecase"} {
+	for _, phase := range []string{"repository.layout", "repository.config", "repository.roots"} {
 		t.Run(phase, func(t *testing.T) {
 			directory := repositoryFixture(t)
 			ctx, cancel := context.WithCancel(t.Context())
@@ -185,5 +192,41 @@ func TestRepositoryIdentityAllowsDetachedAndMissingIgnorecase(t *testing.T) {
 	detached, err := InspectRepository(t.Context(), directory)
 	if err != nil || detached == nil || detached.ID != attached.ID || detached.Branch != "(detached)" || detached.CaseFold {
 		t.Fatal("detached repository with missing optional ignorecase refused", detached, err)
+	}
+}
+
+func TestRepositoryBatchedConfigMatchesLocalGet(t *testing.T) {
+	directory := repositoryFixture(t)
+	gitFixture(t, directory, "config", "--local", "--add", "remote.origin.url", "https://example.test/last/project.git")
+	gitFixture(t, directory, "config", "--local", "--replace-all", "core.ignorecase", "false")
+	gitFixture(t, directory, "config", "--local", "--add", "core.ignorecase", "true")
+	remote := gitFixture(t, directory, "config", "--local", "--get", "remote.origin.url")
+	folded := gitFixture(t, directory, "config", "--local", "--get", "core.ignorecase")
+	canonical, ok := canonicalRepositoryRemote(remote)
+	if !ok || folded != "true" {
+		t.Fatal("fixture does not exercise last-value semantics")
+	}
+	got, err := InspectRepository(t.Context(), directory)
+	if err != nil || got == nil || got.Repository != canonical || !got.CaseFold {
+		t.Fatal("batched config differs from local --get", got, err)
+	}
+	// Git emits valueless entries without a key/value newline. Previously
+	// --get returned an empty string, which does not enable case folding.
+	config := filepath.Join(directory, ".git", "config")
+	file, err := os.OpenFile(config, os.O_APPEND|os.O_WRONLY, 0600)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, writeErr := file.WriteString("\n[core]\nignorecase\n")
+	closeErr := file.Close()
+	if writeErr != nil || closeErr != nil {
+		t.Fatal(writeErr, closeErr)
+	}
+	if value := gitFixture(t, directory, "config", "--local", "--get", "core.ignorecase"); value != "" {
+		t.Fatal("valueless fixture changed", value)
+	}
+	got, err = InspectRepository(t.Context(), directory)
+	if err != nil || got == nil || got.Repository != canonical || got.CaseFold {
+		t.Fatal("valueless optional config changed identity", got, err)
 	}
 }

@@ -14,14 +14,15 @@ import (
 // process creation; Wait includes Git work and scheduling.
 // These timings alone cannot distinguish CPU scheduling from Git execution.
 type Event struct {
-	Prepare     time.Duration `json:"prepare_ns"`
-	Phase       string        `json:"phase"`
-	Start       time.Duration `json:"start_ns"`
-	Wait        time.Duration `json:"wait_ns"`
-	Remaining   time.Duration `json:"remaining_ns"`
-	HasDeadline bool          `json:"has_deadline"`
-	Outcome     string        `json:"outcome"`
-	ExitCode    int           `json:"exit_code"`
+	ExecutableResolution string        `json:"executable_resolution,omitempty"`
+	Prepare              time.Duration `json:"prepare_ns"`
+	Phase                string        `json:"phase"`
+	Start                time.Duration `json:"start_ns"`
+	Wait                 time.Duration `json:"wait_ns"`
+	Remaining            time.Duration `json:"remaining_ns"`
+	HasDeadline          bool          `json:"has_deadline"`
+	Outcome              string        `json:"outcome"`
+	ExitCode             int           `json:"exit_code"`
 }
 
 type traceKey struct{}
@@ -36,12 +37,15 @@ func WithTrace(ctx context.Context, observe func(Event)) context.Context {
 // Phase must be a fixed label selected by the caller, never repository data.
 // Capture preparedAt immediately before exec.CommandContext, which may look up
 // the Git executable synchronously before process creation starts.
-func Run(ctx context.Context, phase string, preparedAt time.Time, command *exec.Cmd) error {
+func Run(ctx context.Context, phase string, preparedAt time.Time, command *exec.Cmd, preparation ...Preparation) error {
 	observe, _ := ctx.Value(traceKey{}).(func(Event))
 	if observe == nil {
 		return command.Run()
 	}
 	event := Event{Phase: phase, Prepare: time.Since(preparedAt), ExitCode: -1}
+	if len(preparation) != 0 {
+		event.ExecutableResolution = preparation[0].resolution
+	}
 	if deadline, ok := ctx.Deadline(); ok {
 		event.HasDeadline = true
 		event.Remaining = deadline.Sub(preparedAt)
