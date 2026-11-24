@@ -171,8 +171,9 @@ The receiving wrapper rejects wrong-process, replayed, oversized or unsupported
 records. It independently checks the selected UUID against the invocation
 account's native store and original project before signing `native-selection`
 evidence for that terminal. Channel loss or an unverified selection removes
-confidence while retaining the previous UUID as a manual choice. Once this
-channel has reported, process-file fallback cannot overwrite it after a switch.
+confidence while retaining the previous UUID as a manual choice. While this
+channel is reserved, process-file fallback cannot promote an unrelated file
+before the first report or overwrite a later selected conversation.
 
 The matching native source is retained on the
 [Codex prototype branch](https://github.com/jordanhubbard/codex/tree/fix/tui-selected-thread-observer).
