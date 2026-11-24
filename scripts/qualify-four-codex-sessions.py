@@ -225,6 +225,7 @@ class Fixture:
             return json.loads(value) if value else None
 
     def ready(self):
+        require(self.controller is not None and self.controller.poll() is None, 'controller-exited-before-ready')
         try:
             return self.api('/api/health').get('status') == 'ok'
         except OSError:
@@ -232,7 +233,7 @@ class Fixture:
 
     def start_controller(self):
         require(self.controller is None or self.controller.poll() is not None, 'controller-already-live')
-        self.controller = subprocess.Popen([str(self.args.webmux), '-listen', self.address],
+        self.controller = subprocess.Popen([str(self.args.webmux), '-root', str(self.repo / 'webmux'), '-listen', self.address],
             env=self.env, cwd=self.root, stdin=subprocess.DEVNULL,
             stdout=self.log(f'controller-{len(self.receipt["phases"])}.log'), stderr=subprocess.STDOUT,
             start_new_session=True)
