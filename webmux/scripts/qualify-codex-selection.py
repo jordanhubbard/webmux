@@ -4,6 +4,7 @@ This is UI selection evidence, not actual model/coding-work or survival evidence
 """
 import argparse
 import base64
+import binascii
 import datetime
 import fcntl
 import hashlib
@@ -33,6 +34,7 @@ parser.add_argument('--daemon-sha256', help='Managed profile: independently reco
 parser.add_argument('--webmux-binary', help='Exercise the actual WebMux launcher and signed recovery channel')
 parser.add_argument('--webmux-sha256', help='SHA-256 of the exact WebMux launcher build')
 parser.add_argument('--companion', action='store_true', help='Require independent selection in a second viewer on the same daemon')
+parser.add_argument('--reconnect', action='store_true', help='Require selection to return after replacing only the isolated managed daemon')
 args = parser.parse_args()
 if not re.fullmatch(r'[0-9a-f]{64}', args.expected_sha256):
     parser.error('--expected-sha256 must be 64 lowercase hexadecimal characters')
@@ -42,6 +44,8 @@ if args.webmux_binary and not re.fullmatch(r'[0-9a-f]{64}', args.webmux_sha256 o
     parser.error('--webmux-binary requires --webmux-sha256')
 if args.companion and args.profile != 'managed':
     parser.error('--companion requires the managed profile')
+if args.reconnect and args.profile != 'managed':
+    parser.error('--reconnect requires the managed profile')
 binary = Path(args.binary).resolve()
 output = Path(args.output).resolve()
 assert not output.exists(), 'preserve prior receipts'
@@ -75,9 +79,11 @@ os.chmod(home / 'config.toml', 0o600)
 receipt = {'schema': 1, 'passed': False, 'fixture_root': str(root), 'selection_events': [],
            'profile': args.profile,
            'observer': 'webmux-signed-recovery' if args.webmux_binary else 'native-pipe',
+           'host_cache_qualified': False,
            'active_work_qualified': False, 'four_session_survival_qualified': False,
            'fixture_kind': 'synthetic saved rollouts; actual native CLI and app-server; no model execution'}
 server = viewer = None
+retired_processes = []
 companion = None
 companion_reader = companion_writer = companion_master = companion_slave = None
 companion_buffer = companion_tail = b''
@@ -88,7 +94,7 @@ logs = []
 pipe_buffer = b''
 terminal_tail = b''
 packet_buffer = b''
-wrapper_key = uuid.uuid4().hex + uuid.uuid4().hex
+wrapper_key = uuid.uuid4().hex
 wrapper_instance = uuid.uuid4().hex
 output.parent.mkdir(parents=True, exist_ok=True)
 receipt_file = output.open('x')
@@ -122,6 +128,7 @@ class ManagedDaemon:
         self.pid = None
         self.identity = None
         self.stop_exit_code = None
+        self.command_count = 0
 
     def launch(self):
         package = home / 'packages' / 'app-server-daemon'
@@ -133,6 +140,11 @@ class ManagedDaemon:
         settings.write_text(json.dumps({'remoteControlEnabled': False, 'featureOverrides': {},
             'shutdownGraceSeconds': 2, 'updater': {'autoUpdateEnabled': False, 'updateIntervalMinutes': 60}}))
         os.chmod(settings, 0o600)
+        self.start()
+
+    def start(self):
+        settings = home / 'app-server-daemon' / 'settings.json'
+        self.stop_exit_code = None
         try:
             result = self.command('start')
         except (OSError, subprocess.SubprocessError):
@@ -156,12 +168,16 @@ class ManagedDaemon:
         assert not (settings.parent / 'daemon-updater.pid').exists()
         receipt['managed_start'] = {'exit_code': result.returncode, 'pid': self.pid,
             'epoch': self.identity, 'socket_path': str(socket_path), 'updater_disabled': True}
+        receipt.setdefault('managed_starts', []).append(receipt['managed_start'])
 
     def command(self, action):
         result = subprocess.run([str(self.executable), 'app-server', 'daemon', action],
             stdin=subprocess.DEVNULL, capture_output=True, text=True, cwd=project, env=env, timeout=30)
-        (root / f'managed-{action}.log').write_text(result.stdout + result.stderr)
-        os.chmod(root / f'managed-{action}.log', 0o600)
+        self.command_count += 1
+        log = root / f'managed-{self.command_count}-{action}.log'
+        with log.open('x') as stream:
+            stream.write(result.stdout + result.stderr)
+        os.chmod(log, 0o600)
         result.check_returncode()
         return result
 
@@ -299,7 +315,16 @@ def pump(duration, expected='unmatched'):
                             break
                         encoded = packet_buffer[start+len(prefix):end]
                         packet_buffer = packet_buffer[end+1:]
-                        item = json.loads(base64.urlsafe_b64decode(encoded + b'=' * (-len(encoded) % 4)))
+                        try:
+                            item = json.loads(base64.b64decode(encoded + b'=' * (-len(encoded) % 4), altchars=b'-_', validate=True))
+                        except (binascii.Error, json.JSONDecodeError, UnicodeDecodeError):
+                            # Match recovery.Decoder.Feed: discard malformed PTY
+                            # frames. They never establish a selection or satisfy
+                            # a wait; a fresh signed event is still required within
+                            # the original deadline. Preserve transport loss counts.
+                            receipt['malformed_metadata_frames_discarded'] = receipt.get('malformed_metadata_frames_discarded', 0) + 1
+                            checkpoint()
+                            continue
                         signature = item.pop('signature')
                         canonical = json.dumps(item, separators=(',', ':'), ensure_ascii=False).replace('<', '\\u003c').replace('>', '\\u003e').replace('&', '\\u0026').encode()
                         actual = base64.urlsafe_b64encode(hmac.new(wrapper_key.encode(), canonical, hashlib.sha256).digest()).rstrip(b'=').decode()
@@ -422,6 +447,7 @@ try:
         ['--no-alt-screen', 'resume', ids[0]], stdin=slave, stdout=slave, stderr=slave,
         cwd=project, env=env, pass_fds=(writer,) if writer is not None else (), preexec_fn=own_terminal)
     receipt['viewer_pid'] = viewer.pid
+    viewer_epoch = epoch(viewer.pid)
     if writer is not None:
         os.close(writer)
     writer = None
@@ -495,6 +521,26 @@ try:
     assert args.profile == 'remote-negative' or len(receipt['selection_events']) > previous_count
     assert all(item['thread_id'] is None for item in receipt['selection_events'][previous_count:])
     receipt['loss_demoted_to_unavailable'] = True
+    if args.reconnect:
+        retired_processes.append(server.closure())
+        assert retired_processes[-1]['not_running']
+        old_pid = server.pid
+        assert settle_groups({old_pid}) == []
+        companion_target = ids[1] if args.companion else None
+        companion_transition = True
+        server.start()
+        assert server.pid != old_pid
+        checkpoint()
+        pump(40, ids[0])
+        if args.companion:
+            until = time.monotonic() + 40
+            while receipt['companion_events'][-1]['thread_id'] != companion_target:
+                if time.monotonic() >= until:
+                    raise TimeoutError('companion did not recover its selected conversation')
+                pump(0.2)
+        assert viewer.poll() is None and epoch(viewer.pid) == viewer_epoch
+        receipt['reconnect_selection_qualified'] = True
+        receipt['native_daemon_continuity_qualified'] = False
 except Exception as error:
     receipt['error'] = f'{type(error).__name__}: {error}'
 finally:
@@ -525,7 +571,7 @@ finally:
     for handle in logs:
         handle.close()
     model_guard.close()
-    receipt['owned_processes_closed'] = [
+    receipt['owned_processes_closed'] = retired_processes + [
         process.closure() if isinstance(process, ManagedDaemon) else
         {'pid': process.pid, 'exit_code': process.poll(), 'not_running': process.poll() is not None}
         for process in [viewer, companion, server] if process is not None and process.pid is not None
@@ -543,11 +589,13 @@ finally:
             item['not_running'] for item in receipt['owned_processes_closed']
         )
     )
+    receipt['framing_integrity_qualified'] = receipt.get('malformed_metadata_frames_discarded', 0) == 0
     receipt['passed'] = bool(
         (receipt.get('interactive_switch_qualified') or receipt.get('remote_selection_unavailable'))
         and receipt.get('loss_demoted_to_unavailable')
         and receipt['cleanup_qualified']
         and (not args.companion or receipt.get('concurrent_viewer_isolation_qualified'))
+        and (not args.reconnect or receipt.get('reconnect_selection_qualified'))
         and not receipt.get('error')
     )
     checkpoint()
