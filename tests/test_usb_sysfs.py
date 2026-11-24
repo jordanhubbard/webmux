@@ -116,6 +116,26 @@ class ReadableDiskTests(unittest.TestCase):
         self.assertIsNone(imported_disk_with_payload(self.payload, lambda: next(discover)))
         self.assertEqual(imported_disk_with_payload(self.payload, lambda: next(discover)), replacement)
 
+    def test_unconfigured_block_node_is_rediscovered_before_readiness(self):
+        replacement = self.root / 'sdb'
+        replacement.write_bytes(self.payload)
+        discover = iter([self.disk, replacement])
+        original = Path.open
+        def open_node(path, *args, **kwargs):
+            if path == self.disk:
+                raise OSError(errno.ENXIO, 'block device is not live')
+            return original(path, *args, **kwargs)
+        with patch.object(Path, 'open', open_node):
+            self.assertIsNone(imported_disk_with_payload(self.payload, lambda: next(discover)))
+            self.assertEqual(imported_disk_with_payload(self.payload, lambda: next(discover)), replacement)
+
+    def test_enxio_after_open_is_a_read_failure(self):
+        with patch.object(Path, 'open') as opened:
+            opened.return_value.__enter__.return_value.read.side_effect = OSError(errno.ENXIO, 'read failed')
+            with self.assertRaises(OSError) as raised:
+                imported_disk_with_payload(self.payload, lambda: self.disk)
+            self.assertEqual(raised.exception.errno, errno.ENXIO)
+
     def test_absent_or_unmatched_fixture_does_not_open_a_device(self):
         with patch.object(Path, 'open', side_effect=AssertionError('must not open')):
             self.assertIsNone(imported_disk_with_payload(self.payload, lambda: None))
@@ -131,7 +151,7 @@ class ReadableDiskTests(unittest.TestCase):
                     self.assertIsNone(imported_disk_with_payload(self.payload, lambda: self.disk))
 
     def test_permission_and_unexpected_io_errors_fail_immediately(self):
-        for code in (errno.EACCES, errno.EIO, errno.ENXIO, None):
+        for code in (errno.EACCES, errno.EIO, None):
             with self.subTest(errno=code):
                 with patch.object(Path, 'open', side_effect=OSError(code, 'unexpected')):
                     with self.assertRaises(OSError) as raised:

@@ -3066,6 +3066,85 @@ They qualify conversation discovery only. Authenticated Windows coding and
 recovery remain open: the first ARM64 Codex 0.169.0 tool attempt failed before
 command dispatch with a sandbox runner `pipe-in` connection timeout.
 
+## Isolated four-Codex continuity qualification (#710)
+
+`scripts/qualify-four-codex-sessions.py` owns a private WebMux controller, private
+`TMUX_TMPDIR`, four durable local providers, and one separately managed native
+daemon selected from an independently hash-verified binary. It references only
+the supplied account's `auth.json`; configuration, packages, updater settings,
+projects and conversations are private. The installed controller, daemon and
+user viewers are not targets. A preexisting receipt is refused.
+
+The coordinator allows up to 120 seconds for the lifecycle start command because
+the unoptimized producer fingerprints the entire executable before spawning. A
+525 MB diagnostic artifact took about 50 seconds in that preparation stage; the
+original producer is about 954 MB. This outer fixture allowance does not change
+native readiness, management RPC or production source deadlines. Lifecycle
+elapsed times and failures remain in the receipt.
+
+Coding qualification also requires the producer's matching executable
+`codex-code-mode-host` adjacent to the supplied CLI, with its independent hash.
+Missing or mismatched runtime helpers are refused before fixture creation or
+model dispatch; a CLI-only metadata qualifier does not establish coding ability.
+
+Each actual TUI first loads a distinct synthetic saved conversation and must
+publish its selected ID through the actual WebMux launcher. Every registered
+management listener must belong to the expected native executable. The fixture
+calls each thread's real authenticated `codex_tui/read_thread` before submitting
+any model request. A broken baseline ends qualification before disruption.
+Each completed baseline is journaled with thread/session IDs, viewer/provider
+epochs, management listener port, and project/worktree-read digests before the
+next viewer starts. Login-profile PATH changes cannot select another CLI: the
+fixture uses an absolute private Go alias and an explicit private native lookup.
+
+The fixture then submits one new coding request per thread, asking the model to
+write a small Python program, check assertions, and run a bounded foreground loop.
+Progress counts only when returned as command output by that same thread's
+native management tool. Both plain `commandExecution` output and Code Mode
+`exec`/`wait` delegated command-result JSON are supported. Code Mode summaries,
+arbitrary console dictionaries and command arguments cannot contribute. Each
+actual Python worker must also be found by the kernel in its unique project
+with `proof.py` in its command, and its process epoch and program digest must
+remain unchanged through controller phases and viewer migration. Prompt text, command source, file growth alone, another
+turn and a completed turn cannot establish continuing work. The exact original
+thread and turn IDs, native viewer, durable provider and execution-daemon epochs
+must remain unchanged while all four work counters advance after orderly
+controller restart, controller SIGKILL/restart, and explicit provider reconnect.
+No coding request is replayed, and the native daemon is never restarted to pass.
+
+For example, after the matching native handoff and selection builds pass:
+
+```sh
+python3 scripts/qualify-four-codex-sessions.py \
+  --native /absolute/verified/codex --native-sha256 NATIVE_SHA256 \
+  --webmux /absolute/verified/webmux --webmux-sha256 WEBMUX_SHA256 \
+  --code-mode-host-sha256 MATCHING_HELPER_SHA256 \
+  --node /absolute/node24 --auth-home /original/account/.codex \
+  --model ACCOUNT_MODEL --output /new/private/receipt.json
+```
+
+The default `--profile full` requires every phase below. An explicit
+`--profile controller` qualifies only the four original coding turns across
+controller restart, crash and reconnect, plus their completion and cleanup.
+It never replaces viewers and always leaves `active_viewer_handoff_qualified`
+and `worktree_read_parity_qualified` false. This permits independent controller
+qualification while the separate native handoff build is pending.
+
+After those controller phases preserve the four original viewer epochs, a
+separately recorded migration phase replaces each fixture viewer. The original
+model turn, provider and execution-daemon epochs must persist, work must advance
+through the replacement viewer's actual authenticated management tool, and the
+worktree tool inventory and `list_worktrees` results must retain parity. Worktree
+creation is not qualified by a read-only listing.
+
+The four original model turns must finish after their private STOP files are
+created. Success also requires process settlement; same-account process epochs
+and actual private working directories fence any cleanup signals. Original
+failure receipts and fixture files remain available. The small Python refusal
+controls and TypeScript checks do not qualify native continuity. A native run
+is still required; this fixture covers local durable providers and managed
+native viewers. SSH transports, installed/legacy viewer migration, worktree-tool
+parity and the four current user sessions require their own evidence.
 
 The selection qualifier's `--profile forwarded-default` binds an owned byte relay
 directly at the private fixture's advertised default Codex socket. It requires
@@ -3074,3 +3153,14 @@ and only unavailable selection events. Socket ownership and permissions must
 not promote that forward into execution-host confidence. The fixture backend,
 relay, viewer and owned helper groups must all settle. This checks default-path
 classification; it does not qualify SSH transport or any model work.
+
+The four-Codex coordinator also accepts `--ssh-host puck.local` to exercise real
+OpenSSH. It first verifies the peer's kernel boot identity and account UID match
+the local execution account used by its process/socket inspectors. The private
+SSH launcher scopes remote helper lookup, HOME, native configuration, tmux and
+recovery caches to the fixture, and disables SSH connection multiplexing. It
+uses the supplied WebMux binary as a private helper without installing it or
+attaching to the user's tmux server. Each viewer explicitly selects the owned
+managed daemon. Other physical execution hosts need their own native binary and
+process-inspection adapter; this profile cannot map their PIDs into the local
+kernel. Source/refusal controls alone do not qualify the SSH coding profile.
