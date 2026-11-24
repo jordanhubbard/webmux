@@ -170,7 +170,35 @@ class Fixture:
 
     def run(self, argv, **kw):
         return subprocess.run(argv, env=self.env, cwd=self.root, stdin=subprocess.DEVNULL,
-            capture_output=True, text=True, timeout=15, check=True, **kw)
+            capture_output=True, text=True, timeout=kw.pop('timeout', 15), check=True, **kw)
+
+    def lifecycle(self, action):
+        # Match the existing managed selection qualifier. Native readiness has
+        # its own 30-second bound; a generic 15-second inspector must not cut
+        # off executable fingerprinting/startup before that can run.
+        rows = self.receipt.setdefault('native_lifecycle', [])
+        row = {'action': action, 'wrapper_timeout_seconds': 30}
+        rows.append(row)
+        self.save()
+        started = time.monotonic()
+        log = self.log(f'native-lifecycle-{len(rows)}-{action}.log')
+        def retain(value):
+            if value:
+                log.write(value.encode() if isinstance(value, str) else value)
+        try:
+            result = self.run([str(self.args.native), 'app-server', 'daemon', action], timeout=30)
+            retain(result.stdout)
+            retain(result.stderr)
+            row['exit_code'] = result.returncode
+            return result
+        except subprocess.SubprocessError as error:
+            retain(getattr(error, 'stdout', None))
+            retain(getattr(error, 'stderr', None))
+            row['failure'] = type(error).__name__
+            raise
+        finally:
+            row['elapsed_ms'] = (time.monotonic()-started)*1000
+            self.save()
 
     def epoch(self, pid):
         data = self.run(['/bin/ps', '-p', str(pid), '-o', 'uid=,lstart=,comm=']).stdout.strip()
@@ -248,7 +276,7 @@ class Fixture:
         (package / 'fixture/bin/codex').symlink_to(self.args.native)
         (package / 'current').symlink_to('fixture')
         settings = self.home / 'app-server-daemon/settings.json'
-        settings.parent.mkdir()
+        settings.parent.mkdir(mode=0o700)
         settings.write_text(json.dumps({'remoteControlEnabled': False, 'featureOverrides': {},
             'shutdownGraceSeconds': 2, 'updater': {'autoUpdateEnabled': False, 'updateIntervalMinutes': 60}}))
         os.chmod(settings, 0o600)
@@ -270,7 +298,7 @@ class Fixture:
             rollout.write_text(''.join(json.dumps(dict(timestamp=stamp, **row))+'\n' for row in records))
             os.chmod(rollout, 0o600)
         self.daemon_start_attempted = True
-        started = json.loads(self.run([str(self.args.native), 'app-server', 'daemon', 'start']).stdout)
+        started = json.loads(self.lifecycle('start').stdout)
         self.daemon_pid = started['pid']
         self.daemon_epoch = self.epoch(self.daemon_pid)
         self.record_process('native-daemon', self.daemon_pid)
@@ -540,7 +568,7 @@ class Fixture:
             if self.daemon_start_attempted and self.daemon_pid is None:
                 # A failed lifecycle start may already have published a child.
                 record = self.home / 'app-server-daemon/daemon.pid'
-                if record.is_file():
+                if record.is_file() and record.read_text().strip():
                     self.daemon_pid = json.loads(record.read_text())['pid']
                     image = self.run(['/usr/sbin/lsof', '-a', '-p', str(self.daemon_pid), '-d', 'txt', '-Fn']).stdout.splitlines()
                     require('n'+str(self.args.native) in image, 'partial-start-native-image')
@@ -548,7 +576,9 @@ class Fixture:
                     self.daemon_epoch = self.epoch(self.daemon_pid)
             if self.daemon_pid:
                 require(self.epoch(self.daemon_pid) == self.daemon_epoch, 'native-daemon-epoch-before-stop')
-                self.run([str(self.args.native), 'app-server', 'daemon', 'stop'])
+            if self.daemon_start_attempted:
+                stopped = json.loads(self.lifecycle('stop').stdout)
+                require(stopped.get('status') in ('stopped', 'notRunning'), 'native-lifecycle-stop-result')
         except (OSError, ValueError, KeyError, subprocess.SubprocessError, Refusal):
             errors.append('native-lifecycle-settlement')
         # Drain all captured process epochs. Only a still-owned, same-epoch
@@ -600,6 +630,12 @@ class Fixture:
                 break
         if remaining:
             errors.append('owned-process-epochs-remain')
+        # A failed start can reserve an empty PID file before spawning. Never
+        # infer closure from that file alone: also inspect the exact native image.
+        if self.daemon_start_attempted:
+            image = subprocess.run(['/usr/sbin/lsof', '-nP', str(self.args.native)], capture_output=True, text=True, timeout=10)
+            if image.returncode != 1 or image.stdout.strip():
+                errors.append('native-image-owners-remain-or-inspector-unavailable')
         self.receipt['cleanup'] = {'passed': not errors, 'failures': errors,
             'captured_pids': list(owned), 'remaining_pids': list(remaining),
             'private_tmux_socket': str(self.tmuxsocket)}
