@@ -157,6 +157,16 @@ func RunCLI(name string, args []string) error {
 	// Commands launched by a coding CLI do not own its terminal's foreground
 	// recovery identity. A new provider's distinct instance remains independent.
 	cmd.Env = append(cmd.Environ(), "WEBMUX_RECOVERY_NATIVE_PARENT="+instance)
+	var codexSelection *codexSelectionObserver
+	var codexSelections <-chan codexSelectionObservation
+	if cli == "codex" {
+		codexSelection = newCodexSelectionObserver(binary, cwd, args)
+		if codexSelection != nil {
+			defer codexSelection.close()
+			codexSelection.attach(cmd)
+			codexSelections = codexSelection.observations
+		}
+	}
 	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
 	if err := cmd.Start(); err != nil {
 		return err
@@ -164,8 +174,12 @@ func RunCLI(name string, args []string) error {
 	if observer != nil {
 		observer.start(cmd.Process.Pid)
 	}
+	if codexSelection != nil {
+		codexSelection.start(cmd.Process.Pid)
+	}
+	var latestCodexSelection codexSelectionObservation
 	var observeCodex func(string) (string, string)
-	if cli == "codex" {
+	if cli == "codex" && codexSelection == nil {
 		// Pin the launched process before Wait can release its OS handle. A
 		// later process reusing this PID must never own this conversation.
 		var closer io.Closer
@@ -192,6 +206,8 @@ func RunCLI(name string, args []string) error {
 			// already authenticated observations queued before completion.
 			for {
 				select {
+				case selection := <-codexSelections:
+					observeCodexSelection(&event, selection, cwd)
 				case observation := <-observations:
 					observeClaudeSession(&event, observation, cwd)
 				default:
@@ -206,6 +222,10 @@ func RunCLI(name string, args []string) error {
 			if sig != os.Interrupt || !term.IsTerminal(int(os.Stdin.Fd())) {
 				_ = cmd.Process.Signal(sig)
 			}
+		case selection := <-codexSelections:
+			latestCodexSelection = selection
+			observeCodexSelection(&event, selection, cwd)
+			emit()
 		case observation := <-observations:
 			observeClaudeSession(&event, observation, cwd)
 			claudeHookTranscript = observation.Transcript
@@ -225,7 +245,10 @@ func RunCLI(name string, args []string) error {
 					event.StateFile = cursorStateFile(event.SessionID, cwd)
 				}
 			}
-			if cli == "codex" {
+			if cli == "codex" && codexSelection != nil {
+				observeCodexSelection(&event, latestCodexSelection, cwd)
+			}
+			if cli == "codex" && codexSelection == nil {
 				currentID, currentFile := observeCodex(cwd)
 				observeProcessState(&event, currentID, currentFile)
 			}

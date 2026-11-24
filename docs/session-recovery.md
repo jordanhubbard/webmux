@@ -148,6 +148,113 @@ resume requires process-state evidence; launch selectors, native hook
 observations and older records without provenance remain available only for an
 explicit exact-session choice. Native hooks can stop reporting when settings
 change, so their observations do not acquire automatic execution confidence.
+
+### Daemon-backed Codex selection channel (qualification pending)
+
+A shared Codex execution daemon owns rollout files independently of its terminal
+viewers. A viewer's launch selector is therefore insufficient after an in-process
+conversation switch. The experimental native patch for
+[#706](https://github.com/jordanhubbard/webmux/issues/706) adds
+`--selection-observer-fd` to the TUI. WebMux probes support before supplying an
+anonymous pipe unique to that launched viewer. Released clients without the
+option retain their existing behavior; caller-supplied channels are preserved.
+Only direct native executables qualify. Script launchers remain manual because
+they can advertise a child's help while closing inherited descriptors before
+launching it.
+
+The versioned channel reports only the launched PID, a monotonic sequence and the
+settled selected UUID (or null). It carries no prompts, paths, credentials or
+control requests. The native side closes inheritance before daemon bootstrap,
+uses atomic nonblocking writes, and reports no selection for disconnected,
+transitional, read-only or nonlocal views. The prototype admits embedded execution and the local-daemon target over a
+private same-account Unix socket. Explicit remote targets, WebSocket and cloud
+backends remain manual. A Unix socket can itself be forwarded: managed-process
+verification of the local-daemon classification, including its default-path
+alias, remains an execution-host qualification gate.
+
+The receiving wrapper rejects wrong-process, replayed, oversized or unsupported
+records. It independently checks the selected UUID against the invocation
+account's native store and original project before signing `native-selection`
+evidence for that terminal. Channel loss or an unverified selection removes
+confidence while retaining the previous UUID as a manual choice. While this
+channel is reserved, process-file fallback cannot promote an unrelated file
+before the first report or overwrite a later selected conversation.
+
+The matching native source is retained on the
+[Codex prototype branch](https://github.com/jordanhubbard/codex/tree/fix/tui-selected-thread-observer).
+Native build [`2edf03e`](https://github.com/jordanhubbard/codex/actions/runs/45319456514)
+compiled the full TUI and CLI and passed five observer controls on macOS arm64.
+It passed actual CLI/PTY A → B → A switches and daemon-loss demotion using
+synthetic saved conversations, first over an explicit fixture socket, then on a
+separate managed instance of the installed daemon binary. A further managed run
+passed through the actual WebMux Go launcher, which created the native pipe,
+verified native records and emitted signed recovery events. The qualification
+verified each signature and launch instance and required all owned process
+groups, including startup Git helpers, to settle. No model turn ran.
+
+The subsequent native draft rejects explicit remote targets and direct private
+sockets outside Codex's guarded execution directory. Its full native build and
+positive/negative execution-host qualification are pending. The earlier artifact
+results establish plumbing; they do not qualify this newer host policy.
+
+Reproduce a managed-profile publisher run from the application directory using
+Python 3, `lsof`, the exact native artifact/build receipt, and an independently
+hashed installed daemon executable:
+
+```sh
+python3 scripts/qualify-codex-selection.py \
+  --profile managed \
+  --binary /absolute/path/to/codex-selection-prototype \
+  --expected-sha256 BUILD_RECEIPT_SHA256 \
+  --daemon-binary /absolute/path/to/installed/codex \
+  --daemon-sha256 INSTALLED_DAEMON_SHA256 \
+  --output /absolute/path/to/new-receipt.json
+```
+
+Add `--webmux-binary /absolute/path/to/built/webmux --webmux-sha256 HASH` to
+exercise the actual WebMux launcher and signed consumer channel instead of
+reading the native pipe directly. The helper must be built from this branch.
+Add `--companion` in managed mode to require a second native viewer on that same
+daemon: it must remain on C while the primary switches A → B → A, then switch to
+B without changing the primary's selected A. Both must demote on daemon loss.
+This concurrent-viewer mechanism control passed on the earlier artifact; the
+current native host policy still requires its own rerun. `--reconnect` additionally
+requires the same viewers to recover their selections after replacing only the
+isolated daemon; it records daemon replacement separately from continuity.
+The first reconnect qualification stopped before replacement on interleaved PTY
+metadata ([#717](https://github.com/jordanhubbard/webmux/issues/717)). After aligning
+the qualifier with the product decoder's malformed-frame discard behavior, the
+same-viewer selection reconnect control passed on the earlier artifact. One
+malformed frame was discarded; fresh authenticated loss and selection events
+still met the original deadlines. `framing_integrity_qualified` remains false for
+that receipt and #717 remains open. No malformed frame counts as evidence. This
+harness checks the signed stream unless `--host-cache` is also supplied. That
+option provisions only private recovery state and an unused coordination
+socket directory through the real host RPC, enables fixture capture, rejects a
+wrong key, and requires independently signed host snapshots at A, B, A, loss
+and reconnect. It starts no durable provider or coordination listener. This
+host-state control also passed on the earlier artifact with strictly increasing
+saved revisions. It does not qualify controller or SSH recovery.
+`--profile remote-negative` requires selection to stay unavailable over an
+explicit remote fixture socket. `--profile legacy-remote` retains the original
+positive publication test for the earlier artifact only.
+
+The script creates a private `CODEX_HOME`, synthetic history, configuration and
+execution socket. Managed mode seeds a private package selection pointing to the
+read-only supplied daemon executable, disables its updater before launch, and
+uses the actual lifecycle CLI to start and stop that separate instance. It
+attaches the TUI through the verified managed default-path alias. It checks all
+binary hashes before launch and requires complete owned-process cleanup before
+marking a receipt passed. A detached daemon's absence is recorded separately
+from waitable child exit codes. Startup helpers are signaled only after their
+account and fixture working directory are verified. Existing user sessions are
+not targets. Failure receipts and logs are retained, including cleanup failures.
+
+Reconnect, host-boundary controls and current-head native/consumer qualification
+remain release gates. Automatic native resume
+remains gated.
+Task-management MCP handoff (#707), active coding work and four-session survival
+(#710) require their own complete qualification.
 Codex (direct process) and Cursor now have process-state observers. OpenCode
 1.19.5 exposes no selected conversation outside its interface
 ([details](#opencode-conversation-switches-2026-11-12)), so OpenCode recovery
@@ -2958,3 +3065,12 @@ Native fixture controls and the narrower live-process check are recorded in
 They qualify conversation discovery only. Authenticated Windows coding and
 recovery remain open: the first ARM64 Codex 0.169.0 tool attempt failed before
 command dispatch with a sandbox runner `pipe-in` connection timeout.
+
+
+The selection qualifier's `--profile forwarded-default` binds an owned byte relay
+directly at the private fixture's advertised default Codex socket. It requires
+bidirectional native traffic, rendering of the actual synthetic conversation,
+and only unavailable selection events. Socket ownership and permissions must
+not promote that forward into execution-host confidence. The fixture backend,
+relay, viewer and owned helper groups must all settle. This checks default-path
+classification; it does not qualify SSH transport or any model work.

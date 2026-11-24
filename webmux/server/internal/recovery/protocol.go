@@ -48,7 +48,7 @@ func (e Event) Validate() error {
 		return errors.New("unknown coordination interface evidence")
 	}
 	switch e.NativeEvidence {
-	case "", "launch-selector", "process-state", "native-hook", "unavailable":
+	case "", "launch-selector", "process-state", "native-hook", "native-selection", "unavailable":
 	default:
 		return errors.New("unknown native identity evidence")
 	}
