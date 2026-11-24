@@ -1,0 +1,98 @@
+{
+  "schema": "webmux-discovery-lifecycle-qualification/v1",
+  "source": "fe9c28d96bd175f84ffdcb93debe612dc5005709",
+  "base_main": "243575ed27f497f005da867813a560341c862b8c",
+  "passed": true,
+  "scope": "Actual protected cmd/webmux processes and browser enrollment; isolated homes and process-local Linux fixture certificate trust. Not installed-service, OS trust or real-agent/MAC acceptance.",
+  "runtime": {
+    "receiver": "darwin/arm64",
+    "controller": "linux/arm64",
+    "browser": "installed Google Chrome on macOS"
+  },
+  "checks": [
+    "actual Linux application discovers macOS HTTPS application without enrolling it",
+    "human browser configures the discovered HTTPS endpoint and explicitly verifies node/account identity",
+    "actual receiver restart and changed port migrate in the controller background without an open browser",
+    "actual controller restart retains verified peer identity and migrated endpoint",
+    "departed receiver expires from discovery while its verified configured peer remains retained and unreachable",
+    "same receiver rejoins discovery with its retained identity and no duplicate enrollment",
+    "normal policy restart disables browsing while the verified configured peer remains accessible"
+  ],
+  "bounds_seconds": {
+    "departure": 185,
+    "post_controller_restart_discovery": 38,
+    "rejoin_discovery": 38,
+    "rejoin_inventory": 8,
+    "disabled_controller_startup": 20
+  },
+  "observed": {
+    "departure_seconds": 119.44,
+    "rejoin_seconds_after_expiry": 1.559,
+    "departure_snapshots": 119,
+    "disabled_controller_udp_sockets": [],
+    "disabled_policy": {
+      "browse": false,
+      "advertise": false
+    }
+  },
+  "binary_sha256": {
+    "darwin": "c2e6dd0192ccb2891e006974c626d955d2537a8549dc42b3242d62a78db3427c",
+    "linux": "c88ada23a09c49bcd1f3b5c658c977d5cac40d6b9be5c39a2d2c50e629b3ea4b"
+  },
+  "sources_unchanged": true,
+  "cleanup": [
+    "completed",
+    "completed",
+    "completed"
+  ],
+  "private_artifacts_sha256": {
+    "receipt.json": "34432b84fd72fac16a9adce2b72504e4a6d3ceea32785325fbd8c020d898204e",
+    "controller.log": "8f6fc322e565360dbe81ffc8388fe71bc47337048da19f23452fc6f2c735232e",
+    "receiver.log": "ea1e1a1409add1a4e86b4181e0c18cfc3a826400e43e72ff7a712dc6fc1c2bf7",
+    "enrolled.png": "5fd56691d96be02a27e8c966e7c977fb78b0d0d16d653d959fadfc660c4eae21"
+  },
+  "failed_runs_retained": [
+    {
+      "run": "218d4c1",
+      "source": "218d4c12c1eb1997d70c2fd538a7383b58bfd391",
+      "passed": false,
+      "checks": [
+        "actual Linux application discovers macOS HTTPS application without enrolling it"
+      ],
+      "cleanup": [
+        "completed",
+        "completed",
+        "completed"
+      ],
+      "sources_unchanged": true,
+      "receipt_sha256": "3aecd66ffeed585afbc79835043dca014a81c7dd12a917fb9755e5cce6c5145e",
+      "cause": "Bundled Playwright browser absent; stopped before browser enrollment."
+    },
+    {
+      "run": "218d4c1-chrome",
+      "source": "218d4c12c1eb1997d70c2fd538a7383b58bfd391",
+      "passed": false,
+      "checks": [
+        "actual Linux application discovers macOS HTTPS application without enrolling it",
+        "human browser configures the discovered HTTPS endpoint and explicitly verifies node/account identity",
+        "actual receiver restart and changed port migrate in the controller background without an open browser",
+        "actual controller restart retains verified peer identity and migrated endpoint",
+        "departed receiver expires from discovery while its verified configured peer remains retained and unreachable",
+        "same receiver rejoins discovery with its retained identity and no duplicate enrollment"
+      ],
+      "cleanup": [
+        "completed",
+        "completed",
+        "completed"
+      ],
+      "sources_unchanged": true,
+      "receipt_sha256": "5c850ae9d66d9aea5c48824d387dd15a2d3d923d71ed98abc31ab370b69e423e",
+      "cause": "Qualifier incorrectly required API started:false for initialized disabled discovery object; lifecycle departure and rejoin passed before assertion failure."
+    }
+  ],
+  "limits": [
+    "Does not complete #631 or #664.",
+    "No installed-service, OS trust/network policy, existing provider or MAC fleet changes.",
+    "Other platform/IPv6, isolated multicast/spoofing and real-agent/MAC acceptance remain open."
+  ]
+}
