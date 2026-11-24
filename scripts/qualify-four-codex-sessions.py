@@ -173,11 +173,13 @@ class Fixture:
             capture_output=True, text=True, timeout=kw.pop('timeout', 15), check=True, **kw)
 
     def lifecycle(self, action):
-        # Match the existing managed selection qualifier. Native readiness has
-        # its own 30-second bound; a generic 15-second inspector must not cut
-        # off executable fingerprinting/startup before that can run.
+        # The unoptimized producer CLI fingerprints its entire executable before
+        # spawning: measured 525 MB took about 50 seconds on the qualification host.
+        # Reserve time for the ~954 MB original without changing native's own
+        # readiness deadline, any RPC deadline, or production source deadlines.
+        timeout = 120 if action == 'start' else 30
         rows = self.receipt.setdefault('native_lifecycle', [])
-        row = {'action': action, 'wrapper_timeout_seconds': 30}
+        row = {'action': action, 'wrapper_timeout_seconds': timeout}
         rows.append(row)
         self.save()
         started = time.monotonic()
@@ -186,7 +188,7 @@ class Fixture:
             if value:
                 log.write(value.encode() if isinstance(value, str) else value)
         try:
-            result = self.run([str(self.args.native), 'app-server', 'daemon', action], timeout=30)
+            result = self.run([str(self.args.native), 'app-server', 'daemon', action], timeout=timeout)
             retain(result.stdout)
             retain(result.stderr)
             row['exit_code'] = result.returncode
@@ -253,7 +255,7 @@ class Fixture:
         require(response.get('id') == self.counter and not response.get('error'), 'native-rpc-failed')
         return response['result']
 
-    def setup(self):
+    def prepare_native_fixture(self):
         # Only the authentication file is referenced. Mutable native state and
         # all configuration, packages, updater settings and conversations are private.
         auth = self.args.auth_home / 'auth.json'
@@ -297,6 +299,9 @@ class Fixture:
             rollout = folder / f'rollout-{now.strftime("%Y-%m-%dT%H-%M-%S")}-{session["thread"]}.jsonl'
             rollout.write_text(''.join(json.dumps(dict(timestamp=stamp, **row))+'\n' for row in records))
             os.chmod(rollout, 0o600)
+
+    def setup(self):
+        self.prepare_native_fixture()
         self.daemon_start_attempted = True
         started = json.loads(self.lifecycle('start').stdout)
         self.daemon_pid = started['pid']

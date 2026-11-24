@@ -3075,6 +3075,13 @@ the supplied account's `auth.json`; configuration, packages, updater settings,
 projects and conversations are private. The installed controller, daemon and
 user viewers are not targets. A preexisting receipt is refused.
 
+The coordinator allows up to 120 seconds for the lifecycle start command because
+the unoptimized producer fingerprints the entire executable before spawning. A
+525 MB diagnostic artifact took about 50 seconds in that preparation stage; the
+original producer is about 954 MB. This outer fixture allowance does not change
+native readiness, management RPC or production source deadlines. Lifecycle
+elapsed times and failures remain in the receipt.
+
 Each actual TUI first loads a distinct synthetic saved conversation and must
 publish its selected ID through the actual WebMux launcher. Every registered
 management listener must belong to the expected native executable. The fixture
