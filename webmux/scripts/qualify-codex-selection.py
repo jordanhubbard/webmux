@@ -468,7 +468,11 @@ try:
         # A real byte relay bound directly at the advertised default socket is
         # indistinguishable from a remote forward by directory permissions.
         # It must remain Remote/manual even though its backend speaks real Codex.
-        socket_path.parent.mkdir(mode=0o700)
+        socket_path.parent.mkdir(mode=0o700, exist_ok=True)
+        directory = socket_path.parent.lstat()
+        assert socket_path.parent.is_dir() and not socket_path.parent.is_symlink()
+        assert directory.st_uid == os.getuid() and directory.st_mode & 0o077 == 0
+        assert not socket_path.exists() and not socket_path.is_symlink(), 'default forward must not replace an existing native socket'
         relay = root / 'owned-negative-forwarder.py'
         relay.write_text("""import os, selectors, socket, sys, threading
 listener = socket.socket(socket.AF_UNIX)
