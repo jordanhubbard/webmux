@@ -228,7 +228,13 @@ same-viewer selection reconnect control passed on the earlier artifact. One
 malformed frame was discarded; fresh authenticated loss and selection events
 still met the original deadlines. `framing_integrity_qualified` remains false for
 that receipt and #717 remains open. No malformed frame counts as evidence. This
-harness checks the signed stream, not host-cache recovery.
+harness checks the signed stream unless `--host-cache` is also supplied. That
+option provisions only private recovery state and an unused coordination
+socket directory through the real host RPC, enables fixture capture, rejects a
+wrong key, and requires independently signed host snapshots at A, B, A, loss
+and reconnect. It starts no durable provider or coordination listener. This
+host-state control also passed on the earlier artifact with strictly increasing
+saved revisions. It does not qualify controller or SSH recovery.
 `--profile remote-negative` requires selection to stay unavailable over an
 explicit remote fixture socket. `--profile legacy-remote` retains the original
 positive publication test for the earlier artifact only.

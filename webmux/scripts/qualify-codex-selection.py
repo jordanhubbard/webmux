@@ -35,6 +35,7 @@ parser.add_argument('--webmux-binary', help='Exercise the actual WebMux launcher
 parser.add_argument('--webmux-sha256', help='SHA-256 of the exact WebMux launcher build')
 parser.add_argument('--companion', action='store_true', help='Require independent selection in a second viewer on the same daemon')
 parser.add_argument('--reconnect', action='store_true', help='Require selection to return after replacing only the isolated managed daemon')
+parser.add_argument('--host-cache', action='store_true', help='Also require real authenticated host-RPC snapshots of each selected/lost state')
 args = parser.parse_args()
 if not re.fullmatch(r'[0-9a-f]{64}', args.expected_sha256):
     parser.error('--expected-sha256 must be 64 lowercase hexadecimal characters')
@@ -46,10 +47,13 @@ if args.companion and args.profile != 'managed':
     parser.error('--companion requires the managed profile')
 if args.reconnect and args.profile != 'managed':
     parser.error('--reconnect requires the managed profile')
+if args.host_cache and (not args.webmux_binary or args.profile != 'managed'):
+    parser.error('--host-cache requires --webmux-binary and the managed profile')
 binary = Path(args.binary).resolve()
 output = Path(args.output).resolve()
 assert not output.exists(), 'preserve prior receipts'
-root = Path(tempfile.mkdtemp(prefix='wm-native-selection-')).resolve()
+# The real coordination provisioning path has a native sockaddr_un bound.
+root = Path(tempfile.mkdtemp(prefix='wm-native-selection-', dir='/tmp')).resolve()
 home = root / 'home'
 project = root / 'project'
 home.mkdir(mode=0o700)
@@ -96,6 +100,7 @@ terminal_tail = b''
 packet_buffer = b''
 wrapper_key = uuid.uuid4().hex
 wrapper_instance = uuid.uuid4().hex
+wrapper_session = str(uuid.uuid4())
 output.parent.mkdir(parents=True, exist_ok=True)
 receipt_file = output.open('x')
 os.chmod(output, 0o600)
@@ -120,6 +125,48 @@ def epoch(pid):
     result = subprocess.run(['ps', '-p', str(pid), '-o', 'lstart=,uid=,pgid='],
         capture_output=True, text=True, timeout=5)
     return result.stdout.strip() if result.returncode == 0 else None
+
+def authenticated_event(item):
+    item = dict(item)
+    signature = item.pop('signature')
+    canonical = json.dumps(item, separators=(',', ':'), ensure_ascii=False).replace('<', '\\u003c').replace('>', '\\u003e').replace('&', '\\u0026').encode()
+    actual = base64.urlsafe_b64encode(hmac.new(wrapper_key.encode(), canonical, hashlib.sha256).digest()).rstrip(b'=').decode()
+    assert hmac.compare_digest(signature, actual), 'invalid WebMux recovery signature'
+    assert item.get('instance') == wrapper_instance
+    return item
+
+def host_rpc(operation, expect_rejection=False, **extra):
+    request = {'protocol': 1, 'session_id': wrapper_session, 'key': wrapper_key,
+        'operation': operation, **extra}
+    result = subprocess.run([str(webmux_binary), '--recovery-rpc'], input=json.dumps(request),
+        capture_output=True, text=True, cwd=project, env=env, timeout=10)
+    result.check_returncode()
+    value = json.loads(result.stdout)
+    assert value.get('protocol') == 1
+    if expect_rejection:
+        assert value.get('error') and not value.get('events'), 'wrong key obtained host metadata'
+        return value
+    assert not value.get('error'), f'host RPC {operation} refused'
+    return value
+
+def verify_host_selection(expected):
+    if not args.host_cache:
+        return
+    snapshot = host_rpc('snapshot')
+    events = [item for item in snapshot.get('events', []) if item.get('kind') == 'cli']
+    assert len(events) == 1, 'missing unambiguous host-cache CLI evidence'
+    item = authenticated_event(events[0])
+    assert item.get('cwd') == str(project) and item.get('cli') == 'codex'
+    selected = item.get('session_id') if item.get('native_evidence') == 'native-selection' else None
+    assert selected == expected
+    if expected is None:
+        assert item.get('native_evidence') == 'unavailable'
+    observations = receipt.setdefault('host_cache_observations', [])
+    revision = snapshot['revision']
+    assert not observations or revision > observations[-1]['revision']
+    observations.append({'thread_id': selected, 'revision': revision,
+        'signature_verified': True, 'instance_verified': True})
+    checkpoint()
 
 class ManagedDaemon:
     """A daemon managed by its real lifecycle CLI, not a waitable broker child."""
@@ -325,11 +372,7 @@ def pump(duration, expected='unmatched'):
                             receipt['malformed_metadata_frames_discarded'] = receipt.get('malformed_metadata_frames_discarded', 0) + 1
                             checkpoint()
                             continue
-                        signature = item.pop('signature')
-                        canonical = json.dumps(item, separators=(',', ':'), ensure_ascii=False).replace('<', '\\u003c').replace('>', '\\u003e').replace('&', '\\u0026').encode()
-                        actual = base64.urlsafe_b64encode(hmac.new(wrapper_key.encode(), canonical, hashlib.sha256).digest()).rstrip(b'=').decode()
-                        assert hmac.compare_digest(signature, actual), 'invalid WebMux recovery signature'
-                        assert item.get('instance') == wrapper_instance
+                        item = authenticated_event(item)
                         if item.get('kind') != 'cli':
                             continue
                         evidence = item.get('native_evidence')
@@ -437,12 +480,22 @@ try:
         (native_dir / 'codex').symlink_to(binary)
         (wrapper_dir / 'codex').symlink_to(webmux_binary)
         env.update(WEBMUX_BROWSER_ORIGINAL_PATH=str(native_dir) + os.pathsep + env.get('PATH', ''),
-            WEBMUX_RECOVERY_INSTANCE=wrapper_instance, WEBMUX_RECOVERY_SESSION=str(uuid.uuid4()),
+            WEBMUX_RECOVERY_INSTANCE=wrapper_instance, WEBMUX_RECOVERY_SESSION=wrapper_session,
             WEBMUX_RECOVERY_KEY=wrapper_key, WEBMUX_RECOVERY_HELPER=str(webmux_binary),
             WEBMUX_RECOVERY_CACHE_HOME=str(root / 'recovery-cache'),
             WEBMUX_COORDINATION_CACHE_HOME=str(root / 'coordination-cache'))
         launch = [str(wrapper_dir / 'codex')]
         observer_flags = []  # The actual Go launcher must create and own its native pipe.
+        if args.host_cache:
+            # This real provisioning operation initializes only private host state
+            # and an unused private directory; PrepareSocket starts no listener or
+            # durable provider. The policy call enables capture in that fixture.
+            prepared = host_rpc('coordination-prepare', coordination_channel=uuid.uuid4().hex)
+            assert root in Path(prepared['coordination_socket']).parents
+            assert not Path(prepared['coordination_socket']).exists()
+            host_rpc('snapshot', expect_rejection=True, key='0'*32)
+            receipt['host_cache_wrong_key_refused'] = True
+            assert host_rpc('policy', recording=True)['recording'] is True
     viewer = subprocess.Popen(launch + ['--remote', f'unix://{socket_path}'] + observer_flags +
         ['--no-alt-screen', 'resume', ids[0]], stdin=slave, stdout=slave, stderr=slave,
         cwd=project, env=env, pass_fds=(writer,) if writer is not None else (), preexec_fn=own_terminal)
@@ -475,6 +528,7 @@ try:
         receipt['remote_selection_unavailable'] = True
     else:
         pump(40, ids[0])
+        verify_host_selection(ids[0])
         if args.companion:
             until = time.monotonic() + 40
             while not receipt['companion_events'] or receipt['companion_events'][-1]['thread_id'] != ids[2]:
@@ -487,6 +541,7 @@ try:
             pump(0.5)
             os.write(master, b'\r')
             pump(30, thread_id)
+            verify_host_selection(thread_id)
             pump(1)  # Drain the other viewer before assessing isolation.
         if args.companion:
             assert receipt['companion_events'][-1]['thread_id'] == ids[2]
@@ -521,6 +576,7 @@ try:
     assert args.profile == 'remote-negative' or len(receipt['selection_events']) > previous_count
     assert all(item['thread_id'] is None for item in receipt['selection_events'][previous_count:])
     receipt['loss_demoted_to_unavailable'] = True
+    verify_host_selection(None)
     if args.reconnect:
         retired_processes.append(server.closure())
         assert retired_processes[-1]['not_running']
@@ -532,6 +588,7 @@ try:
         assert server.pid != old_pid
         checkpoint()
         pump(40, ids[0])
+        verify_host_selection(ids[0])
         if args.companion:
             until = time.monotonic() + 40
             while receipt['companion_events'][-1]['thread_id'] != companion_target:
@@ -541,6 +598,7 @@ try:
         assert viewer.poll() is None and epoch(viewer.pid) == viewer_epoch
         receipt['reconnect_selection_qualified'] = True
         receipt['native_daemon_continuity_qualified'] = False
+    receipt['host_cache_qualified'] = args.host_cache
 except Exception as error:
     receipt['error'] = f'{type(error).__name__}: {error}'
 finally:
@@ -596,6 +654,7 @@ finally:
         and receipt['cleanup_qualified']
         and (not args.companion or receipt.get('concurrent_viewer_isolation_qualified'))
         and (not args.reconnect or receipt.get('reconnect_selection_qualified'))
+        and (not args.host_cache or receipt.get('host_cache_qualified'))
         and not receipt.get('error')
     )
     checkpoint()
