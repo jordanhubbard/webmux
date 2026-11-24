@@ -158,6 +158,9 @@ conversation switch. The experimental native patch for
 `--selection-observer-fd` to the TUI. WebMux probes support before supplying an
 anonymous pipe unique to that launched viewer. Released clients without the
 option retain their existing behavior; caller-supplied channels are preserved.
+Only direct native executables qualify. Script launchers remain manual because
+they can advertise a child's help while closing inherited descriptors before
+launching it.
 
 The versioned channel reports only the launched PID, a monotonic sequence and the
 settled selected UUID (or null). It carries no prompts, paths, credentials or

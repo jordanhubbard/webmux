@@ -64,7 +64,7 @@ func codexSelectionBinary(t *testing.T, supported bool) string {
 
 func TestCodexSelectionPrivatePipeBindsProcessAndRefusesReplay(t *testing.T) {
 	binary := codexSelectionBinary(t, true)
-	o := newCodexSelectionObserver(binary, t.TempDir(), nil)
+	o := newCodexSelectionPipe()
 	if o == nil {
 		t.Fatal("supported private observation unavailable")
 	}
@@ -126,7 +126,18 @@ func TestCodexSelectionDoesNotInjectIntoUnsupportedOrCallerOwnedChannels(t *test
 		got.close()
 		t.Fatal("caller's observer channel replaced")
 	}
-	o := newCodexSelectionObserver(codexSelectionBinary(t, true), t.TempDir(), nil)
+	launcher := codexSelectionBinary(t, true)
+	if !codexSelectionEligible(launcher, t.TempDir(), nil) {
+		t.Fatal("qualified protocol help not recognized")
+	}
+	if got := newCodexSelectionObserver(launcher, t.TempDir(), nil); got != nil {
+		got.close()
+		t.Fatal("private descriptor injected through script launcher")
+	}
+	if !codexSelectionDirectExecutable(os.Args[0]) {
+		t.Fatal("native test executable not recognized")
+	}
+	o := newCodexSelectionPipe()
 	if o == nil {
 		t.Fatal("missing supported observer")
 	}
