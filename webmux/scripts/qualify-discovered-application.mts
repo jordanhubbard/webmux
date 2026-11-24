@@ -15,6 +15,7 @@ const { values } = parseArgs({ options: {
   'local-bind': { type: 'string' }, 'remote-bind': { type: 'string' },
   'local-interface': { type: 'string' }, 'remote-interface': { type: 'string' },
   'changed-node-proof': { type: 'boolean', default: false },
+  lifecycle: { type: 'boolean', default: false },
 } });
 const output = values.output, peer = values.peer;
 const localBind = values['local-bind'], remoteBind = values['remote-bind'];
@@ -48,6 +49,7 @@ const sourcesBefore = inventory();
 const checks: string[] = [];
 const receipt: Record<string, unknown> = { passed: false, revision, sourcesBefore, checks,
   changedNodeProof: values['changed-node-proof'],
+  lifecycle: values.lifecycle,
   scope: 'Actual protected cmd/webmux processes and browser enrollment; isolated homes and process-local Linux fixture certificate trust. Not installed-service, OS trust or real-agent/MAC acceptance.' };
 const passed = (name: string) => { checks.push(name); console.log(`PASS ${name}`); };
 function child(program: string, args: string[], log: string, env = process.env) {
@@ -73,7 +75,7 @@ async function freePort(bind: string) {
   return port;
 }
 type Directory = { servers: Array<{ id: string; url: string; identity?: { node_id: string; owner: string; tls_key_sha256: string } }> };
-type Candidate = { claimed_id: string; host: string; address: string; port: number; tls: boolean };
+type Candidate = { claimed_id: string; host: string; address: string; port: number; tls: boolean; last_seen: string; expires: string };
 const localHome = path.join(output, 'receiver-home');
 let remoteRoot = '', localProcess: ChildProcess | undefined, remoteProcess: ChildProcess | undefined, tunnel: ChildProcess | undefined;
 let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
@@ -245,6 +247,64 @@ sys.stdout.write(result.stdout);sys.stderr.write(result.stderr);sys.exit(result.
   expect((await directory()).servers[0]).toMatchObject({id:enrolled.id,url:migrated.url,identity:enrolled.identity});
   receipt.controllerRestartRetainedIdentity=true;
   passed('actual controller restart retains verified peer identity and migrated endpoint');
+  if (values.lifecycle) {
+    const lifecycle: Record<string, unknown> = {};
+    receipt.lifecycleEvidence = lifecycle;
+    const snapshots: unknown[] = [];
+    lifecycle.departureSnapshots = snapshots;
+    const discovery = async () => {
+      const r = await api('/discovered-nodes'); expect(r.status).toBe(200);
+      return await r.json() as { policy: { browse: boolean }; started: boolean; error: string; candidates: Candidate[] };
+    };
+    // Require a live observation after controller restart before testing absence.
+    await expect.poll(async () => (await discovery()).candidates.some(c => c.claimed_id === nodeID && c.port === movedPort),
+      { timeout: 38_000, intervals: [500, 1000] }).toBe(true);
+    lifecycle.departedAt = new Date().toISOString();
+    await stop(localProcess); localProcess = undefined;
+    // Two candidate lifetimes plus scheduling allowance: a cached DNS-SD answer
+    // may refresh the 90-second application lifetime after the receiver stops.
+    await expect.poll(async () => {
+      const view = await discovery();
+      expect(view.started).toBe(true);
+      expect(view.policy.browse).toBe(true);
+      expect(view.error).toBe('');
+      const matching = view.candidates.filter(c => c.claimed_id === nodeID);
+      snapshots.push({ observedAt: new Date().toISOString(), candidates: matching });
+      return matching.length;
+    }, { timeout: 185_000, intervals: [1000] }).toBe(0);
+    lifecycle.expiredAt = new Date().toISOString();
+    expect((await directory()).servers).toEqual([migrated]);
+    expect((await api(`/servers/${enrolled.id}/sessions`)).status).toBe(502);
+    passed('departed receiver expires from discovery while its verified configured peer remains retained and unreachable');
+    localProcess = child(path.join(output, 'darwin-webmux'), [], 'receiver.log', localEnv);
+    await expect.poll(async () => (await discovery()).candidates.some(c => c.claimed_id === nodeID && c.port === movedPort),
+      { timeout: 38_000, intervals: [500, 1000] }).toBe(true);
+    await expect.poll(async () => (await api(`/servers/${enrolled.id}/sessions`)).status,
+      { timeout: 8000, intervals: [500, 1000] }).toBe(200);
+    expect((await directory()).servers).toEqual([migrated]);
+    lifecycle.rejoinedAt = new Date().toISOString();
+    passed('same receiver rejoins discovery with its retained identity and no duplicate enrollment');
+    await stopRemote();
+    const disabledPolicy = yaml.dump({ ...yaml.load(payload.files['node-discovery.yaml']) as object, browse: false });
+    remote(`import json,pathlib,sys
+p=json.load(sys.stdin);r=pathlib.Path(p['root']);f=r/'home'/'config'/'node-discovery.yaml'
+assert r.name.startswith('discovered-app-') and f.is_file() and not f.is_symlink()
+f.write_text(p['policy']);f.chmod(0o600)`, { root: remoteRoot, policy: disabledPolicy });
+    payload.files['node-discovery.yaml'] = disabledPolicy;
+    remoteProcess = launchRemote();
+    await expect.poll(async () => { try { return (await api('/health')).status; } catch { return 0; } },
+      { timeout: 20_000 }).toBe(200);
+    const disabled = await discovery();
+    expect(disabled.policy.browse).toBe(false);
+    expect(disabled.started).toBe(false);
+    expect(disabled.error).toBe('');
+    expect(disabled.candidates).toEqual([]);
+    expect((await directory()).servers).toEqual([migrated]);
+    expect((await api(`/servers/${enrolled.id}/sessions`)).status).toBe(200);
+    lifecycle.disabledDiscovery = disabled;
+    lifecycle.retainedPeer = (await directory()).servers[0];
+    passed('normal policy restart disables browsing while the verified configured peer remains accessible');
+  }
   receipt.passed=true;
 } catch(error) {
   receipt.error=error instanceof Error?error.message:String(error);
