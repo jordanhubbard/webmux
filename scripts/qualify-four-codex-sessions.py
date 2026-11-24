@@ -169,8 +169,17 @@ class Fixture:
         return stream
 
     def run(self, argv, **kw):
-        return subprocess.run(argv, env=self.env, cwd=self.root, stdin=subprocess.DEVNULL,
-            capture_output=True, text=True, timeout=kw.pop('timeout', 15), check=True, **kw)
+        try:
+            return subprocess.run(argv, env=self.env, cwd=self.root, stdin=subprocess.DEVNULL,
+                capture_output=True, text=True, timeout=kw.pop('timeout', 15), check=True, **kw)
+        except subprocess.CalledProcessError as error:
+            # Retain diagnostics privately; command arguments can contain secrets.
+            rows = self.receipt.setdefault('failed_subprocesses', [])
+            name = f'failed-subprocess-{len(rows)+1}.log'
+            self.log(name).write(((error.stdout or '')+(error.stderr or '')).encode())
+            rows.append({'executable': Path(argv[0]).name, 'exit_code': error.returncode, 'log': name})
+            self.save()
+            raise
 
     def lifecycle(self, action):
         # The unoptimized producer CLI fingerprints its entire executable before
@@ -332,10 +341,10 @@ class Fixture:
             session['id'] = str(uuid.UUID(self.api('/api/sessions', request)['id']))
             session['target'] = 'webmux-' + session['id']
             self.wait(lambda: self.api('/api/session-recovery/'+session['id']).get('shell_ready'), 'provider-shell-ready')
-            self.tmux('send-keys', '-t', '='+session['target'], '-l', f'cd {shlex.quote(str(session["project"]))} && ' + self.viewer_command(session))
-            self.tmux('send-keys', '-t', '='+session['target'], 'Enter')
+            self.tmux('send-keys', '-t', '='+session['target']+':', '-l', f'cd {shlex.quote(str(session["project"]))} && ' + self.viewer_command(session))
+            self.tmux('send-keys', '-t', '='+session['target']+':', 'Enter')
             self.wait(lambda: self.selection(session) == session['thread'], 'native-selection-ready')
-            session['provider'] = int(self.tmux('display-message', '-p', '-t', '='+session['target'], '#{pane_pid}').strip())
+            session['provider'] = int(self.tmux('display-message', '-p', '-t', '='+session['target']+':', '#{pane_pid}').strip())
             session['provider_epoch'] = self.epoch(session['provider'])
             self.record_process('provider', session['provider'])
             session['viewer'], session['management_port'] = self.management_owner(session)
@@ -412,8 +421,8 @@ class Fixture:
             # belongs to the separate managed daemon and must continue unchanged.
             os.kill(session['viewer'], signal.SIGKILL)
             self.wait(lambda: self.api('/api/session-recovery/'+session['id']).get('shell_ready'), 'fixture-viewer-shell-return')
-            self.tmux('send-keys', '-t', '='+session['target'], '-l', self.viewer_command(session))
-            self.tmux('send-keys', '-t', '='+session['target'], 'Enter')
+            self.tmux('send-keys', '-t', '='+session['target']+':', '-l', self.viewer_command(session))
+            self.tmux('send-keys', '-t', '='+session['target']+':', 'Enter')
             old_viewer = session['viewer']
             def replacement():
                 try:
@@ -566,8 +575,24 @@ class Fixture:
         if self.tmuxsocket.exists():
             try:
                 require(self.tmuxsocket.is_socket() and self.tmuxsocket.stat().st_uid == os.getuid(), 'private-tmux-owner')
-                self.tmux('kill-server')
-                self.wait(lambda: not self.tmuxsocket.exists(), 'private-tmux-settlement', seconds=10)
+                try:
+                    self.tmux('kill-server')
+                except subprocess.CalledProcessError:
+                    pass  # A controller stop may already have closed it.
+                def provider_closed():
+                    probe = subprocess.run(['tmux', '-S', str(self.tmuxsocket), 'list-sessions'],
+                        env=self.env, cwd=self.root, capture_output=True, timeout=5)
+                    owners = subprocess.run(['/usr/sbin/lsof', '-nP', str(self.tmuxsocket)],
+                        capture_output=True, timeout=5)
+                    # tmux can leave a stale socket inode after kernel closure.
+                    # Neither a failed client nor missing owners alone suffices.
+                    closed = probe.returncode == 1 and owners.returncode == 1 and not owners.stdout.strip()
+                    if closed:
+                        self.receipt['provider_socket_settlement'] = {
+                            'private_client_exit': probe.returncode, 'kernel_owners_exit': owners.returncode,
+                            'socket_inode_retained': self.tmuxsocket.exists()}
+                    return closed
+                self.wait(provider_closed, 'private-tmux-settlement', seconds=10)
             except (OSError, subprocess.SubprocessError, Refusal):
                 errors.append('provider-settlement')
         try:
