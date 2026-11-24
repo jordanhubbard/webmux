@@ -131,6 +131,10 @@ class Fixture:
         self.output.truncate()
         self.output.flush()
 
+    def record_process(self, role, pid):
+        self.receipt.setdefault('owned_processes', []).append({'role': role, 'pid': pid, 'epoch': self.epoch(pid)})
+        self.save()
+
     def log(self, name):
         stream = (self.root / name).open('xb', buffering=0)
         os.chmod(stream.name, 0o600)
@@ -175,6 +179,7 @@ class Fixture:
             env=self.env, cwd=self.root, stdin=subprocess.DEVNULL,
             stdout=self.log(f'controller-{len(self.receipt["phases"])}.log'), stderr=subprocess.STDOUT,
             start_new_session=True)
+        self.record_process('controller', self.controller.pid)
         self.wait(self.ready, 'controller-startup')
         return self.epoch(self.controller.pid)
 
@@ -241,6 +246,7 @@ class Fixture:
         started = json.loads(self.run([str(self.args.native), 'app-server', 'daemon', 'start']).stdout)
         self.daemon_pid = started['pid']
         self.daemon_epoch = self.epoch(self.daemon_pid)
+        self.record_process('native-daemon', self.daemon_pid)
         require(started['status'] == 'started', 'managed-native-start')
         require(Path(started['managedCodexPath']).resolve() == self.args.native, 'managed-native-image')
         self.socket = self.home / 'app-server-control/app-server-control.sock'
@@ -248,6 +254,7 @@ class Fixture:
         self.rpc = subprocess.Popen([str(self.args.node), str(self.repo / 'webmux/scripts/codex-fixture-rpc.mts'), str(self.socket)],
             cwd=self.root, env=self.env, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
             stderr=self.log('native-rpc.log'), text=True, bufsize=1, start_new_session=True)
+        self.record_process('native-rpc-client', self.rpc.pid)
         shutil.copytree(self.repo / 'webmux/config.defaults', self.webhome / 'config')
         (self.webhome / 'config/auth.yaml').write_text('auth:\n  mode: none\n  users: []\n')
         with socket.socket() as listener:
@@ -266,11 +273,13 @@ class Fixture:
             self.wait(lambda: self.selection(session) == session['thread'], 'native-selection-ready')
             session['provider'] = int(self.tmux('display-message', '-p', '-t', '='+session['target'], '#{pane_pid}').strip())
             session['provider_epoch'] = self.epoch(session['provider'])
+            self.record_process('provider', session['provider'])
             session['viewer'], session['management_port'] = self.management_owner(session)
             owners = [str(session['viewer'])]
             images = self.run(['/usr/sbin/lsof', '-a', '-p', owners[0], '-d', 'txt', '-Fn']).stdout.splitlines()
             require('n'+str(self.args.native) in images, 'viewer-native-image')
             session['viewer_epoch'] = self.epoch(session['viewer'])
+            self.record_process('native-viewer', session['viewer'])
             # Fail before submitting model work if its actual authenticated
             # management registration is already broken.
             self.read_management(session)
@@ -349,6 +358,7 @@ class Fixture:
             require('n'+str(self.args.native) in images, 'replacement-native-image')
             session['viewer'], session['management_port'] = viewer, port
             session['viewer_epoch'] = self.epoch(viewer)
+            self.record_process('replacement-native-viewer', viewer)
             self.wait(lambda: self.selection(session) == session['thread'], 'replacement-selected-thread')
             def advanced():
                 current = self.snapshot(session)
@@ -582,6 +592,10 @@ def main():
     args.node = args.node.resolve(strict=True)
     fixture = Fixture(args)
     passed = False
+    def interrupted(_signal, _frame):
+        raise Refusal('qualification-interrupted')
+    signal.signal(signal.SIGINT, interrupted)
+    signal.signal(signal.SIGTERM, interrupted)
     try:
         fixture.qualify()
         passed = True
