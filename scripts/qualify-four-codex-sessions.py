@@ -119,6 +119,7 @@ class Fixture:
         self.counter = 0
         self.receipt = {'schema': 'webmux.four-codex-continuity.v1', 'passed': False,
             'four_session_survival_qualified': False, 'active_work_qualified': False,
+            'profile': getattr(args, 'profile', 'full'),
             'fixture_root': str(self.root), 'source': subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=self.repo, text=True).strip(),
             'native_sha256': args.native_sha256, 'webmux_sha256': args.webmux_sha256,
             'qualifier_sha256': digest(Path(__file__)), 'phases': [],
@@ -517,7 +518,8 @@ class Fixture:
             self.api('/api/sessions/'+session['id']+'/reconnect', {})
         previous = self.phase('provider-reconnect', previous)
         verify_continuity(baseline, previous)
-        self.migrate_viewers()
+        if self.args.profile == 'full':
+            self.migrate_viewers()
         # Let the original four model requests finish their own coding checks.
         for session in self.sessions:
             (session['project'] / 'STOP').touch(exist_ok=False)
@@ -696,6 +698,8 @@ def main():
         parser.add_argument('--'+name, type=Path, required=True)
     for name in ('native-sha256', 'webmux-sha256', 'model'):
         parser.add_argument('--'+name, required=True)
+    parser.add_argument('--profile', choices=('full', 'controller'), default='full',
+        help='Controller profile preserves all original viewers; full additionally qualifies viewer replacement')
     parser.add_argument('--ssh-host', help='Real SSH profile; must resolve to this kernel and account; uses private helpers/tmux')
     args = parser.parse_args()
     args.ssh_boot_sha256 = None
@@ -740,8 +744,8 @@ def main():
         fixture.receipt['passed'] = passed and settled
         fixture.receipt['active_work_qualified'] = passed and settled
         fixture.receipt['four_session_survival_qualified'] = passed and settled
-        fixture.receipt['active_viewer_handoff_qualified'] = passed and settled
-        fixture.receipt['worktree_read_parity_qualified'] = passed and settled
+        fixture.receipt['active_viewer_handoff_qualified'] = passed and settled and args.profile == 'full'
+        fixture.receipt['worktree_read_parity_qualified'] = passed and settled and args.profile == 'full'
         fixture.receipt['worktree_creation_qualified'] = False
         fixture.save()
         fixture.output.close()

@@ -3112,6 +3112,13 @@ python3 scripts/qualify-four-codex-sessions.py \
   --model ACCOUNT_MODEL --output /new/private/receipt.json
 ```
 
+The default `--profile full` requires every phase below. An explicit
+`--profile controller` qualifies only the four original coding turns across
+controller restart, crash and reconnect, plus their completion and cleanup.
+It never replaces viewers and always leaves `active_viewer_handoff_qualified`
+and `worktree_read_parity_qualified` false. This permits independent controller
+qualification while the separate native handoff build is pending.
+
 After those controller phases preserve the four original viewer epochs, a
 separately recorded migration phase replaces each fixture viewer. The original
 model turn, provider and execution-daemon epochs must persist, work must advance
