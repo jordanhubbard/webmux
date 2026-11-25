@@ -1,6 +1,6 @@
 # Private Codex daemon upgrade qualification
 
-`webmux/scripts/qualify-codex-daemon-upgrade.mjs` checks an old and candidate
+`webmux/scripts/qualify-codex-daemon-upgrade.mjs` checks an initial and successor
 macOS Codex executable against a synthetic local model provider. It creates a
 fresh private home, project and Unix socket. It never accepts an existing home,
 socket or thread ID, replaces an installed daemon, or sends a real coding task.
@@ -17,6 +17,12 @@ node webmux/scripts/qualify-codex-daemon-upgrade.mjs \
   --candidate-sha256 CANDIDATE_SHA256 \
   --output /absolute/path/to/new-receipt-directory
 ```
+
+The argument names describe the forward upgrade direction: `--old` runs first
+and `--candidate` runs second. To qualify backward state compatibility, supply
+the newer image as `--old` and the previous image as `--candidate`, with their
+matching hashes and another new output directory. Keep both receipts. A passing
+forward run does not establish backward compatibility.
 
 The tool verifies both hashes and strict code signatures, then launches only its
 own private server processes. Socket ownership is checked against each child
@@ -43,7 +49,7 @@ A passing receipt proves this private protocol scenario for the exact two images
 It does not prove uninterrupted old-turn completion: the shutdown snapshot can
 record an interrupted turn, which the receipt reports explicitly. It also does
 not prove actual four-session model work, original viewer input handling, all
-helper process settlement, rollback compatibility, final native CI, or an installed
+helper process settlement, rollback of a live workload, final native CI, or an installed
 upgrade. Those remain separate requirements before a checkpointed activation.
 
 Tracked in [#752](https://github.com/jordanhubbard/webmux/issues/752).
