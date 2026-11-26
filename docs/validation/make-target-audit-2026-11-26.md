@@ -88,15 +88,40 @@ containing spaces. These use the separately qualified built images and private
 service labels, not the installed operator service. Logs are
 `service-gui-recheck.log` and `service-install-all.log` in the audit directory.
 
-Saved-cookie restart qualification fails on both the changed code and unchanged
-baseline browser source. A separate minimal real-Chrome probe retains a synthetic
-cookie during its first process, closes gracefully, and loses it after reopening.
-Chrome reports Keychain OSStatus `-25308` (`errSecInteractionNotAllowed`) and
-`Encryption is not available`. #764 retains this environment prerequisite and
-the required rerun. The GUI-available native recheck still fails; a new minimal
-probe still reports -25308 with both graceful closes succeeding. GUI-domain
-availability alone does not establish usable Chrome Safe Storage access. Browser
-encryption, sandboxing, and user Keychain policy were not weakened. The changed Snap data location still needs native Snap acceptance.
+Earlier saved-cookie restart qualification failed on both the changed code and
+unchanged baseline browser source. A minimal real-Chrome probe reproduced cookie
+loss after graceful close with Keychain OSStatus `-25308`
+(`errSecInteractionNotAllowed`) and `Encryption is not available`.
+
+The caller's security session matters: status-only Security.framework probes
+report the remote caller as remote/non-graphical with a locked default Keychain,
+while an owned one-shot GUI job reports graphical/non-remote with an unlocked
+default Keychain. Repeating the remote probe still reports locked. The same
+minimal cookie probe passes inside the GUI job. The earlier GUI-domain-available
+recheck ran from the remote session; domain availability did not change its
+security context. No Keychain items or policies were read or changed by these
+status probes.
+
+A clean GUI `make test` at `73baf25f` passed 499 frontend and 297 helper tests,
+then failed in browser startup/navigation and accessible controls with the
+managed full Chrome backend. It was interrupted after reproducible failures;
+the owned runner performed cleanup and port 18080 was verified free. This is an
+interrupted failing batch, not another completed full-suite run.
+
+An image comparison in the same GUI domain and with the same native test binary
+then passed both frame controls and saved-cookie restart with installed Chrome
+`158.0.8127.37`, but failed both with managed Chrome for Testing `158.0.8127.18`
+(navigation/action timeouts). A focused E2E run at `73baf25f`, explicitly selecting
+installed Chrome for the companion and the managed headless shell for Playwright,
+passed all nine accessible-control, authentication callback and saved-profile
+tests. The fixture now prefers the installed macOS companion browser, preserving
+`WEBMUX_BROWSER_EXECUTABLE` overrides and the managed fallback when absent.
+The precise cause of the managed image's GUI failures remains unproven. These
+focused passes do not qualify the complete Make suite. Receipts and logs are
+under `_build/release-targets-767/`, including
+`native-gui-browser-comparison.json`, `gui-installed-e2e.json` and
+`gui-make-test.json`. Browser encryption, sandboxing and Keychain policy were
+not weakened. The changed Snap data location still needs native Snap acceptance.
 
 ## Home-directory relocation
 
