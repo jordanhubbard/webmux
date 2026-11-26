@@ -126,7 +126,7 @@ focused passes do not qualify the complete Make suite. Receipts and logs are
 under `_build/release-targets-767/`, including
 `native-gui-browser-comparison.json`, `gui-installed-e2e.json` and
 `gui-make-test.json`. Browser encryption, sandboxing and Keychain policy were
-not weakened. The changed Snap data location still needs native Snap acceptance.
+not weakened. The changed Snap data location has separate native acceptance below at its recorded source.
 
 ## Screenshot resize input regression: #769
 
@@ -246,7 +246,8 @@ The final readiness output is `real-main-readiness-final.log`/JSON.
 ### Open acceptance
 
 The starting open-issue snapshot contained 70 issues. #762–#765 and
-#767–#770 added eight issues during this audit (78 before subsequent closures).
+#767–#771 added nine issues during this audit (79 before subsequent closures).
+#764, #765 and #770 completed their scoped investigations/qualification.
 This checkpoint does not close the unrelated native
 runtime, integration, distribution, or acceptance issues.
 
@@ -280,3 +281,54 @@ runtime, integration, distribution, or acceptance issues.
 
 The unchecked requirements in `docs/roadmap.md` remain unchecked. Complete their
 actual acceptance before publishing a release or claiming the overall goal done.
+
+## Native Linux Snap storage and shutdown: #763 / #771
+
+At `169dc3da16e2dc7979de7145a3644046c563ba20`, Ubuntu 22.04.5 ARM64
+(Linux 5.15.0-203) with Canonical strict Snap Chromium 158.0.8127.36 revision
+3606 passes the complete native browser race package: 50 top-level passes,
+zero failures and one fixture-child skip. The original two Windows-only
+NetLog subcases remain skipped. The four original workspace, saved-profile,
+accessible-action and callback UI files pass all ten tests, including exact
+upload/download and saved-cookie worker replacement. The Linux process control
+passes mismatched identity, bounded timeout, final child file operation and
+unrelated sibling survival checks. Its private child entry point is skipped in
+the ordinary parent invocation, then actually executed by the control.
+
+The first owned QA fixture precreated browser storage with mode 0775; production
+correctly refused it. Correcting only those owned fixture directories to 0700
+exposed a separate ENOTEMPTY removal failure after direct WebSocket shutdown:
+48 top-level native tests passed and one group failed. A metadata-only original
+control reproduced it. Inotify observed TransportSecurity/Network Persistent
+State files created or renamed while removal proceeded, and observed browser
+children outlasted the main process. This supports a shutdown ordering gap;
+the observer does not identify the exact writer PID. All failed outputs remain
+retained. A separate unchanged-source run already passed the ten UI cases;
+that did not turn its failed native cleanup control into acceptance.
+
+Linux now retains pidfds for its private CDP browser process set before
+cancellation, rechecking account, executable and immutable process start time.
+It waits on those stable handles before the single directory-removal attempt.
+The existing two-second collection/wait bounds, saved-profile graceful-close
+bound, browser protections, test deadlines and retry policy are unchanged.
+Unverifiable identity, unsupported pidfds or failed exit waits retain the files
+and return a fixed error. The code never signals a process selected by name or
+follows a newly resolved PID after cancellation. This was a Linux no-op before
+#771; Windows retains its existing handle wait and macOS behavior is unchanged.
+
+The current-source full package and UI run complete in an owned copy-on-write
+QA VM, followed by normal guest shutdown. All retained backing disk, firmware
+and seed hashes are unchanged; no top-level WebMux home entries were added.
+The source is unchanged during qualification. macOS browser race tests and
+Linux ARM64 vet pass; Linux ARM64 and Windows ARM64 test binaries compile.
+Cross-compilation does not qualify native Windows behavior. The complete macOS
+Make result above retains its original `2cc3a26d` source binding.
+
+Private receipts: `snap-native.json`, `snap-mode-fixed.json`,
+`snap-cleanup-diagnostic.json`, `snap-pidfd.json` and their `gui-*` outer receipts
+under the audit directory. The adjacent sanitized receipt records source and
+log/archive hashes for the successful Linux run. Earlier failure archives and
+the metadata-only observer remain preserved. This qualifies the changed Snap
+storage and scoped shutdown behavior; broader platform, SSH/provider, roadmap,
+signing and release gates remain open. The operator service was not deployed
+or restarted.

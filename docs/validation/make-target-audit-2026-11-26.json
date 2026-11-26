@@ -1,5 +1,5 @@
 {
-  "scope": "Native macOS qualification checkpoint; full roadmap, skipped integrations and other platforms remain open. Archive hashes identify local candidates, not published release assets.",
+  "scope": "Native macOS Make qualification at its recorded source plus Linux ARM64 Snap browser qualification at its own recorded source; full roadmap, other native platforms and release remain open. Archive hashes distinguish local candidates from published assets.",
   "source": "2cc3a26d249f9b04e17e0a85f49466128ba47855",
   "make": {
     "command": "make test",
@@ -114,5 +114,59 @@
     "main_sha": "7420061436fa914f463a3e5573fdd0af7d212413",
     "operation": "read_only_release_readiness",
     "exit_code": 1
+  },
+  "linux_snap": {
+    "source": "169dc3da16e2dc7979de7145a3644046c563ba20",
+    "platform": "Ubuntu22.04.5 ARM64 Linux5.15.0-203",
+    "browser": "Snap Chromium158.0.8127.36 revision3606",
+    "native_browser": {
+      "command": "WEBMUX_REAL_BROWSER=1 WEBMUX_BROWSER_EXECUTABLE=/snap/bin/chromium go test -race -count=1 -v ./internal/browser",
+      "exit_code": 0,
+      "top_level_results": {
+        "PASS": 50,
+        "FAIL": 0,
+        "SKIP": 1
+      },
+      "log_sha256": "630eb0ada817df8c0a14b593aeb071a068ced74fa235c12dbc3c7914490ceb1c",
+      "skip_scope": "One private fixture-child entry point; two Windows-only NetLog subcases also retain their original skips."
+    },
+    "process_controls": {
+      "command": "go test -race -count=1 -v -run '^TestLinuxBrowserExit' ./internal/browser",
+      "exit_code": 0,
+      "log_sha256": "9dc285df977bebb8921072753feef141768e743d57487de542ac2b19b2725710"
+    },
+    "ui_files": [
+      {
+        "file": "browser-workspace.spec.ts",
+        "passed": 1,
+        "exit_code": 0,
+        "log_sha256": "c8ca6d6a37b3d6c98624fcee70f580e5994eba4a485bf65c91380482a6365afc"
+      },
+      {
+        "file": "browser-profiles.spec.ts",
+        "passed": 1,
+        "exit_code": 0,
+        "log_sha256": "304769cb9dc5ba0c797fd850bff6409eec04d0ca957439da98f068e6157bafe3"
+      },
+      {
+        "file": "browser-accessible-actions.spec.ts",
+        "passed": 1,
+        "exit_code": 0,
+        "log_sha256": "6bb00894f51cdaf521e70733413a1e4c761ed6a1191c894f01afb0dd2519bd5a"
+      },
+      {
+        "file": "browser-companion.spec.ts",
+        "passed": 7,
+        "exit_code": 0,
+        "log_sha256": "d2f67b3001a1e9734e9930aac5b97bb433af053a246f59fb0ba428a937deb412"
+      }
+    ],
+    "confinement": "snap.chromium.chromium (enforce)",
+    "forbidden_primary_flags_observed": false,
+    "home_root_entries_unchanged": true,
+    "normal_vm_shutdown": true,
+    "retained_input_hashes_unchanged": true,
+    "source_unchanged": true,
+    "evidence_archive_sha256": "443417cecf8b2853fc4c123d4f9263e37651b077840d6a5621acc84d3bca32bf"
   }
 }
