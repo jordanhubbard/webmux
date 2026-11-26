@@ -37,23 +37,28 @@ run_bounded() {
   return "$rc"
 }
 
-# 1. Explicit override.
-if [[ -n "${PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH:-}" ]]; then
-  err "▸  e2e browser: using PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH override"
-  printf '%s' "$PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH"
-  exit 0
-fi
-
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WEBMUX_DIR="$SCRIPT_DIR/../webmux"
 cd "$WEBMUX_DIR"
 
 launches_ok() {
-  # True only if the managed Chromium can actually start a headless browser.
+  # Verify launch, rendering, and reuse after closing an isolated test context.
   # Bounded so a hung launch can't stall provisioning.
-  run_bounded 30 node "$WEBMUX_DIR/scripts/check-browser.mts" \
+  run_bounded 30 node "$WEBMUX_DIR/scripts/check-browser.mts" "$@" \
     >/dev/null 2>&1
 }
+
+# 1. Explicit override. Do not silently substitute a different browser.
+if [[ -n "${PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH:-}" ]]; then
+  if launches_ok "$PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH"; then
+    err "▸  e2e browser: verified PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH override"
+    printf '%s' "$PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH"
+    exit 0
+  fi
+  err "✗  Explicit E2E browser cannot render and reopen isolated contexts."
+  err "   Choose a compatible executable, or unset PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH to provision managed Chromium."
+  exit 1
+fi
 
 # 2. Managed browser. Fast-path: if one is already present and launches, skip the
 # (slow) install entirely. Otherwise attempt a bounded install, then re-check.
@@ -78,7 +83,7 @@ for candidate in \
   "$(command -v google-chrome-stable 2>/dev/null || true)" \
   "$(command -v chromium 2>/dev/null || true)" \
   "$(command -v chromium-browser 2>/dev/null || true)"; do
-  if [[ -n "$candidate" && -x "$candidate" ]]; then
+  if [[ -n "$candidate" && -x "$candidate" ]] && launches_ok "$candidate"; then
     err "✓  e2e browser: system Chrome at $candidate"
     printf '%s' "$candidate"
     exit 0

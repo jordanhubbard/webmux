@@ -36,12 +36,19 @@ func savedProfile(key string) (string, *os.File, error) {
 	if !profileSyntax.MatchString(key) {
 		return "", nil, errors.New("invalid saved browser profile identity")
 	}
-	home, err := os.UserHomeDir()
+	root, err := browserDirectory("profiles")
 	if err != nil {
 		return "", nil, err
 	}
-	root := filepath.Join(home, "webmux-browser-profiles")
-	if err := privateDirectory(root); err != nil {
+	// Never silently replace an existing login with an empty profile after the
+	// storage layout change. Migration must happen with browser workers stopped.
+	home, homeErr := os.UserHomeDir()
+	if homeErr != nil {
+		return "", nil, homeErr
+	}
+	if _, err := os.Lstat(filepath.Join(home, "webmux-browser-profiles", key)); err == nil {
+		return "", nil, errors.New("legacy saved browser profile requires offline migration; see docs/browser-companion.md")
+	} else if !errors.Is(err, os.ErrNotExist) {
 		return "", nil, err
 	}
 	lockPath := filepath.Join(root, key+".lock")

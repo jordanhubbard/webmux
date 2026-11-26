@@ -1,7 +1,13 @@
-# Delegate to the top-level Makefile.
-# Run `make` from the repository root for full usage and options.
+# Delegate all public targets to the repository Makefile, including future ones.
+# Keep the default explicit so invoking make without arguments still builds.
+.DEFAULT_GOAL := all
 
-.PHONY: all build install start stop restart status test lint clean help
+.PHONY: all
+all:
+	@$(MAKE) --no-print-directory -C "$(CURDIR)/.." all
 
-all build install start stop restart status test lint clean help:
-	@$(MAKE) --no-print-directory -C $(CURDIR)/.. $@
+# Never let GNU Make's implicit remake of this file invoke the parent build.
+Makefile: ;
+
+%:
+	@$(MAKE) --no-print-directory -C "$(CURDIR)/.." $@

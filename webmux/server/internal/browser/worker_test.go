@@ -51,13 +51,12 @@ func TestWorkerProfileCleanup(t *testing.T) {
 	if os.Getenv("WEBMUX_REAL_BROWSER") != "1" {
 		t.Skip("set WEBMUX_REAL_BROWSER=1 to run installed Chromium")
 	}
-	home, err := os.UserHomeDir()
+	shared, err := browserDirectory("tmp")
 	if err != nil {
 		t.Fatal(err)
 	}
-	// A real Snap browser must see this path too, so keep this test's private
-	// home below the actual account home rather than an isolated /tmp mount.
-	root, err := os.MkdirTemp(home, "webmux-browser-test-")
+	// Keep the fixture inside browser-visible storage, including under Snap.
+	root, err := os.MkdirTemp(shared, "worker-test-")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -80,7 +79,11 @@ func TestWorkerProfileCleanup(t *testing.T) {
 	if frame.Error != "" || len(frame.Image) == 0 {
 		t.Fatalf("browser did not start: %s", frame.Error)
 	}
-	profiles, _ := filepath.Glob(filepath.Join(root, "webmux-browser-*"))
+	temporary, err := browserDirectory("tmp")
+	if err != nil {
+		t.Fatal(err)
+	}
+	profiles, _ := filepath.Glob(filepath.Join(temporary, "webmux-browser-*"))
 	if len(profiles) != 1 {
 		t.Fatalf("expected one private profile, got %v", profiles)
 	}
@@ -114,7 +117,7 @@ func TestWorkerProfileCleanup(t *testing.T) {
 	case <-time.After(10 * time.Second):
 		t.Fatal("worker did not stop after pipe closed")
 	}
-	profiles, _ = filepath.Glob(filepath.Join(root, "webmux-browser-*"))
+	profiles, _ = filepath.Glob(filepath.Join(temporary, "webmux-browser-*"))
 	if len(profiles) != 0 {
 		t.Fatalf("credential profile leaked: %v", profiles)
 	}
@@ -136,7 +139,7 @@ func TestModifierCombinationsSurviveWorkerProtocol(t *testing.T) {
 	}
 }
 
-func TestTemporaryProfileUsesSharedPrivateHome(t *testing.T) {
+func TestTemporaryProfileUsesSharedPrivateData(t *testing.T) {
 	home, isolated := t.TempDir(), t.TempDir()
 	t.Setenv("HOME", home)
 	t.Setenv("USERPROFILE", home)
@@ -148,8 +151,8 @@ func TestTemporaryProfileUsesSharedPrivateHome(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer os.RemoveAll(profile)
-	if filepath.Dir(profile) != home {
-		t.Fatal("profile and transfer files must use the shared account home")
+	if filepath.Dir(profile) == home || !strings.HasPrefix(profile, home+string(filepath.Separator)) {
+		t.Fatal("profile and transfer files must use the private shared data subtree")
 	}
 	info, err := os.Stat(profile)
 	if err != nil {
@@ -179,7 +182,7 @@ func TestWorkerRefusesUnavailableSharedProfile(t *testing.T) {
 	if err := json.Unmarshal(output.Bytes(), &frame); err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(frame.Error, "home directory") || strings.Contains(frame.Error, "private-marker") {
+	if !strings.Contains(frame.Error, "WebMux data directory") || strings.Contains(frame.Error, "private-marker") {
 		t.Fatalf("missing or private-path-bearing profile diagnostic: %s", frame.Error)
 	}
 }

@@ -2,6 +2,7 @@
 // Exercise shipped native Unix service templates under a private, temporary label.
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
+import { readFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import net from 'node:net';
@@ -46,7 +47,7 @@ const target = `${domain}/${label}`;
 const definition = !darwin && makeMode ? path.join(os.homedir(), '.config/systemd/user', label)
   : path.join(temporary, darwin ? 'fixture.plist' : label);
 function makeControl(action: 'install-server' | 'start' | 'stop' | 'restart' | 'uninstall-server'): void {
-  assert(makeMode && (!darwin || domain === `gui/${uid}`), 'Make fixture requires an isolated service');
+  assert(makeMode && (!darwin || [`gui/${uid}`, `user/${uid}`].includes(domain)), 'Make fixture requires an isolated service');
   const result = spawnSync('make', ['--no-print-directory', '-o', 'build-server', action,
     'MAKE=make -o build-server', `NODE=${process.execPath}`, `WEBMUX_DIR=${root}`, `WEBMUX_HOME=${home}`,
     ...(darwin ? [`PLIST=${definition}`, `LAUNCHD_SVC=${target}`, `MACOS_APP=${path.join(temporary, 'WebMux.app')}`] : [`UNIT=${definition}`])], {
@@ -54,6 +55,10 @@ function makeControl(action: 'install-server' | 'start' | 'stop' | 'restart' | '
     env: { ...process.env, JWT_SECRET: '', WEBMUX_SLAVE_HOST: '', WEBMUX_SLAVE_PORT: '' },
   });
   if (result.error) throw result.error;
+  if (result.status !== 0) {
+    // Preserve the native failure before fixture cleanup removes its log.
+    try { console.error(readFileSync(path.join(home, 'logs/webmux.log'), 'utf8')); } catch { /* No log yet. */ }
+  }
   assert.equal(result.status, 0, result.stdout + result.stderr);
 }
 let registered = false;
@@ -68,8 +73,7 @@ async function waitFor(check: () => Promise<boolean>, description: string): Prom
 }
 try {
   if (makeMode) {
-    if (darwin) assert.equal(domain, `gui/${uid}`, 'Make installer needs a GUI launchd domain');
-    else systemctl(['show-environment']);
+    if (!darwin) systemctl(['show-environment']);
     await fs.mkdir(path.join(root, 'service'), { recursive: true });
     for (const entry of ['bin', 'web', 'config.defaults']) await fs.symlink(path.join(sourceRoot, entry), path.join(root, entry));
   }

@@ -17,7 +17,7 @@ func TestSavedProfilePersistsRealChromiumCookies(t *testing.T) {
 	if os.Getenv("WEBMUX_REAL_BROWSER") != "1" {
 		t.Skip("set WEBMUX_REAL_BROWSER=1 to run installed Chromium")
 	}
-	home, err := os.UserHomeDir()
+	root, err := browserDirectory("profiles")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -28,7 +28,6 @@ func TestSavedProfilePersistsRealChromiumCookies(t *testing.T) {
 		}
 		key := hex.EncodeToString(raw)
 		t.Cleanup(func() {
-			root := filepath.Join(home, "webmux-browser-profiles")
 			os.RemoveAll(filepath.Join(root, key))
 			os.Remove(filepath.Join(root, key+".lock"))
 		})

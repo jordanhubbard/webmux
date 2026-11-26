@@ -72,7 +72,13 @@ func TestSavedProfileRejectsLinksAndPublicDirectory(t *testing.T) {
 	}
 	home := t.TempDir()
 	t.Setenv("HOME", home)
-	root := filepath.Join(home, "webmux-browser-profiles")
+	root, err := browserDirectory("profiles")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Remove(root); err != nil {
+		t.Fatal(err)
+	}
 	outside := t.TempDir()
 	if err := os.Symlink(outside, root); err != nil {
 		t.Fatal(err)
