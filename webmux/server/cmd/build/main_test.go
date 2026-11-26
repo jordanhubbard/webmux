@@ -78,6 +78,14 @@ func TestCanonicalBuilderLinksMetadataIntoRunningServer(t *testing.T) {
 		t.Fatal(err)
 	}
 	root := t.TempDir()
+	// Build staging must ignore unrelated Git markers above its temporary copy,
+	// while the running server still reports the original source metadata below.
+	if err := os.Mkdir(filepath.Join(root, ".git"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	for _, key := range []string{"TMPDIR", "TMP", "TEMP"} {
+		t.Setenv(key, root)
+	}
 	defaults := filepath.Join(root, "defaults")
 	if err := copyTree(filepath.Join(module, "..", "config.defaults"), defaults); err != nil {
 		t.Fatal(err)
