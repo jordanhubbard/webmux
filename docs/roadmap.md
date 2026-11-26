@@ -157,6 +157,13 @@ roadmap checkbox.
 
 ## Current reliability work
 
+The [2026-11-26 Make target and roadmap audit](validation/make-target-audit-2026-11-26.md)
+tracks #762's source build/install/lifecycle qualification and #763's browser
+storage correction. Private native macOS service installation and combined
+install/uninstall now pass; saved-cookie restart qualification (#764) still
+fails with Keychain error -25308. The complete Make test run is not green. These
+checks do not replace the recovery and coordination acceptance below.
+
 **Retained recovery priority: the original [#318](https://github.com/jordanhubbard/webmux/issues/318)
 requirements and the remaining acceptance below.** The tracker records #318 as
 closed on 2026-11-20. Its earlier [#322](https://github.com/jordanhubbard/webmux/pull/322)

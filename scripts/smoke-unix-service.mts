@@ -13,7 +13,8 @@ import { renderService } from './render-service.mts';
 
 assert(process.platform === 'darwin' || process.platform === 'linux', 'Unix service smoke requires macOS or Linux');
 const darwin = process.platform === 'darwin';
-const makeMode = process.argv.includes('--make');
+const installAll = process.argv.includes('--make-all');
+const makeMode = installAll || process.argv.includes('--make');
 const sourceRoot = path.resolve(import.meta.dirname, '../webmux');
 await fs.access(path.join(sourceRoot, 'bin/webmux'));
 const temporary = await fs.mkdtemp(path.join(os.tmpdir(), 'webmux-unix-service-'));
@@ -46,10 +47,11 @@ const domain = darwin ? (launch(['print', `gui/${uid}`], false) ? `gui/${uid}` :
 const target = `${domain}/${label}`;
 const definition = !darwin && makeMode ? path.join(os.homedir(), '.config/systemd/user', label)
   : path.join(temporary, darwin ? 'fixture.plist' : label);
-function makeControl(action: 'install-server' | 'start' | 'stop' | 'restart' | 'uninstall-server'): void {
+function makeControl(action: 'install-server' | 'install-all' | 'start' | 'stop' | 'restart' | 'uninstall-server' | 'uninstall-all'): void {
   assert(makeMode && (!darwin || [`gui/${uid}`, `user/${uid}`].includes(domain)), 'Make fixture requires an isolated service');
-  const result = spawnSync('make', ['--no-print-directory', '-o', 'build-server', action,
-    'MAKE=make -o build-server', `NODE=${process.execPath}`, `WEBMUX_DIR=${root}`, `WEBMUX_HOME=${home}`,
+  const result = spawnSync('make', ['--no-print-directory', '-o', 'build-server', '-o', 'build-client', action,
+    'MAKE=make -o build-server -o build-client', `NODE=${process.execPath}`, `WEBMUX_DIR=${root}`, `WEBMUX_HOME=${home}`,
+    `CLIENT_BINDIR=${path.join(temporary, 'client bin')}`,
     ...(darwin ? [`PLIST=${definition}`, `LAUNCHD_SVC=${target}`, `MACOS_APP=${path.join(temporary, 'WebMux.app')}`] : [`UNIT=${definition}`])], {
     cwd: path.dirname(sourceRoot), encoding: 'utf8', timeout: 30000,
     env: { ...process.env, JWT_SECRET: '', WEBMUX_SLAVE_HOST: '', WEBMUX_SLAVE_PORT: '' },
@@ -138,7 +140,8 @@ try {
     // substitutions. Make still invokes the real serializer and service commands.
     await fs.writeFile(path.join(root, 'service', templateName), template);
     await fs.unlink(definition);
-    makeControl('install-server');
+    makeControl(installAll ? 'install-all' : 'install-server');
+    if (installAll) await fs.access(path.join(temporary, 'client bin/webmux-client'));
   } else if (darwin) launch(['bootstrap', domain, definition]);
   else {
     systemctl(['link', '--runtime', definition]);
@@ -279,9 +282,10 @@ try {
   socket?.close();
   if (!registered && definitionCreated) await fs.rm(definition, { force: true });
   if (registered && makeMode) {
-    makeControl('uninstall-server');
+    makeControl(installAll ? 'uninstall-all' : 'uninstall-server');
     await waitFor(async () => darwin ? launch(['print', target], false) === '' : property('LoadState') === 'not-found', 'Make uninstall registration cleanup');
     await assert.rejects(fs.access(definition), { code: 'ENOENT' });
+    if (installAll) await assert.rejects(fs.access(path.join(temporary, 'client bin/webmux-client')), { code: 'ENOENT' });
   }
   if (registered && !darwin && !makeMode) {
     systemctl(['stop', label]);
