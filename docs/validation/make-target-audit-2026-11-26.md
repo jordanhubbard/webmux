@@ -28,8 +28,9 @@ release. The starting revision was `7420061436fa914f463a3e5573fdd0af7d212413`.
 
 ## Verification
 
-Private logs are retained in `_build/make-audit-2026-11-26/`; they are not release
-artifacts. Make prerequisites are shared, so exercising a parent target also
+Private logs are retained in `_build/make-audit-2026-11-26/` and
+`_build/release-targets-767/`; they are qualification evidence. Make prerequisites
+are shared, so exercising a parent target also
 executes its actual prerequisite recipes. Fixture checks are distinguished from
 native commands below.
 
@@ -46,7 +47,7 @@ native commands below.
 | `clean` | Actual recipe removed all five seeded artifact/dependency trees in a private application directory. No primary build or installed service was removed. |
 | `help`, `check-tmux`, `check-guacd`, `changelog-init` | Actual commands passed; existing changelog retained. |
 | `lint`, strict TypeScript checks | Passed on the implementation checkpoint. |
-| `test`, `test-unit`, `test-e2e` | The completed clean managed-browser run exited 2: race tests, Go/bundled-library tests, 499 frontend tests and 287 helper tests passed (one GUI-dependent helper skipped at that stage); E2E had 1,417 passes, one saved-cookie restart failure and 22 opt-in/platform skips. This is not full-suite green. |
+| `test`, `test-unit`, `test-e2e` | The complete unmodified macOS GUI `make test` at `2cc3a26d` exits 0: Go/race/bundled-library and strict TypeScript stages pass, all 500 frontend and 297 helper tests pass, and E2E has 1,418 passes, zero failures and 22 existing opt-in/platform skips. The private GUI job uses the normal app resource role (`ProcessType=Interactive`); see #770 below. This qualifies this native macOS run, with the skipped/native-platform requirements still open. |
 | `release`, `release-minor`, `release-major`, `release-publish` | The actual Make recipes and release scripts pass isolated local-Git transition controls with a private bare origin and substituted application tests/GitHub service. No real publication was invoked. See the release-control follow-up below. |
 
 The delegate regression enumerates all 39 public targets, including names with
@@ -87,6 +88,10 @@ also installed and removed the actual client binary in a private bindir
 containing spaces. These use the separately qualified built images and private
 service labels, not the installed operator service. Logs are
 `service-gui-recheck.log` and `service-install-all.log` in the audit directory.
+
+The earlier completed remote `make test` exited 2 with 1,417 E2E passes, one
+saved-cookie failure and 22 opt-in/platform skips. Its failure and the later
+GUI-role failure are retained as separate runs.
 
 Earlier saved-cookie restart qualification failed on both the changed code and
 unchanged baseline browser source. A minimal real-Chrome probe reproduced cookie
@@ -137,13 +142,64 @@ reply describes a 373-pixel viewport. A visible drag press at y=40 was dispatche
 at y=62.17, outside the fixture handle. Pointer and wheel conversion now use the
 decoded screenshot's natural dimensions, with response dimensions as a fallback
 before an image is decoded. The test checks press, release and wheel coordinates.
-No deadline was changed. Actual browser workspace and complete Make qualification
-must pass after this change before calling the target green.
+No deadline was changed. At `2cc3a26d` the actual browser workspace case passes,
+including drag and subsequent dialog, clipboard, file, navigation and tab checks.
+The complete Make run also passes in the GUI app resource role described below.
 
 Private receipts: `gui-native-make.json`, `gui-native-make-interruption.json`,
 `browser-image-coordinates-before.log` and the owned GUI job directory under
 `_build/release-targets-767/`. The original fixture attachment is retained under
 `webmux/test-results/run-2bc10958-ca3f-4be3-ae60-7d10e37d6ab6/spec-11/`.
+
+## Complete native Make run and qualifier role: #770
+
+The unmodified `make test` at `2cc3a26d249f9b04e17e0a85f49466128ba47855`
+completed with exit 0 in `gui/501`, with unchanged source and the private job
+unregistered afterward. All 500 frontend and 297 helper tests pass; E2E has
+1,418 passes, zero failures and 22 original opt-in/platform skips. Those skips
+retain their actual native integration and hardware requirements.
+
+The preceding complete GUI run at the same source exited 2: 1,417 E2E passes,
+one underline-v2 replay deadline failure and the same 22 skips. Its first 1,355
+replay controls passed. The private GUI wrapper had omitted launchd's ProcessType.
+The installed `launchd.plist(5)` manual describes the resulting Standard role's
+CPU/I/O throttling. An instrumented copy of the unchanged case established:
+
+| GUI wrapper role | Result at the original 30-second deadline |
+| --- | --- |
+| Standard (implicit), first control | Timeout; 1,024 callbacks completed by 28.9 seconds. |
+| Interactive | All 256 reference controls and 2,120 callbacks completed in 12.59 seconds; all assertions passed. |
+| Standard (implicit), reversal | Timeout again; 192/256 reference controls completed by 28.0 seconds. |
+
+The original uninstrumented test then passed in 12.8 seconds under Interactive.
+In the final whole Make run it passed in 12.7 seconds, and all 1,356 replay cases
+passed. Only the task-private GUI wrapper's resource role changed: no product or
+test source, test concurrency, deadline, assertion or retry policy changed.
+The original failures and the rejected diagnostic setup (a grep matching no
+tests) remain retained separately. This is a qualifier environment correction,
+not a terminal parser repair.
+
+Receipts: `gui-interactive-make.json`, `gui-interactive-make-summary.json`,
+`snapshot-role-comparison.json` and `gui-snapshot-original.json` under
+`_build/release-targets-767/`. The [sanitized receipt](make-target-audit-2026-11-26.json)
+binds the source, command outcomes, logs and local archive hashes.
+
+## Current native packaging and lifecycle
+
+The same frozen source passed the actual public command
+`make package package-server package-client`; all three archive sidecars match.
+The combined archive passed relocated standalone runtime smoke, and the newly
+built images passed public manual start/status/restart/stop and private GUI
+combined install/uninstall. The installer check includes active PTY shutdown,
+transcript drain, restart and a client bindir containing spaces. Build prerequisites
+were qualified separately before lifecycle helpers selected the prebuilt images.
+Earlier archive bytes were preserved before the public package recipes replaced
+the local outputs. These are local candidate archives, using the development
+version 1.4.5; published release assets retain their own separate identities.
+
+Receipts: `gui-native-targets.json`, `native-targets.json`, and
+`native-targets-__4xobqn/archives.json` under the private audit directory.
+The operator service and its real terminal sessions were preserved.
 
 ## Home-directory relocation
 
@@ -181,14 +237,17 @@ not release publication or native packaging qualification.
 The source-bound fixtures use isolated Git configuration and local bare origins.
 Their logs are retained in `_build/release-targets-767/`: the original failing
 `before-valid-fixture.log`, passing `final-controls.log`, and the read-only
-`real-main-readiness.log`/JSON receipt. Actual main `74200614` currently has no
-qualifying exact-head CI run; the readiness command exits 1 as required. No
+`real-main-readiness.log`/JSON receipt. The final read-only recheck at main
+`74200614` still has no qualifying exact-head CI run; the readiness command exits
+1 as required. No
 hosted job, repository release tag or GitHub release was created by these checks.
+The final readiness output is `real-main-readiness-final.log`/JSON.
 
 ### Open acceptance
 
-The starting open-issue snapshot contained 70 issues. #762–#765 were
-added during this audit. This checkpoint does not close the unrelated native
+The starting open-issue snapshot contained 70 issues. #762–#765 and
+#767–#770 added eight issues during this audit (78 before subsequent closures).
+This checkpoint does not close the unrelated native
 runtime, integration, distribution, or acceptance issues.
 
 - #661 still requires physical gesture-capable trackpad and remaining
@@ -202,8 +261,22 @@ runtime, integration, distribution, or acceptance issues.
 - Native daemon/recovery, platform failures and activation gates, including
   #706/#707, #752 and #761, remain independently tracked. PR #754's private
   continuity evidence does not close all those issues.
-- Release/distribution gates, including Developer ID notarization, Windows
-  signing and WinGet, retain their existing issue-specific evidence requirements.
+- Release/distribution gates retain their existing issue-specific requirements.
+  On Puck, GUI `notarytool history` lookups for profile `webmux` in default
+  storage and the explicit login Keychain report a missing item (native exit
+  69), rather than the earlier remote locked-Keychain error. #152 still needs
+  profile setup/location, signing, notarization/stapling/Gatekeeper and signed
+  upgrade permission acceptance. The initial private observer misparsed the
+  formatted exit 69; its retained observation-limit receipt has an explicit
+  correction note and an independent completed explicit-login lookup.
+- #63 still has no repository signing secrets or dedicated release signing
+  environment in the read-only metadata check; provider enrollment and native
+  signature/installer acceptance remain outstanding.
+- #65's current native 1.4.5 submission is microsoft/winget-pkgs#482084, open at
+  `0052405113c622f6b2b0276c876da931351bd505`. All eleven non-skipped checks now
+  pass, including installation and CLA. Moderator approval, merge and actual
+  community-source discovery remain pending. The old 1.3.10 submission #432896
+  closed without merging; it is historical and superseded.
 
 The unchecked requirements in `docs/roadmap.md` remain unchecked. Complete their
 actual acceptance before publishing a release or claiming the overall goal done.

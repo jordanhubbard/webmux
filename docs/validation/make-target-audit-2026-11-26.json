@@ -1,0 +1,118 @@
+{
+  "scope": "Native macOS qualification checkpoint; full roadmap, skipped integrations and other platforms remain open. Archive hashes identify local candidates, not published release assets.",
+  "source": "2cc3a26d249f9b04e17e0a85f49466128ba47855",
+  "make": {
+    "command": "make test",
+    "security_domain": "GUI user session",
+    "process_type": "Interactive",
+    "exit_code": 0,
+    "source_unchanged": true,
+    "job_unregistered": true,
+    "stdout_sha256": "f15aa7427c8c0c749a9d26389fcdb0a7c2b639fed62b03559cf028fd5122d6bd",
+    "stderr_sha256": "028a5951b164502aad3ee51438be7b75dce0919595e129d0242c0343246d638e",
+    "summary": {
+      "source": "2cc3a26d249f9b04e17e0a85f49466128ba47855",
+      "make_exit_code": 0,
+      "e2e_passed": 1418,
+      "e2e_failed": 0,
+      "e2e_skipped": 22,
+      "frontend_passed": 500,
+      "helpers_passed": 297,
+      "source_unchanged": true,
+      "process_type": "Interactive"
+    }
+  },
+  "native_commands": [
+    {
+      "name": "package-public",
+      "exit_code": 0,
+      "elapsed_seconds": 50.674,
+      "sha256": "505e2feafba46b60907eb66596e368a1ba21d629001efd80ee05754f1bed066c"
+    },
+    {
+      "name": "combined-runtime",
+      "exit_code": 0,
+      "elapsed_seconds": 2.611,
+      "sha256": "8efd1d99a2cfafea8be1a78164c961cb2cdf4216b6b0eab38aab81064c46f735"
+    },
+    {
+      "name": "source-public-lifecycle",
+      "exit_code": 0,
+      "elapsed_seconds": 6.072,
+      "sha256": "ee05cf25361e597866cb052b64ff4d10af8b07fd772965a3d9c274cb5ceebc68"
+    },
+    {
+      "name": "combined-public-install",
+      "exit_code": 0,
+      "elapsed_seconds": 25.566,
+      "sha256": "f78068efef66dbb7afdca6a6dda1b3d1a027f0580e82e060e52ccc4a846e4cd1"
+    }
+  ],
+  "local_archives": [
+    {
+      "name": "webmux-1.4.5-darwin-arm64-native.tar.gz",
+      "size": 31107419,
+      "sha256": "f8826e0efdcf1c7fb8397e6cef4d269192b89285524e1382b73eadd98893b93e"
+    },
+    {
+      "name": "webmux-server-1.4.5-darwin-arm64-native.tar.gz",
+      "size": 24849766,
+      "sha256": "b95786ec2f34ea1a5eeb7d69a8a91c1b770a04452aaa5c9cb7815df4ebbc193a"
+    },
+    {
+      "name": "webmux-client-1.4.5-darwin-arm64-native.tar.gz",
+      "size": 6260839,
+      "sha256": "a924b6169e86441bbb74df55242331a61c2f07cbe2e5d6f0af8bd59136aa14aa"
+    }
+  ],
+  "role_controls": [
+    {
+      "variant": "standard_first",
+      "exit_code": 1,
+      "process_type_field": null,
+      "last_phase": {
+        "phase": "callbacks",
+        "ms": 28907,
+        "writes": 1024,
+        "longestCallback": 100.79999999888241
+      },
+      "stdout_sha256": "fe50d739fa027701d7c37cea4da3edbe597b8cdd34fa4f4ca42da8c51ae8b8f4"
+    },
+    {
+      "variant": "interactive",
+      "exit_code": 0,
+      "process_type_field": "Interactive",
+      "last_phase": {
+        "phase": "complete",
+        "ms": 12590,
+        "writes": 2120,
+        "longestCallback": 13.099999999627471
+      },
+      "stdout_sha256": "3ba0016cfd7fb12e46f80d6f6649644953368ae45eb67d8f8fc66827d864f5b1"
+    },
+    {
+      "variant": "standard_reversal",
+      "exit_code": 1,
+      "process_type_field": null,
+      "last_phase": {
+        "phase": "controls",
+        "ms": 28004,
+        "writes": 960,
+        "longestCallback": 87.29999999888241,
+        "controls": 192
+      },
+      "stdout_sha256": "301eff32eb2284331a1689dbe799466103d302791d4f7fce6db84e873f842b71"
+    }
+  ],
+  "original_replay_case": {
+    "exit_code": 0,
+    "seconds": 12.8,
+    "deadline_seconds": 30,
+    "source_unchanged": true
+  },
+  "release_readiness": {
+    "main_sha": "7420061436fa914f463a3e5573fdd0af7d212413",
+    "operation": "read_only_release_readiness",
+    "exit_code": 1
+  }
+}

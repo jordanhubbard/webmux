@@ -159,10 +159,14 @@ roadmap checkbox.
 
 The [2026-11-26 Make target and roadmap audit](validation/make-target-audit-2026-11-26.md)
 tracks #762's source build/install/lifecycle qualification and #763's browser
-storage correction. Private native macOS service installation and combined
-install/uninstall now pass; saved-cookie restart qualification (#764) still
-fails with Keychain error -25308. The complete Make test run is not green. These
-checks do not replace the recovery and coordination acceptance below.
+storage correction. At source `2cc3a26d`, private native macOS service and
+combined installer checks pass, as do saved-cookie restart and the complete
+unmodified GUI `make test`: 500 frontend, 297 helpers and 1,418 E2E passes, with
+22 existing opt-in/platform skips. #769 fixes screenshot-resize input mapping;
+#770 diagnoses and corrects the private GUI qualifier's launchd resource role,
+with original tests and deadlines unchanged. Source prevention remains in draft
+PR #766; Snap/platform acceptance and the recovery/coordination requirements
+below remain open. These local checks do not complete the roadmap or release.
 Release-control follow-ups #767/#768 add retained preparation failure state and
 exact-main CI admission before tagging; their isolated Git/GitHub-service
 controls do not establish release publication or complete this roadmap.
