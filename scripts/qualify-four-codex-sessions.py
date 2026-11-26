@@ -151,6 +151,7 @@ class Fixture:
         if args.ssh_host:
             self.configure_private_ssh(nativebin)
         self.controller = self.rpc = None
+        self.controller_starts = 0
         self.daemon_start_attempted = False
         self.daemon_pid = None
         self.daemon_epoch = None
@@ -162,6 +163,9 @@ class Fixture:
             'profile': getattr(args, 'profile', 'full'),
             'fixture_root': str(self.root), 'source': subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=self.repo, text=True).strip(),
             'native_sha256': args.native_sha256, 'webmux_sha256': args.webmux_sha256,
+            'initial_webmux_sha256': args.initial_webmux_sha256,
+            'controller_asset_mode': 'embedded' if args.embedded_assets else 'checkout-override',
+            'controller_images': [],
             'code_mode_host_sha256': getattr(args, 'code_mode_host_sha256', None),
             'qualifier_sha256': digest(Path(__file__)), 'phases': [],
             'worker_start': {'load': list(os.getloadavg()), 'cpus': os.cpu_count(),
@@ -288,13 +292,25 @@ class Fixture:
 
     def start_controller(self):
         require(self.controller is None or self.controller.poll() is not None, 'controller-already-live')
-        self.controller = subprocess.Popen([str(self.args.webmux), '-root', str(self.repo / 'webmux'), '-listen', self.address],
+        initial = self.controller_starts == 0 and self.args.initial_webmux is not None
+        binary = self.args.initial_webmux if initial else self.args.webmux
+        expected = self.args.initial_webmux_sha256 if initial else self.args.webmux_sha256
+        require(digest(binary) == expected, 'controller-image-changed')
+        command = [str(binary), '-listen', self.address]
+        if not self.args.embedded_assets:
+            command.extend(['-root', str(self.repo / 'webmux')])
+        self.controller = subprocess.Popen(command,
             env=self.env, cwd=self.root, stdin=subprocess.DEVNULL,
             stdout=self.log(f'controller-{len(self.receipt["phases"])}.log'), stderr=subprocess.STDOUT,
             start_new_session=True)
         self.record_process('controller', self.controller.pid)
         self.wait(self.ready, 'controller-startup')
-        return self.epoch(self.controller.pid)
+        epoch = self.epoch(self.controller.pid)
+        self.receipt['controller_images'].append({'sha256': expected, 'epoch': epoch,
+            'initial_image': initial, 'asset_mode': self.receipt['controller_asset_mode']})
+        self.controller_starts += 1
+        self.save()
+        return epoch
 
     def stop_controller(self, abrupt=False):
         require(self.controller is not None and self.controller.poll() is None, 'owned-controller-not-live')
@@ -802,12 +818,20 @@ def main():
         parser.add_argument('--'+name, required=True)
     parser.add_argument('--profile', choices=('full', 'controller'), default='full',
         help='Controller profile preserves all original viewers; full additionally qualifies viewer replacement')
+    parser.add_argument('--initial-webmux', type=Path,
+        help='Optional old controller for baseline only; launchers and remote helpers use --webmux throughout')
+    parser.add_argument('--initial-webmux-sha256', help='Required with --initial-webmux; must differ from --webmux-sha256')
+    parser.add_argument('--embedded-assets', action='store_true',
+        help='Omit the checkout asset override for every controller start')
     parser.add_argument('--ssh-host', help='Real SSH profile; must resolve to this kernel and account; uses private helpers/tmux')
     args = parser.parse_args()
     args.ssh_boot_sha256 = None
     require(os.uname().sysname == 'Darwin', 'native-macos-required')
     require(not args.output.exists(), 'exclusive-output-required')
-    for name in ('native', 'webmux'):
+    require(bool(args.initial_webmux) == bool(args.initial_webmux_sha256), 'initial-controller-path-and-hash-required')
+    require(not args.initial_webmux or args.initial_webmux_sha256 != args.webmux_sha256,
+        'controller-cutover-requires-distinct-images')
+    for name in ('native', 'webmux', *(['initial_webmux'] if args.initial_webmux else [])):
         binary = getattr(args, name).resolve(strict=True)
         expected = getattr(args, name+'_sha256')
         require(re.fullmatch('[0-9a-f]{64}', expected) and digest(binary) == expected, name+'-hash-mismatch')
@@ -850,6 +874,7 @@ def main():
         fixture.receipt['passed'] = passed and settled
         fixture.receipt['active_work_qualified'] = passed and settled
         fixture.receipt['four_session_survival_qualified'] = passed and settled
+        fixture.receipt['controller_image_cutover_qualified'] = passed and settled and args.initial_webmux is not None
         fixture.receipt['active_viewer_handoff_qualified'] = passed and settled and args.profile == 'full'
         fixture.receipt['worktree_read_parity_qualified'] = passed and settled and args.profile == 'full'
         fixture.receipt['worktree_creation_qualified'] = False

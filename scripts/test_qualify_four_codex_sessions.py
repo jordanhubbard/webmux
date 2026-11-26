@@ -7,7 +7,10 @@ import subprocess
 import sys
 import tempfile
 import time
+from types import SimpleNamespace
 import unittest
+from unittest.mock import Mock
+from unittest.mock import patch
 
 spec = importlib.util.spec_from_file_location('four_codex', Path(__file__).with_name('qualify-four-codex-sessions.py'))
 module = importlib.util.module_from_spec(spec)
@@ -22,6 +25,58 @@ def cohort(counter=1):
 
 
 class ContinuityControls(unittest.TestCase):
+    def test_controller_cutover_uses_old_image_once_and_refuses_changed_replacement(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            old, replacement = root / 'old', root / 'replacement'
+            old.write_bytes(b'old controller image')
+            replacement.write_bytes(b'replacement controller image')
+            fixture = object.__new__(module.Fixture)
+            fixture.args = SimpleNamespace(initial_webmux=old, initial_webmux_sha256=module.digest(old),
+                webmux=replacement, webmux_sha256=module.digest(replacement), embedded_assets=True)
+            fixture.controller, fixture.controller_starts = None, 0
+            fixture.root, fixture.repo, fixture.env = root, root, {}
+            fixture.address = '127.0.0.1:1'
+            fixture.receipt = {'phases': [], 'controller_images': [], 'controller_asset_mode': 'embedded'}
+            fixture.record_process = fixture.wait = Mock()
+            fixture.epoch = lambda pid: f'epoch-{pid}'
+            fixture.save = Mock()
+            with (root / 'log').open('wb') as stream:
+                fixture.log = lambda name: stream
+                children = [Mock(pid=pid, poll=Mock(return_value=0)) for pid in (101, 102, 103)]
+                with patch.object(module.subprocess, 'Popen', side_effect=children) as launch:
+                    for _ in range(3):
+                        fixture.start_controller()
+                    self.assertEqual([call.args[0][0] for call in launch.call_args_list],
+                        [str(old), str(replacement), str(replacement)])
+                    self.assertTrue(all('-root' not in call.args[0] for call in launch.call_args_list))
+                    replacement.write_bytes(b'changed after verification')
+                    with self.assertRaisesRegex(module.Refusal, 'controller-image-changed'):
+                        fixture.start_controller()
+                    self.assertEqual(launch.call_count, 3)
+            self.assertEqual([row['initial_image'] for row in fixture.receipt['controller_images']], [True, False, False])
+
+    def test_default_controller_keeps_checkout_asset_override(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            binary = root / 'controller'
+            binary.write_bytes(b'controller image')
+            fixture = object.__new__(module.Fixture)
+            fixture.args = SimpleNamespace(initial_webmux=None, initial_webmux_sha256=None,
+                webmux=binary, webmux_sha256=module.digest(binary), embedded_assets=False)
+            fixture.controller, fixture.controller_starts = None, 0
+            fixture.root, fixture.repo, fixture.env = root, root, {}
+            fixture.address = '127.0.0.1:1'
+            fixture.receipt = {'phases': [], 'controller_images': [], 'controller_asset_mode': 'checkout-override'}
+            fixture.record_process = fixture.wait = fixture.save = Mock()
+            fixture.epoch = lambda pid: f'epoch-{pid}'
+            with (root / 'log').open('wb') as stream:
+                fixture.log = lambda name: stream
+                with patch.object(module.subprocess, 'Popen', return_value=Mock(pid=101)) as launch:
+                    fixture.start_controller()
+                    self.assertEqual(launch.call_args.args[0],
+                        [str(binary), '-listen', fixture.address, '-root', str(root / 'webmux')])
+
     def test_four_independent_original_turns_must_progress(self):
         module.verify_continuity(cohort(), cohort(2))
         for key in ('session_id', 'thread_id', 'turn_id', 'viewer_epoch', 'provider_epoch', 'daemon_epoch', 'work_epoch', 'work_script_sha256', 'work_item_id'):
