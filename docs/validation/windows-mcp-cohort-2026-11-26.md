@@ -35,7 +35,28 @@ every manifest hash, native BEP, log, and XML reference:
 | Control | 97138 | 27 | `a4c51ea3c47e9e9d472c4dc4841cf4af29d7080f99679c7641ebb40108f42c7d` |
 | Candidate | 63101 | 23 | `f35e93e58862129d0aa43f944eed20010de472dc446abcad2a1469bf7026ee33` |
 
-The full sixteen-shard target and remaining required platform gates still need
-qualification. Existing failures in #742, #751, and #757 remain open. No hosted
-Actions, installed services, original coding requests, or global configuration
-were changed by this comparison.
+This comparison covers one original cohort; the subsequent full-target result
+follows below. Remaining required platform gates, including failures in #742,
+#751, and #757, are still open. No hosted Actions, installed services, original
+coding requests, or global configuration were changed by this comparison.
+
+## Full sixteen-shard target
+
+The subsequent unfiltered `//codex-rs/core:core-all-test` run at candidate
+`cdf75ab609e0a82fad4b6622dbcd746349f63672` passed all sixteen native shards on
+their first attempts. Native test results were not cached. Every shard matched
+its original case names, ignores, and wrapper batch sizes. Assertions, native
+concurrency, deadlines, and retry policy remained unchanged. This includes a
+first-attempt pass for the previously failing fifth shard.
+
+All three owned normal Bazel shutdowns succeeded. The controller restored the
+original clean source revision, and preservation found no unresolved native
+helpers. The off-worker archive contains 53 independently hash-verified files,
+including all sixteen native log/XML pairs and their BEP references:
+
+- Bytes: `238088`.
+- SHA-256: `56335f51dbf574c7905e03ef5d7ecce62fb0615fca78256505d026a284035b72`.
+
+This completes the full core-target check for this candidate. It does not
+complete the Windows platform matrix, clear #742/#751/#757, qualify other
+platforms, or activate any installed service.
