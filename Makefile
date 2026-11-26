@@ -66,6 +66,8 @@ OS           := $(shell uname)
 SERVER_COMMAND := "$(WEBMUX_DIR)/bin/webmux"
 E2E_SCRIPT := test:e2e
 NPM_WORKSPACES := --workspace=frontend --include-workspace-root
+TOOLCHAIN_DIR := $(CURDIR)/.build/toolchains
+export PATH := $(TOOLCHAIN_DIR)/node/bin:$(TOOLCHAIN_DIR)/go/bin:$(PATH)
 
 export WEBMUX_ROOT
 export WEBMUX_HOME
@@ -87,7 +89,7 @@ ifneq ($(JWT_SECRET),)
 endif
 
 # ── Targets ────────────────────────────────────────────────────────
-.PHONY: all build build-server build-client deps check-tmux check-guacd start stop restart status test test-unit test-e2e lint clean configure help \
+.PHONY: all build build-server build-client deps toolchain-node toolchain-go check-tmux check-guacd start stop restart status test test-unit test-e2e lint clean configure help \
        install install-client install-agent-deck install-optional-agent-deck install-server install-all uninstall uninstall-client uninstall-server uninstall-all \
        release release-minor release-major release-publish changelog-init \
        package package-server package-client package-assets _start_manual _stop_manual
@@ -95,17 +97,16 @@ endif
 all: build
 
 # Platform-specific runtime bundles; the combined archive retains its existing name.
-package-assets:
-	@cd "$(WEBMUX_DIR)" && $(NPM) ci $(NPM_WORKSPACES) --no-audit --no-fund
+package-assets: deps
 	@cd "$(WEBMUX_DIR)" && $(NPM) run build --workspace=frontend
 
-package: package-assets
+package: package-assets toolchain-go
 	@WEBMUX_NATIVE_COMPONENT=all $(NODE) scripts/package-native.mts
 
-package-server: package-assets
+package-server: package-assets toolchain-go
 	@WEBMUX_NATIVE_COMPONENT=server $(NODE) scripts/package-native.mts
 
-package-client:
+package-client: toolchain-node toolchain-go
 	@WEBMUX_NATIVE_COMPONENT=client $(NODE) scripts/package-native.mts
 
 help:
@@ -156,20 +157,26 @@ check-tmux:
 check-guacd:
 	@sh scripts/check-guacd.sh
 
-deps:
-	@cd "$(WEBMUX_DIR)" && $(NPM) install $(NPM_WORKSPACES) --no-audit --no-fund
+toolchain-node:
+	@sh scripts/bootstrap-toolchain.sh node "$(NODE)" "$(TOOLCHAIN_DIR)"
+
+toolchain-go:
+	@sh scripts/bootstrap-toolchain.sh go "$(GO)" "$(TOOLCHAIN_DIR)" "$(WEBMUX_DIR)/server/go.mod"
+
+deps: toolchain-node
+	@cd "$(WEBMUX_DIR)" && $(NPM) ci $(NPM_WORKSPACES) --include=dev --no-audit --no-fund
 
 build: build-server build-client
 	@printf "$(C_GRN)✓$(C_RST) Server and client build complete.\n"
 
-build-server: deps
+build-server: deps toolchain-go
 	@printf "$(C_BLU)▸$(C_RST) Building webmux…\n"
 	@cd "$(WEBMUX_DIR)" && $(NPM) run build:helpers --silent && $(NPM) run build --workspace=frontend --silent
 	@mkdir -p "$(WEBMUX_DIR)/bin"
 	@cd "$(WEBMUX_DIR)/server" && $(GO) run ./cmd/build -o ../bin/webmux
 	@printf "$(C_GRN)✓$(C_RST) Server build complete.\n"
 
-build-client:
+build-client: toolchain-go
 	@printf "$(C_BLU)▸$(C_RST) Building webmux-client…\n"
 	@mkdir -p "$(WEBMUX_DIR)/bin"
 	@cd "$(WEBMUX_DIR)/server" && $(GO) build -o ../bin/webmux-client ./cmd/webmux-client
@@ -338,7 +345,7 @@ test-e2e: build
 	cd "$(WEBMUX_DIR)" && PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH="$$EXE" $(NPM) run $(E2E_SCRIPT)
 	@printf "$(C_GRN)✓$(C_RST) E2E tests passed.\n"
 
-lint:
+lint: deps toolchain-go
 	@cd "$(WEBMUX_DIR)" && $(NPM) run lint
 
 clean: stop

@@ -5,6 +5,7 @@ node_modules/
 /.worktrees/
 
 # Build output
+/.build/
 webmux/bin/
 webmux/scripts/dist/
 webmux/web/
