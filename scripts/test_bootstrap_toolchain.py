@@ -91,6 +91,24 @@ class BootstrapTests(unittest.TestCase):
         self.assertIn("npm ci --workspace=frontend --include-workspace-root", r.stdout)
         self.assertNotIn("npm install", r.stdout)
 
+    def test_make_defaults_to_private_caches_and_honors_overrides(self):
+        fixture = self.root / "cache.mk"
+        fixture.write_text(f"include {ROOT / 'Makefile'}\nprobe-caches:\n"
+                           "\t@printf '%s\\n' \"$$GOMODCACHE\" \"$$GOCACHE\"\n")
+        env = dict(os.environ)
+        for key in ["GOMODCACHE", "GOCACHE"]:
+            env.pop(key, None)
+        for override in [False, True]:
+            with self.subTest(override=override):
+                if override:
+                    env.update(GOMODCACHE="/chosen/module cache", GOCACHE="/chosen/build cache")
+                r = subprocess.run(["make", "--no-print-directory", "-f", str(fixture), "probe-caches"],
+                                   cwd=ROOT, env=env, capture_output=True, text=True, timeout=10)
+                self.assertEqual(r.returncode, 0, r.stderr)
+                expected = [env["GOMODCACHE"], env["GOCACHE"]] if override else [
+                    str(ROOT / ".build/go-mod"), str(ROOT / ".build/go-cache")]
+                self.assertEqual(r.stdout.splitlines(), expected)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -216,6 +216,8 @@ The build installs JavaScript build dependencies with `npm ci --include=dev` fro
 lockfile. Bootstrapped tools are selected only inside Make recipes; direct npm
 commands still require a compatible Node.js on your shell's `PATH`. An initial
 build needs network access for the toolchains, npm packages and Go modules.
+Go module and compiler caches default to `.build/go-mod/` and `.build/go-cache/`;
+set `GOMODCACHE` and `GOCACHE` to reuse another writable cache.
 
 Open `http://localhost:8080`. On first run with local auth, you'll be prompted to create the first administrator account.
 

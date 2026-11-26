@@ -68,6 +68,10 @@ E2E_SCRIPT := test:e2e
 NPM_WORKSPACES := --workspace=frontend --include-workspace-root
 TOOLCHAIN_DIR := $(CURDIR)/.build/toolchains
 export PATH := $(TOOLCHAIN_DIR)/node/bin:$(TOOLCHAIN_DIR)/go/bin:$(PATH)
+# Avoid stale/root-owned host caches on newly provisioned build machines.
+# Explicit environment or command-line cache locations remain authoritative.
+export GOMODCACHE ?= $(CURDIR)/.build/go-mod
+export GOCACHE ?= $(CURDIR)/.build/go-cache
 
 export WEBMUX_ROOT
 export WEBMUX_HOME
