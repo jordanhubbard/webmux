@@ -185,8 +185,11 @@ prerequisites, upgrades, and current signing information.
 
 ### Prerequisites (source builds)
 
-- Go >= 1.26 for native source builds
-- Node.js >= 24 for frontend and tooling builds
+- Make, a POSIX shell, tar, curl or wget, and sha256sum or shasum for Unix source builds
+- Go >= 1.27.4 and Node.js >= 24; `make` downloads checksum-verified toolchains
+  into the checkout's ignored `.build/toolchains/` when these are missing or too old
+  (Linux/macOS, x64/ARM64). Existing compatible tools are reused. No sudo or shell
+  profile changes are needed. Explicit `GO` and `NODE` overrides must already work.
 - OpenSSH client (`ssh` on macOS/Linux, `ssh.exe` on `PATH` on Windows)
 - tmux on macOS/Linux for built-in local terminals; source server install/start commands check for it on `PATH`
 - (Optional) `sshpass` for password-based SSH auth
@@ -208,6 +211,13 @@ WebMux runs natively on all three major desktop/server platforms. Each platform 
 make            # install deps + build
 make start      # start in background
 ```
+
+The build installs JavaScript build dependencies with `npm ci --include=dev` from the committed
+lockfile. Bootstrapped tools are selected only inside Make recipes; direct npm
+commands still require a compatible Node.js on your shell's `PATH`. An initial
+build needs network access for the toolchains, npm packages and Go modules.
+Go module and compiler caches default to `.build/go-mod/` and `.build/go-cache/`;
+set `GOMODCACHE` and `GOCACHE` to reuse another writable cache.
 
 Open `http://localhost:8080`. On first run with local auth, you'll be prompted to create the first administrator account.
 

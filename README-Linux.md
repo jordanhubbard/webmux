@@ -28,8 +28,9 @@ source checkout.
 ## Prerequisites
 
 - A supported 64-bit or ARM64 Linux distribution
-- Go 1.26 or newer
-- Node.js 24 LTS or newer for frontend/tooling builds
+- Make, tar, curl or wget, and sha256sum
+- Go 1.27.4 or newer and Node.js 24 or newer (automatically provisioned by `make`
+  on x64/ARM64 when missing or outdated)
 - Git and OpenSSH Client
 - A C/C++ toolchain and Python if npm must compile a native dependency
 
@@ -37,10 +38,15 @@ On Debian or Ubuntu, install the common prerequisites with:
 
 ```bash
 sudo apt update
-sudo apt install git openssh-client build-essential python3
+sudo apt-get install -y git openssh-client build-essential python3 curl ca-certificates
 ```
 
-Install Go 1.26 or newer and Node.js 24 LTS or newer using your distribution packages or the language distributors. Verify them before building:
+Run `make` to download checksum-verified Go and Node toolchains into
+`.build/toolchains/`, without sudo or shell profile changes. Compatible installed
+tools are reused. Go caches also default to `.build/`; explicit `GOMODCACHE` and
+`GOCACHE` settings override these defaults. Direct npm/Go commands outside Make
+need compatible tools on your shell's PATH. To use tools installed separately,
+verify them before building:
 
 ```bash
 node --version

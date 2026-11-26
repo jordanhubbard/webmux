@@ -84,7 +84,9 @@ func build(output, web, defaults, goos, goarch string) error {
 	if after != observed {
 		return errors.New("build metadata changed while staging source")
 	}
-	command := exec.Command("go", "build", "-trimpath", "-tags=embedded", "-ldflags", observed.linkerFlags(), "-o", output, "./cmd/webmux")
+	// The staging directory has no Git identity. Do not let Go discover an
+	// unrelated ancestor repository; source metadata was observed above.
+	command := exec.Command("go", "build", "-buildvcs=false", "-trimpath", "-tags=embedded", "-ldflags", observed.linkerFlags(), "-o", output, "./cmd/webmux")
 	command.Dir = stage
 	for _, variable := range os.Environ() {
 		key, _, _ := strings.Cut(variable, "=")

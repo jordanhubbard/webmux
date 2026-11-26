@@ -26,14 +26,18 @@ source checkout.
 ## Prerequisites
 
 - A currently supported macOS release
-- Go 1.26 or newer
-- Node.js 24 LTS or newer for frontend/tooling builds
+- Make, tar, curl, and shasum
+- Go 1.27.4 or newer and Node.js 24 or newer (automatically provisioned by `make`
+  on Intel/Apple Silicon when missing or outdated)
 - Git
 - The built-in OpenSSH client
 - tmux for built-in local terminals (`brew install tmux`)
 - Xcode Command Line Tools if npm must compile a native dependency
 
-Homebrew is a convenient way to install the required tools:
+`make` downloads checksum-verified Go and Node toolchains into `.build/toolchains/`
+when needed. Go caches also default to `.build/`, with explicit `GOMODCACHE` and
+`GOCACHE` overrides preserved. No sudo or shell profile changes are needed for
+this bootstrap. Homebrew remains an option for installing tools globally:
 
 ```bash
 xcode-select --install

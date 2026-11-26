@@ -1,0 +1,27 @@
+{
+  "source": "228bae10a8d2762c53545d0e9d99a17bfcf9fe75",
+  "utc": "2026-11-26T04:11:06.777028+00:00",
+  "platform": "native Linux x86_64",
+  "source_archive_sha256": "d5517420f50d481664697d03cee90c3f336c2a91d2f224b90f90f343e7ba79cc",
+  "cold_build_exit_code": 0,
+  "cold_initial_state": "toolchains, node_modules and binaries absent; asserted before make",
+  "environment": {
+    "NODE_ENV": "production",
+    "GOMAXPROCS": "2",
+    "GOFLAGS": "-p=2"
+  },
+  "tests": {
+    "bootstrap": 7,
+    "builder_and_buildinfo": 3,
+    "make_controls": 12
+  },
+  "all_test_commands_exit_zero": true,
+  "source_lockfile_sha256": "45c39a2a9b254ac87a33b6ca83f90cda1bf9dbdb1a0f90038cd0024b45e015fa",
+  "lockfile_unchanged": true,
+  "original_primary_lockfile_preserved": true,
+  "binaries": {
+    "webmux": "b73d2fa3655be394521a40047ce366015f18998013d350f5b3e16f7b8c61fd9e",
+    "webmux-client": "231b1a58901fb8e9e00f29de9898c78bf492dd8b91e847656bf2ca61102eae22"
+  },
+  "scope": "Clean source export, real toolchain downloads, npm ci and native compilation; owned HTTP builder regression preserves source metadata with invalid Git ancestor. No installed service activation, original session replay, full platform claim or GitHub Actions."
+}
