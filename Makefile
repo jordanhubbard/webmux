@@ -49,6 +49,12 @@ C_CYN  := \033[36m
 C_RED  := \033[31m
 C_WHT  := \033[37m
 
+# Freeze runtime data before any Make shell function or recipe can expand it.
+override JWT_SECRET := $(value JWT_SECRET)
+override HTTP_PORT := $(value HTTP_PORT)
+override HTTPS_PORT := $(value HTTPS_PORT)
+export JWT_SECRET HTTP_PORT HTTPS_PORT
+
 # ── Paths ──────────────────────────────────────────────────────────
 WEBMUX_DIR   := $(CURDIR)/webmux
 WEBMUX_ROOT  := $(WEBMUX_DIR)
@@ -84,14 +90,6 @@ LISTEN_HOST  ?=
 AUTH_MODE    ?=
 JWT_SECRET   ?=
 SECURE_MODE  ?=
-
-# Build the env-var exports only for values that are set.
-# HTTP_PORT and HTTPS_PORT are resolved at start time (with port-conflict check)
-# and passed explicitly; only JWT_SECRET needs to be forwarded here.
-RUNTIME_ENV :=
-ifneq ($(JWT_SECRET),)
-  RUNTIME_ENV += JWT_SECRET=$(JWT_SECRET)
-endif
 
 # ── Targets ────────────────────────────────────────────────────────
 .PHONY: all build build-server build-client deps toolchain-node toolchain-go check-tmux check-guacd start stop restart status test test-unit test-e2e lint clean configure help \
@@ -204,20 +202,23 @@ _start_manual: check-tmux
 		printf "$(C_YLW)●$(C_RST) webmux is already running $(C_DIM)(pid $$(cat "$(PIDFILE)"))$(C_RST)\n"; \
 		exit 1; \
 	fi
-	@WANT_HTTP="$(HTTP_PORT)"; [ -z "$$WANT_HTTP" ] && WANT_HTTP=8080; \
-	WANT_HTTPS="$(HTTPS_PORT)"; [ -z "$$WANT_HTTPS" ] && WANT_HTTPS=8443; \
+	@WANT_HTTP="$${HTTP_PORT:-8080}"; \
+	WANT_HTTPS="$${HTTPS_PORT:-8443}"; \
 	if command -v python3 >/dev/null 2>&1; then PYTHON=python3; \
 	elif command -v python >/dev/null 2>&1; then PYTHON=python; \
 	else PYTHON=""; fi; \
 	if [ -n "$$PYTHON" ]; then \
-		ACTUAL_HTTP=$$($$PYTHON "$(CURDIR)/scripts/find_free_port.py" "$$WANT_HTTP") || exit 1; \
-		ACTUAL_HTTPS=$$($$PYTHON "$(CURDIR)/scripts/find_free_port.py" "$$WANT_HTTPS") || exit 1; \
+		ACTUAL_HTTP=$$WANT_HTTP; \
+		if [ "$$WANT_HTTP" != 0 ]; then ACTUAL_HTTP=$$($$PYTHON "$(CURDIR)/scripts/find_free_port.py" "$$WANT_HTTP") || exit 1; fi; \
+		ACTUAL_HTTPS=$$WANT_HTTPS; \
+		if [ "$$WANT_HTTPS" != 0 ]; then ACTUAL_HTTPS=$$($$PYTHON "$(CURDIR)/scripts/find_free_port.py" "$$WANT_HTTPS") || exit 1; fi; \
 	else \
 		printf "$(C_YLW)!$(C_RST) python3/python not found — skipping port availability check\n"; \
 		ACTUAL_HTTP=$$WANT_HTTP; ACTUAL_HTTPS=$$WANT_HTTPS; \
 	fi; \
-	LOG_START=$$(wc -l < "$(LOGFILE)" 2>/dev/null || echo 0); \
-	cd "$(WEBMUX_DIR)" && $(RUNTIME_ENV) HTTP_PORT=$$ACTUAL_HTTP HTTPS_PORT=$$ACTUAL_HTTPS \
+	LOG_START=0; \
+	if [ -f "$(LOGFILE)" ]; then LOG_START=$$(wc -l < "$(LOGFILE)") || exit 1; fi; \
+	cd "$(WEBMUX_DIR)" && HTTP_PORT=$$ACTUAL_HTTP HTTPS_PORT=$$ACTUAL_HTTPS \
 		WEBMUX_ROOT="$(WEBMUX_ROOT)" WEBMUX_HOME="$(WEBMUX_HOME)" \
 		exec $(SERVER_COMMAND) >> "$(LOGFILE)" 2>&1 & echo $$! > "$(PIDFILE)"; \
 	sleep 0.5; \

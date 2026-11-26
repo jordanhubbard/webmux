@@ -147,7 +147,12 @@ posixTest('symlinked or publicly readable journals refuse', t => {
   for (const mode of ['link', 'public']) {
     const f = fixture(t); fs.mkdirSync(path.join(f.parent, 'other'), { mode: 0o700 });
     if (mode === 'link') fs.symlinkSync(path.join(f.parent, 'other'), f.directory);
-    else fs.mkdirSync(f.directory, { mode: 0o755 });
+    else {
+      fs.mkdirSync(f.directory, { mode: 0o755 });
+      // Creation respects umask; establish the unsafe precondition explicitly.
+      fs.chmodSync(f.directory, 0o755);
+      assert.equal(fs.statSync(f.directory).mode & 0o777, 0o755);
+    }
     assert.throws(() => reserveRigCreateIntent(f.directory, key, f.intent), /unsafe_native_create_journal/);
   }
 });

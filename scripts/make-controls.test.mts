@@ -389,3 +389,65 @@ chmod +x "$bindir/agent-deck"
     assert.match(service.stdout, /PATH="\/qualified\/agent-deck:\$PATH" node scripts\/render-service\.mts/);
   } finally { fs.rmSync(directory, { recursive: true, force: true }); }
 });
+
+test('manual Make startup preserves literal runtime data, zero ports and fresh logs', { skip: process.platform === 'win32' }, async () => {
+  const root = path.resolve(import.meta.dirname, '..');
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'webmux-runtime values-'));
+  const quote = (value: string) => `'${value.replaceAll("'", "'\\''")}'`;
+  try {
+    for (const mode of ['command-line', 'environment', 'zero-ports', 'fresh-log']) {
+      const base = path.join(directory, mode);
+      fs.mkdirSync(base);
+      const home = path.join(base, 'state & config');
+      const receipt = path.join(base, 'runtime.json');
+      const marker = path.join(base, 'must-not-exist');
+      const worker = path.join(base, 'fixture worker.mjs');
+      // Observe the Make-to-runtime boundary. The worker never opens sockets or
+      // allocates a PTY; native server lifecycle is qualified separately.
+      fs.writeFileSync(worker, `import fs from 'node:fs';
+fs.writeFileSync(process.env.WEBMUX_ENV_RECEIPT, JSON.stringify({
+  pid: process.pid, jwt: process.env.JWT_SECRET ?? '',
+  http: process.env.HTTP_PORT, https: process.env.HTTPS_PORT,
+}));
+console.log('listening fixture');
+setTimeout(() => process.exit(2), 15000);
+setInterval(() => {}, 1000);
+`);
+      const secret = ['command-line', 'environment'].includes(mode)
+        ? `qa secret $literal $(shell touch ${quote(marker)}) \`touch ${quote(marker)}\`; 'single' "double"` : '';
+      const env = { ...process.env, JWT_SECRET: mode === 'environment' ? secret : '', WEBMUX_ENV_RECEIPT: receipt };
+      const common = ['--no-print-directory', '-o', 'check-tmux', `WEBMUX_HOME=${home}`,
+        `SERVER_COMMAND=${quote(process.execPath)} ${quote(worker)}`];
+      try {
+        const zero = mode === 'zero-ports';
+        const started = spawnSync('make', [...common, '_start_manual',
+          `HTTP_PORT=${zero ? '0' : '49101'}`, `HTTPS_PORT=${zero ? '0' : '49102'}`,
+          ...(mode === 'command-line' ? [`JWT_SECRET=${secret}`] : [])], {
+          cwd: root, env, encoding: 'utf8', timeout: 10000,
+        });
+        assert.ifError(started.error);
+        assert.equal(started.status, 0, `${mode}: ${started.stdout}${started.stderr}`);
+        // Starting a process and observing its ready message are distinct. Wait
+        // only for this same worker's receipt; never replay the Make operation.
+        const deadline = Date.now() + 5000;
+        while (!fs.existsSync(receipt) && Date.now() < deadline) await new Promise(resolve => setTimeout(resolve, 20));
+        const actual = JSON.parse(fs.readFileSync(receipt, 'utf8')) as { pid: number; jwt: string; http: string; https: string };
+        assert.equal(actual.jwt, secret, `${mode}: runtime secret changed`);
+        assert.equal(Number(fs.readFileSync(path.join(home, '.webmux.pid'), 'utf8')), actual.pid);
+        assert(!fs.existsSync(marker), `${mode}: runtime data was evaluated`);
+        assert.doesNotMatch(started.stderr, /No such file or directory/, `${mode}: fresh log printed an error`);
+        if (zero) {
+          assert.equal(actual.http, '0');
+          assert.equal(actual.https, '0');
+        }
+      } finally {
+        if (fs.existsSync(receipt)) {
+          const stopped = spawnSync('make', [...common, '_stop_manual'], { cwd: root, env, encoding: 'utf8', timeout: 10000 });
+          assert.ifError(stopped.error);
+          assert.equal(stopped.status, 0, `${mode}: ${stopped.stdout}${stopped.stderr}`);
+          assert(!fs.existsSync(path.join(home, '.webmux.pid')), `${mode}: stop retained pidfile`);
+        }
+      }
+    }
+  } finally { fs.rmSync(directory, { recursive: true, force: true }); }
+});
