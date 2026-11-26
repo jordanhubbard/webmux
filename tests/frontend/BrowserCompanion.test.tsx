@@ -422,3 +422,28 @@ it.each([false, true])('retires accessible controls while a replacement snapshot
   expect(screen.getByRole('textbox', { name: 'Type into remote page' })).toHaveFocus();
  } finally { view.unmount(); }
 });
+
+it('keeps drag and wheel coordinates on the displayed screenshot while resize metadata leads decoding', async () => {
+ const frame = { protocol: 3, control: { owned: true, available: false }, image: 'new-image-still-decoding', width: 1262, height: 373, url: 'about:blank', tabs: [], target: 'one' };
+ fixture.action.mockReset().mockResolvedValue(frame);
+ vi.stubGlobal('PointerEvent', MouseEvent);
+ const view = render(<BrowserCompanion session={{ id: 'test', title: 'test', transport: 'local' } as Session} onHide={vi.fn()} />);
+ try {
+  await act(async () => { await Promise.resolve(); });
+  const image = screen.getByAltText('Interactive remote browser viewport') as HTMLImageElement;
+  // The browser still displays the decoded 240px-high screenshot while the
+  // latest reply describes a resized 373px viewport. Visible (50,40) must keep
+  // addressing page (50,40), inside the drag handle at y=20..60.
+  Object.defineProperties(image, { naturalWidth: { configurable: true, value: 1262 }, naturalHeight: { configurable: true, value: 240 }, setPointerCapture: { configurable: true, value: vi.fn() }, releasePointerCapture: { configurable: true, value: vi.fn() } });
+  vi.spyOn(image, 'getBoundingClientRect').mockReturnValue({ x: 0, y: 0, left: 0, top: 0, right: 1262, bottom: 240, width: 1262, height: 240, toJSON: () => ({}) });
+  fixture.action.mockClear();
+  await act(async () => {
+   fireEvent.pointerDown(image, { clientX: 50, clientY: 40, button: 0, buttons: 1 });
+   fireEvent.pointerUp(image, { clientX: 150, clientY: 50, button: 0, buttons: 0 });
+   fireEvent.wheel(image, { clientX: 70, clientY: 45, deltaY: 20 });
+  });
+  expect(fixture.action).toHaveBeenCalledWith('test', expect.objectContaining({ action: 'mouse_down', x: 50, y: 40 }));
+  expect(fixture.action).toHaveBeenCalledWith('test', expect.objectContaining({ action: 'mouse_up', x: 150, y: 50 }));
+  expect(fixture.action).toHaveBeenCalledWith('test', expect.objectContaining({ action: 'scroll', x: 70, y: 45 }));
+ } finally { view.unmount(); vi.unstubAllGlobals(); }
+});

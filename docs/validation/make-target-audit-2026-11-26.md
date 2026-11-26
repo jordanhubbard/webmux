@@ -123,6 +123,28 @@ under `_build/release-targets-767/`, including
 `gui-make-test.json`. Browser encryption, sandboxing and Keychain policy were
 not weakened. The changed Snap data location still needs native Snap acceptance.
 
+## Screenshot resize input regression: #769
+
+A default GUI `make test` at `8c7fbe22` passed Go, strict TypeScript, all 499
+frontend and 297 helper tests, browser callbacks, docking and saved-profile
+restart. The browser workspace test then failed waiting for the drag signal.
+Its trace showed viewport heights changing 373 → 240 → 373 near the gesture.
+The batch was interrupted after a deterministic component regression reproduced
+the mismatch; the original failed test and partial batch remain retained.
+
+The component regression keeps a decoded 240-pixel screenshot while the newest
+reply describes a 373-pixel viewport. A visible drag press at y=40 was dispatched
+at y=62.17, outside the fixture handle. Pointer and wheel conversion now use the
+decoded screenshot's natural dimensions, with response dimensions as a fallback
+before an image is decoded. The test checks press, release and wheel coordinates.
+No deadline was changed. Actual browser workspace and complete Make qualification
+must pass after this change before calling the target green.
+
+Private receipts: `gui-native-make.json`, `gui-native-make-interruption.json`,
+`browser-image-coordinates-before.log` and the owned GUI job directory under
+`_build/release-targets-767/`. The original fixture attachment is retained under
+`webmux/test-results/run-2bc10958-ca3f-4be3-ae60-7d10e37d6ab6/spec-11/`.
+
 ## Home-directory relocation
 
 Seven existing top-level directories were inspected and found to have no open

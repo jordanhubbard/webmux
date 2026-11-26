@@ -203,8 +203,12 @@ export function BrowserCompanion({ session, navigation, onHide, onAuthentication
 
   const point = (event: React.PointerEvent<HTMLImageElement> | React.WheelEvent<HTMLImageElement>) => {
     const bounds = event.currentTarget.getBoundingClientRect();
-    return { x: Math.max(0, Math.min(frame?.width ?? 1100, (event.clientX - bounds.left) * (frame?.width ?? 1100) / bounds.width)),
-      y: Math.max(0, Math.min(frame?.height ?? 760, (event.clientY - bounds.top) * (frame?.height ?? 760) / bounds.height)) };
+    // A resize reply can precede decoding its screenshot. Map the pixels the
+    // user sees, rather than stretching their input to newer metadata (#769).
+    const width = event.currentTarget.naturalWidth || frame?.width || 1100;
+    const height = event.currentTarget.naturalHeight || frame?.height || 760;
+    return { x: Math.max(0, Math.min(width, (event.clientX - bounds.left) * width / bounds.width)),
+      y: Math.max(0, Math.min(height, (event.clientY - bounds.top) * height / bounds.height)) };
   };
   const end = async () => {
     setBusy(true); setReady(false); await queue.current;
