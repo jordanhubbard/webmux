@@ -14,9 +14,6 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-var errBrowserExitIdentity = errors.New("Cannot verify the browser process identities; private browser files were retained")
-var errBrowserExitWait = errors.New("Browser processes did not exit before the cleanup deadline; private browser files were retained")
-
 type browserExitIdentity struct {
 	pid     uint32
 	created uint64

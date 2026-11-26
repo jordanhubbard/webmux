@@ -9,10 +9,12 @@ import (
 )
 
 var errBrowserGracefulExit = errors.New("Browser did not close gracefully; private browser files were retained")
+var errBrowserExitIdentity = errors.New("Cannot verify the browser process identities; private browser files were retained")
+var errBrowserExitWait = errors.New("Browser processes did not exit before the cleanup deadline; private browser files were retained")
 
 // Retain native process identities before stopping their browser connection.
 // Waiting on those handles after allocator shutdown avoids confusing parent
-// exit with the completion of its owned children's file cleanup on Windows.
+// exit with the completion of its owned children's file cleanup.
 func closeBrowserProcesses(root context.Context, cancel, stop context.CancelFunc, graceful bool) error {
 	observing, finish := context.WithTimeout(root, 2*time.Second)
 	wait, err := prepareBrowserProcessExit(observing)
