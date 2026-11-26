@@ -17,7 +17,7 @@ const channel = await connect(await authorizeSocket(socket), message => {
 try {
   for await (const line of readline.createInterface({ input: process.stdin, crlfDelay: Infinity })) {
     const request = JSON.parse(line) as { id?: unknown; method?: unknown; params?: unknown };
-    if (!Number.isSafeInteger(request.id) || !['thread/resume', 'thread/read', 'thread/turns/list', 'turn/start', 'mcpServerStatus/list', 'mcpServer/tool/call'].includes(String(request.method)) || !request.params || typeof request.params !== 'object' || Array.isArray(request.params)) throw new Error('Invalid fixture request');
+    if (!Number.isSafeInteger(request.id) || !['model/list', 'thread/resume', 'thread/read', 'thread/turns/list', 'turn/start', 'mcpServerStatus/list', 'mcpServer/tool/call'].includes(String(request.method)) || !request.params || typeof request.params !== 'object' || Array.isArray(request.params)) throw new Error('Invalid fixture request');
     try {
       const result = await channel.call(request.method as Parameters<typeof channel.call>[0], request.params as Record<string, unknown>);
       process.stdout.write(`${JSON.stringify({ id: request.id, result })}\n`);

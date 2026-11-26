@@ -540,6 +540,14 @@ class Fixture:
             self.save()
 
     def start_work(self):
+        catalog = self.native_rpc('model/list', {'limit': 1000})
+        require(isinstance(catalog.get('data'), list), 'model-catalog-shape')
+        require(not catalog.get('nextCursor'), 'model-catalog-incomplete')
+        require(any(isinstance(row, dict) and row.get('model') == self.args.model
+            and not row.get('hidden', False) for row in catalog['data']), 'selected-model-not-listed')
+        self.receipt['selected_model_verified'] = self.args.model
+        self.receipt['model_catalog_count'] = len(catalog['data'])
+        self.save()
         for session in self.sessions:
             # Attach this fixture-only observer before submitting any model work.
             # No overrides and no turn input: subscribe to the already loaded actor.

@@ -26,6 +26,25 @@ def cohort(counter=1):
 
 
 class ContinuityControls(unittest.TestCase):
+    def test_unavailable_or_incomplete_catalog_never_submits_coding_work(self):
+        for catalog, refusal in [
+            ({'data': [{'model': 'different-model'}]}, 'selected-model-not-listed'),
+            ({'data': [{'model': 'requested-model', 'hidden': True}]}, 'selected-model-not-listed'),
+            ({'data': [], 'nextCursor': 'next-page'}, 'model-catalog-incomplete'),
+            ({'data': None}, 'model-catalog-shape'),
+        ]:
+            fixture = object.__new__(module.Fixture)
+            fixture.args = SimpleNamespace(model='requested-model')
+            fixture.receipt = {'model_requests_attempted': 0, 'model_requests_submitted': 0}
+            fixture.sessions = [{}, {}, {}, {}]
+            fixture.native_rpc = Mock(return_value=catalog)
+            fixture.save = Mock()
+            with self.subTest(refusal=refusal), self.assertRaisesRegex(module.Refusal, refusal):
+                fixture.start_work()
+            fixture.native_rpc.assert_called_once_with('model/list', {'limit': 1000})
+            self.assertEqual(fixture.receipt['model_requests_attempted'], 0)
+            self.assertEqual(fixture.receipt['model_requests_submitted'], 0)
+
     def test_private_ssh_shim_preserves_strict_trust_options_and_destination(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

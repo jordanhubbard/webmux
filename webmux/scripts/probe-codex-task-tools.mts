@@ -21,7 +21,7 @@ export class ProbeFailure extends Error {
 }
 
 type JsonObject = Record<string, unknown>;
-export type RpcMethod = 'thread/resume' | 'turn/start' | 'thread/read' | 'thread/turns/list' | 'mcpServerStatus/list' | 'mcpServer/tool/call';
+export type RpcMethod = 'model/list' | 'thread/resume' | 'turn/start' | 'thread/read' | 'thread/turns/list' | 'mcpServerStatus/list' | 'mcpServer/tool/call';
 export interface RpcChannel { call(method: RpcMethod, params: JsonObject): Promise<unknown>; close(): void; }
 export interface ProbeOptions { socket?: string; cwd?: string; thread?: string; viewerPid: number; daemonPid: number; turn?: string; }
 export interface ProbeDependencies {
