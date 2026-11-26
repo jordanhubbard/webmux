@@ -472,16 +472,16 @@ endif
 #
 # Non-interactive batch mode: BATCH=yes make release
 
-release:
+release: toolchain-node
 	@BATCH=$(BATCH) ./scripts/release.sh prepare patch
 
-release-minor:
+release-minor: toolchain-node
 	@BATCH=$(BATCH) ./scripts/release.sh prepare minor
 
-release-major:
+release-major: toolchain-node
 	@BATCH=$(BATCH) ./scripts/release.sh prepare major
 
-release-publish:
+release-publish: toolchain-node
 	@BATCH=$(BATCH) ./scripts/release.sh publish
 
 changelog-init:

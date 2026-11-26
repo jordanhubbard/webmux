@@ -214,6 +214,36 @@ verifies its checksum, and checks migration of its saved state to Go.
 
 ## Maintaining releases
 
+Use the Make targets from a clean, up-to-date `main` checkout with authenticated
+GitHub CLI access. They select the qualified Node 24 toolchain:
+
+```bash
+BATCH=yes make release        # patch version and a release PR
+BATCH=yes make release-minor  # minor version and a release PR
+BATCH=yes make release-major  # major version and a release PR
+```
+
+Preparation updates metadata on its release branch and runs `make test` before
+pushing or opening the PR. If tests fail, the helper retains that branch and its
+uncommitted edits for inspection and repair. It does not carry those changes
+onto `main`. Fix the failure and verify the retained release work through the
+normal branch, test, commit, push and PR workflow; do not discard it blindly or
+rerun preparation on a dirty branch.
+
+After the release PR is reviewed and merged, `BATCH=yes make release-publish`
+requires successful completion of the latest exact-main runs of **CI**,
+**Packaging**, and **Windows ARM64 native qualification**. Missing, pending,
+failed, cancelled, timed-out, skipped, foreign-revision or malformed observations
+refuse before a tag is created or pushed. An earlier successful run cannot hide
+a newer cancelled or failed run. These checks only read existing run state; they
+do not start hosted qualification or bypass the owner's worker policy.
+
+The helper rechecks the clean/up-to-date main revision after validation and
+confirmation, and pins its annotated tag to the revision that was checked.
+Roadmap acceptance, release review and post-publication artifact/checksum
+verification remain separate required gates; workflow success does not prove
+all of them.
+
 The packaging workflow tests macOS, Linux, and Windows on pull requests. It
 builds and tests extracted runtime bundles, installs and tests the Homebrew
 formula against the PR revision, and installs, tests, and removes the Windows

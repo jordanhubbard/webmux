@@ -47,7 +47,7 @@ native commands below.
 | `help`, `check-tmux`, `check-guacd`, `changelog-init` | Actual commands passed; existing changelog retained. |
 | `lint`, strict TypeScript checks | Passed on the implementation checkpoint. |
 | `test`, `test-unit`, `test-e2e` | The completed clean managed-browser run exited 2: race tests, Go/bundled-library tests, 499 frontend tests and 287 helper tests passed (one GUI-dependent helper skipped at that stage); E2E had 1,417 passes, one saved-cookie restart failure and 22 opt-in/platform skips. This is not full-suite green. |
-| `release`, `release-minor`, `release-major`, `release-publish` | Publication intentionally not invoked while roadmap/native gates remain open. These are mutating delivery workflows, not safe smoke-test aliases. |
+| `release`, `release-minor`, `release-major`, `release-publish` | The actual Make recipes and release scripts pass isolated local-Git transition controls with a private bare origin and substituted application tests/GitHub service. No real publication was invoked. See the release-control follow-up below. |
 
 The delegate regression enumerates all 39 public targets, including names with
 digits such as `test-e2e`, and runs each against an isolated parent fixture. Eight
@@ -112,6 +112,33 @@ existing operator service was left undisturbed; the source fix in PR #766 has no
 been deployed to that service.
 
 ## Remaining roadmap scope
+
+### Release-control follow-up: #767 and #768
+
+The real preparation failure path was reproduced independently: after the test
+command failed, the helper returned to `main` with dirty release edits and
+deleted the release branch. Preparation now retains the branch and edits, with
+no release-branch push or PR creation on test failure.
+
+Publication now requires the latest exact-main runs of CI, Packaging and Windows
+ARM64 native qualification to complete successfully before tag creation. The
+revision is rechecked and the annotated tag explicitly names the checked SHA.
+Nine focused controls cover patch/minor/major preparation, retained failure
+state, dirty/non-main refusals, tag/notes/publication sequencing, absent or
+unqualified workflow observations, API ordering and a main change during
+readiness checks. All 297 integrated helper tests also pass, with no failures or
+skips in that run. The Git transitions and Make recipes are real; the GitHub
+service and application test result are controlled fixture boundaries. This is
+not release publication or native packaging qualification.
+
+The source-bound fixtures use isolated Git configuration and local bare origins.
+Their logs are retained in `_build/release-targets-767/`: the original failing
+`before-valid-fixture.log`, passing `final-controls.log`, and the read-only
+`real-main-readiness.log`/JSON receipt. Actual main `74200614` currently has no
+qualifying exact-head CI run; the readiness command exits 1 as required. No
+hosted job, repository release tag or GitHub release was created by these checks.
+
+### Open acceptance
 
 The starting open-issue snapshot contained 70 issues. #762–#765 were
 added during this audit. This checkpoint does not close the unrelated native

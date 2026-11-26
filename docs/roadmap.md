@@ -163,6 +163,9 @@ storage correction. Private native macOS service installation and combined
 install/uninstall now pass; saved-cookie restart qualification (#764) still
 fails with Keychain error -25308. The complete Make test run is not green. These
 checks do not replace the recovery and coordination acceptance below.
+Release-control follow-ups #767/#768 add retained preparation failure state and
+exact-main CI admission before tagging; their isolated Git/GitHub-service
+controls do not establish release publication or complete this roadmap.
 
 **Retained recovery priority: the original [#318](https://github.com/jordanhubbard/webmux/issues/318)
 requirements and the remaining acceptance below.** The tracker records #318 as
