@@ -70,3 +70,20 @@ established. This passing `gpt-6-astra` run does not resolve that difference.
 Required native platform failures and missing gates remain open. No installed
 service, original coding request, or global configuration was changed by this
 qualification.
+
+## Installed backend compatibility
+
+The installed `0.172.0` executable was separately used to generate its complete
+protocol schema with `--experimental` under an empty private `CODEX_HOME`.
+Generation exited successfully; all 483 JSON schema files were hashed. None
+advertised `thread/tuiMcp/rebind`, the operation required by the candidate's
+same-thread management handoff. The executable's SHA-256 was
+`f30a99714dc984876864239ef60563949b1e21421a7c9180422f51fd39186bc6`.
+
+This establishes an installed-backend compatibility limit: a viewer-only update
+cannot activate this handoff operation against that backend. The candidate
+explicitly leaves management transport unconfirmed when the operation is
+unsupported. Schema generation did not start a daemon, connect to the installed
+control socket, access authentication, or change registration or configuration.
+The original TUIs and installed service processes retained their start times.
+Backend activation remains separate from this private continuity qualification.
