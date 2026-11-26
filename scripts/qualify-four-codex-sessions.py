@@ -21,6 +21,7 @@ import shlex
 import shutil
 import signal
 import socket
+import stat
 import subprocess
 import tempfile
 import time
@@ -44,6 +45,17 @@ def digest(path):
         for block in iter(lambda: stream.read(1024 * 1024), b''):
             value.update(block)
     return value.hexdigest()
+
+
+def private_ssh_options(known_hosts):
+    if known_hosts is None:
+        return []
+    metadata = known_hosts.lstat()
+    require(stat.S_ISREG(metadata.st_mode) and metadata.st_uid == os.getuid()
+        and not metadata.st_mode & 0o022, 'owned-ssh-known-hosts-required')
+    return ['-o', 'UserKnownHostsFile='+str(known_hosts.resolve(strict=True)),
+        '-o', 'GlobalKnownHostsFile=/dev/null', '-o', 'StrictHostKeyChecking=yes',
+        '-o', 'UpdateHostKeys=no']
 
 
 def verify_continuity(before, after):
@@ -172,6 +184,7 @@ class Fixture:
                 'free_disk_bytes': shutil.disk_usage(self.root).free, 'machine': os.uname().machine},
             'model_requests_attempted': 0, 'model_requests_submitted': 0, 'coding_requests_replayed': 0, 'native_daemon_restarts': 0,
             'ssh_host': args.ssh_host, 'ssh_execution_boot_sha256': args.ssh_boot_sha256,
+            'ssh_known_hosts_sha256': digest(args.ssh_known_hosts) if args.ssh_known_hosts else None,
             'scope': ('four isolated actual SSH durable providers on the verified same-kernel macOS account' if args.ssh_host else 'four isolated local durable providers') + '; actual native model coding turns; installed/legacy viewer migration and other execution hosts unqualified'}
         self.output = args.output.open('x')
         os.chmod(args.output, 0o600)
@@ -197,7 +210,7 @@ class Fixture:
             + 'if len(args) < 2 or not any(value == host or value.endswith("@"+host) for value in args) or args[-1] == host or args[-1].endswith("@"+host):\n    raise SystemExit("Fixture SSH destination or remote command is missing")\n'
             + 'args[-1] = '+repr(prefix)+' + args[-1]\n'
             + 'trace = ["-vv", "-E", '+repr(str(self.root / 'ssh-capability-debug.log'))+'] if "--recovery-capabilities" in args[-1] else []\n'
-            + 'os.execv("/usr/bin/ssh", ["ssh", *trace, "-o", "BatchMode=yes", "-o", "ConnectTimeout=5", "-o", "ControlMaster=no", "-o", "ControlPath=none", "-o", "ControlPersist=no", *args])\n')
+            + 'os.execv("/usr/bin/ssh", ["ssh", *trace, *'+repr(self.args.ssh_options)+', "-o", "BatchMode=yes", "-o", "ConnectTimeout=5", "-o", "ControlMaster=no", "-o", "ControlPath=none", "-o", "ControlPersist=no", *args])\n')
         os.chmod(shim, 0o700)
         self.env['PATH'] = str(shimdir) + os.pathsep + self.env['PATH']
 
@@ -824,8 +837,12 @@ def main():
     parser.add_argument('--embedded-assets', action='store_true',
         help='Omit the checkout asset override for every controller start')
     parser.add_argument('--ssh-host', help='Real SSH profile; must resolve to this kernel and account; uses private helpers/tmux')
+    parser.add_argument('--ssh-known-hosts', type=Path,
+        help='Optional owned trust file containing already-verified public host keys; never updates SSH configuration')
     args = parser.parse_args()
     args.ssh_boot_sha256 = None
+    require(not args.ssh_known_hosts or args.ssh_host, 'ssh-known-hosts-requires-ssh-host')
+    args.ssh_options = private_ssh_options(args.ssh_known_hosts)
     require(os.uname().sysname == 'Darwin', 'native-macos-required')
     require(not args.output.exists(), 'exclusive-output-required')
     require(bool(args.initial_webmux) == bool(args.initial_webmux_sha256), 'initial-controller-path-and-hash-required')
@@ -846,7 +863,7 @@ def main():
         require(re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9.-]{0,252}', args.ssh_host), 'ssh-host-name-required')
         local_boot = subprocess.check_output(['/usr/sbin/sysctl', '-n', 'kern.bootsessionuuid'], text=True, timeout=5).strip()
         code = 'import json,os,subprocess;print(json.dumps({"uid":os.getuid(),"boot":subprocess.check_output(["/usr/sbin/sysctl","-n","kern.bootsessionuuid"],text=True).strip()}))'
-        peer = subprocess.run(['/usr/bin/ssh', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=5', '-o', 'ControlMaster=no', '-o', 'ControlPath=none', args.ssh_host,
+        peer = subprocess.run(['/usr/bin/ssh', *args.ssh_options, '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=5', '-o', 'ControlMaster=no', '-o', 'ControlPath=none', args.ssh_host,
             shlex.join(['/usr/bin/python3', '-c', code])], capture_output=True, text=True, timeout=15, check=True)
         identity = json.loads(peer.stdout)
         require(identity.get('uid') == os.getuid() and identity.get('boot') == local_boot, 'ssh-profile-requires-this-kernel-and-account')

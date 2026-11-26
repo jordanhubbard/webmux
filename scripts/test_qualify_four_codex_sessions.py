@@ -3,6 +3,7 @@ import importlib.util
 import json
 import os
 from pathlib import Path
+import runpy
 import subprocess
 import sys
 import tempfile
@@ -25,6 +26,56 @@ def cohort(counter=1):
 
 
 class ContinuityControls(unittest.TestCase):
+    def test_private_ssh_shim_preserves_strict_trust_options_and_destination(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            trust = root / 'known hosts'
+            trust.write_text('owned.example ssh-ed25519 public-fixture-key\n')
+            trust.chmod(0o600)
+            fixture = object.__new__(module.Fixture)
+            fixture.root = root
+            fixture.home, fixture.tmuxdir = root / 'native', root / 'tmux'
+            fixture.env = {'PATH': '/usr/bin:/bin'}
+            fixture.args = SimpleNamespace(webmux=root / 'webmux', ssh_host='owned.example',
+                ssh_options=module.private_ssh_options(trust))
+            fixture.configure_private_ssh(root / 'bin')
+            shim = root / 'ssh-launch/ssh'
+            with patch.object(sys, 'argv', [str(shim), 'owned.example', 'echo fixture']), \
+                    patch.object(os, 'execv') as launch:
+                runpy.run_path(str(shim), run_name='__main__')
+            executable, argv = launch.call_args.args
+            self.assertEqual(executable, '/usr/bin/ssh')
+            self.assertIn('UserKnownHostsFile='+str(trust.resolve()), argv)
+            self.assertIn('StrictHostKeyChecking=yes', argv)
+            self.assertIn('UpdateHostKeys=no', argv)
+            self.assertEqual(argv[-2], 'owned.example')
+            self.assertTrue(argv[-1].endswith('; echo fixture'))
+
+    def test_private_ssh_trust_requires_an_owned_nonwritable_regular_file(self):
+        self.assertEqual(module.private_ssh_options(None), [])
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            trust = root / 'known hosts'
+            trust.write_text('owned.example ssh-ed25519 public-fixture-key\n')
+            trust.chmod(0o600)
+            options = module.private_ssh_options(trust)
+            self.assertIn('UserKnownHostsFile='+str(trust.resolve()), options)
+            self.assertIn('StrictHostKeyChecking=yes', options)
+            self.assertIn('UpdateHostKeys=no', options)
+            for mode in (0o620, 0o602):
+                trust.chmod(mode)
+                with self.subTest(mode=mode), self.assertRaisesRegex(module.Refusal, 'owned-ssh-known-hosts-required'):
+                    module.private_ssh_options(trust)
+            trust.chmod(0o600)
+            link = root / 'link'
+            link.symlink_to(trust)
+            for path in (link, root):
+                with self.subTest(path=path), self.assertRaises(module.Refusal):
+                    module.private_ssh_options(path)
+            with patch.object(module.os, 'getuid', return_value=os.getuid()+1):
+                with self.assertRaises(module.Refusal):
+                    module.private_ssh_options(trust)
+
     def test_controller_cutover_uses_old_image_once_and_refuses_changed_replacement(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
