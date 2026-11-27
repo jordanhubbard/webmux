@@ -5,6 +5,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.4.6] - 2026-11-27
+
 ### Changed
 - Generalize USB forwarding guidance to robots, USB security keys and other
   peripherals. Accept a simple simulated USB device for roadmap qualification;
@@ -23,6 +25,15 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   recorded project (#318).
 
 ### Fixed
+- Build and operate fresh Unix source checkouts through the public Make targets,
+  with qualified Node/Go bootstrapping and consistent client/server installation.
+- Keep browser profiles and transfer files inside private WebMux storage,
+  preserve saved profiles, and wait for owned Linux browser processes before cleanup.
+- Map remote browser input to the displayed image during resize and recover
+  interrupted first frames without replaying navigation.
+- Preserve literal runtime values and OS-selected ports; retain failed release
+  preparation state and require exact-main platform qualification before publication.
+- Honor saved HTTP and HTTPS ports when starting from Make, while preserving explicit overrides, OS-selected ports and existing configuration (#774).
 - Retain guest palette and default colors across Windows screen reattachment,
   preserving indexed colors when the running job changes its palette. Keep
   color setters in mixed query/setter batches and block query replies (#355).

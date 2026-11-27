@@ -202,8 +202,8 @@ _start_manual: check-tmux
 		printf "$(C_YLW)●$(C_RST) webmux is already running $(C_DIM)(pid $$(cat "$(PIDFILE)"))$(C_RST)\n"; \
 		exit 1; \
 	fi
-	@WANT_HTTP="$${HTTP_PORT:-8080}"; \
-	WANT_HTTPS="$${HTTPS_PORT:-8443}"; \
+	@PORTS="$$($(NODE) "$(CURDIR)/scripts/runtime-ports.mts")" || exit 1; \
+	set -- $$PORTS; WANT_HTTP=$$1; WANT_HTTPS=$$2; \
 	if command -v python3 >/dev/null 2>&1; then PYTHON=python3; \
 	elif command -v python >/dev/null 2>&1; then PYTHON=python; \
 	else PYTHON=""; fi; \

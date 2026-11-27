@@ -125,3 +125,23 @@ Logs are written to `~/.config/webmux/logs/webmux.log` unless `WEBMUX_HOME` is o
 - When exposing WebMux beyond the local host, use local authentication, set a strong `JWT_SECRET`, configure TLS, and apply appropriate firewall or network controls.
 
 Return to the [main README](README.md).
+
+## Headless browser qualification and the desktop keyring
+
+The browser companion retains Chromium's normal encrypted cookie storage. Its
+Linux Secret Service login collection must be unlocked when Chrome needs it.
+An SSH shell with a locked desktop keyring can stall the first network
+navigation before an HTTP connection is opened.
+
+For native tests on a headless Linux worker, install `dbus-user-session` and
+`gnome-keyring`, then run an isolated encrypted fixture:
+
+```bash
+python3 scripts/with-test-keyring.py make test
+```
+
+The wrapper uses a private D-Bus session, private data/control directories and a
+random in-memory password. It verifies that the disposable login collection is
+unlocked before invoking the command, then stops its own keyring daemon. The
+operator's desktop collection and browser security flags remain unchanged.
+Production services use the operator's intended desktop Secret Service session.
