@@ -157,6 +157,24 @@ roadmap checkbox.
 
 ## Current reliability work
 
+The [2026-11-26 Make target and roadmap audit](validation/make-target-audit-2026-11-26.md)
+tracks #762's source build/install/lifecycle qualification and #763's browser
+storage correction. At source `2cc3a26d`, private native macOS service and
+combined installer checks pass, as do saved-cookie restart and the complete
+unmodified GUI `make test`: 500 frontend, 297 helpers and 1,418 E2E passes, with
+22 existing opt-in/platform skips. #769 fixes screenshot-resize input mapping;
+#770 diagnoses and corrects the private GUI qualifier's launchd resource role,
+with original tests and deadlines unchanged. Source prevention remains in draft
+PR #766. At `169dc3da`, native Linux ARM64 strict Snap storage/shutdown
+qualification also passes the browser race package and ten original UI tests;
+#771 adds verified process exit waits before removing temporary files. #764's
+macOS cookie investigation and #765's frontend timing qualification are complete.
+Other native-platform acceptance and the recovery/coordination requirements
+below remain open. These checks do not complete the roadmap or release.
+Release-control follow-ups #767/#768 add retained preparation failure state and
+exact-main CI admission before tagging; their isolated Git/GitHub-service
+controls do not establish release publication or complete this roadmap.
+
 **Retained recovery priority: the original [#318](https://github.com/jordanhubbard/webmux/issues/318)
 requirements and the remaining acceptance below.** The tracker records #318 as
 closed on 2026-11-20. Its earlier [#322](https://github.com/jordanhubbard/webmux/pull/322)

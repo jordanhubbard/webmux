@@ -6,6 +6,41 @@ import { spawnSync } from 'node:child_process';
 import { mkdtempSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
 import os from 'node:os';
 import { isolatedPlaywrightRuns, withPlaywrightOutput } from './playwright-runs.mts';
+import { checkBrowser } from './check-browser.mts';
+import type { BrowserType } from 'playwright-core';
+
+test('browser readiness rejects exit after a closed context and always closes its browser', async () => {
+  for (const exits of [false, true]) {
+    let contexts = 0, closed = false, connected = true;
+    const candidate = { launch: async () => ({
+      newContext: async () => {
+        contexts++;
+        return {
+          newPage: async () => ({ goto: async () => {}, title: async () => 'WebMux browser readiness' }),
+          close: async () => { if (exits) connected = false; },
+        };
+      },
+      isConnected: () => connected,
+      close: async () => { closed = true; },
+    }) } as unknown as Pick<BrowserType, 'launch'>;
+    if (exits) await assert.rejects(checkBrowser(candidate), /exited after closing/);
+    else await checkBrowser(candidate);
+    assert.equal(contexts, exits ? 1 : 2);
+    assert(closed, 'browser process was not closed after its probe');
+  }
+});
+
+test('explicit unusable E2E browser refuses before provisioning or starting a suite', { skip: process.platform === 'win32' }, () => {
+  const result = spawnSync('bash', [path.resolve(import.meta.dirname, '../../scripts/ensure-e2e-browser.sh')], {
+    encoding: 'utf8', timeout: 10000,
+    env: { ...process.env, PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH: '/missing/webmux-browser-fixture' },
+  });
+  assert.ifError(result.error);
+  assert.notEqual(result.status, 0);
+  assert.equal(result.stdout, '');
+  assert.match(result.stderr, /Explicit E2E browser cannot render and reopen/);
+  assert.doesNotMatch(result.stderr, /Provisioning Playwright/);
+});
 
 test('every discovered file gets an exact invocation and separate output', () => {
   const rootDir = path.resolve('fixture');

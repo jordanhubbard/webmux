@@ -186,10 +186,16 @@ prerequisites, upgrades, and current signing information.
 ### Prerequisites (source builds)
 
 - Make, a POSIX shell, tar, curl or wget, and sha256sum or shasum for Unix source builds
-- Go >= 1.27.4 and Node.js >= 24; `make` downloads checksum-verified toolchains
-  into the checkout's ignored `.build/toolchains/` when these are missing or too old
-  (Linux/macOS, x64/ARM64). Existing compatible tools are reused. No sudo or shell
+- Go >= 1.27.4 and Node.js 24.x; `make` downloads checksum-verified toolchains
+  into the checkout's ignored `.build/toolchains/` when these are missing or
+  incompatible (Linux/macOS, x64/ARM64). Native coordination helpers require the
+  qualified Node 24 series, so newer Node majors also select the private toolchain.
+  Existing compatible tools are reused. No sudo or shell
   profile changes are needed. Explicit `GO` and `NODE` overrides must already work.
+- Browser tests provision Playwright Chromium below `.build/playwright/` by
+  default; `PLAYWRIGHT_BROWSERS_PATH` selects another cache. Explicit browser
+  executable overrides must pass rendering and context-reuse checks before the
+  suite starts.
 - OpenSSH client (`ssh` on macOS/Linux, `ssh.exe` on `PATH` on Windows)
 - tmux on macOS/Linux for built-in local terminals; source server install/start commands check for it on `PATH`
 - (Optional) `sshpass` for password-based SSH auth

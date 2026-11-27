@@ -154,7 +154,7 @@ update_changelog() {
         { print }
     ' "$changelog_file" > "$temp_file"
 
-    mv "$temp_file" "$changelog_file"
+    mv -f "$temp_file" "$changelog_file"
     rm -f "$entry_file"
     success "CHANGELOG.md updated"
 }
@@ -227,9 +227,7 @@ cmd_prepare() {
     if ! make test > "$test_output" 2>&1; then
         cat "$test_output"
         rm -f "$test_output"
-        git checkout main
-        git branch -D "$release_branch"
-        error "Tests failed. Fix before releasing."
+        error "Tests failed. Release edits remain on $release_branch for inspection and repair. No release branch was pushed and no PR was opened."
     fi
     local test_status
     test_status=$(grep -E "Tests:|passed|failed" "$test_output" | tail -1 || echo "All tests passed")
@@ -299,6 +297,11 @@ cmd_publish() {
         error "Tag v$version already exists. Nothing to publish."
     fi
 
+    info "Checking exact-main CI and packaging readiness..."
+    local release_head
+    release_head=$(git rev-parse HEAD)
+    node scripts/release-readiness.mts "$release_head"
+
     local prev_version
     prev_version=$(get_current_version)
     [[ -z "$prev_version" ]] && prev_version="0.0.0"
@@ -342,8 +345,15 @@ EOF
         [[ $REPLY =~ ^[Yy]$ ]] || { warn "Publish cancelled"; rm -f "$notes_file"; exit 0; }
     fi
 
+    # The main branch or working tree may change while queries or confirmation
+    # are pending. Recheck admission and pin the tag to the validated revision.
+    check_clean_worktree
+    check_on_main_up_to_date
+    [[ "$(git rev-parse HEAD)" == "$release_head" ]] || error "Main changed during release validation. Re-run publication for the current revision."
+    [[ "$(validate_version_consistency)" == "$version" ]] || error "Release version changed during validation."
+
     info "Creating git tag v$version..."
-    git tag -a "v$version" -m "Release v$version"
+    git tag -a "v$version" "$release_head" -m "Release v$version"
 
     info "Pushing tag..."
     git push origin "v$version"

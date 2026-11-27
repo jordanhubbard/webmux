@@ -239,7 +239,7 @@ func firstNavigationWorker(t *testing.T, saved bool, record *firstNavigationEvid
 		}
 		nativeKey := hex.EncodeToString(key)
 		first = Request{Action: "configure", ProfileKey: nativeKey}
-		home, err := os.UserHomeDir()
+		profileRoot, err := browserDirectory("profiles")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -247,7 +247,7 @@ func firstNavigationWorker(t *testing.T, saved bool, record *firstNavigationEvid
 		// profile after its worker has actually exited, never another stored profile.
 		t.Cleanup(func() {
 			if stopped {
-				root := filepath.Join(home, "webmux-browser-profiles")
+				root := profileRoot
 				if err := os.RemoveAll(filepath.Join(root, nativeKey)); err != nil {
 					record.CleanupFailed = true
 					t.Error("private saved profile cleanup failed")

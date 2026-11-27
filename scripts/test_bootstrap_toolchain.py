@@ -66,6 +66,14 @@ class BootstrapTests(unittest.TestCase):
         self.assertIn("Installing node", r.stderr)
         self.assertIn("Checksum mismatch", r.stderr)
 
+    def test_newer_node_uses_qualified_major_instead(self):
+        self.executable("node", "echo v26.8.1\n")
+        r = self.run_tool("node")
+        self.assertNotEqual(r.returncode, 0)
+        self.assertIn("Installing node 24.", r.stderr)
+        self.assertIn("Checksum mismatch", r.stderr)
+        self.assertIn("node-v24.22.3-", (self.root / "download").read_text())
+
     def test_explicit_incompatible_override_is_not_replaced(self):
         command = self.executable("custom-node", "echo v22.22.1\n")
         r = self.run_tool("node", command)
@@ -94,19 +102,20 @@ class BootstrapTests(unittest.TestCase):
     def test_make_defaults_to_private_caches_and_honors_overrides(self):
         fixture = self.root / "cache.mk"
         fixture.write_text(f"include {ROOT / 'Makefile'}\nprobe-caches:\n"
-                           "\t@printf '%s\\n' \"$$GOMODCACHE\" \"$$GOCACHE\"\n")
+                           "\t@printf '%s\\n' \"$$GOMODCACHE\" \"$$GOCACHE\" \"$$PLAYWRIGHT_BROWSERS_PATH\"\n")
         env = dict(os.environ)
-        for key in ["GOMODCACHE", "GOCACHE"]:
+        for key in ["GOMODCACHE", "GOCACHE", "PLAYWRIGHT_BROWSERS_PATH"]:
             env.pop(key, None)
         for override in [False, True]:
             with self.subTest(override=override):
                 if override:
-                    env.update(GOMODCACHE="/chosen/module cache", GOCACHE="/chosen/build cache")
+                    env.update(GOMODCACHE="/chosen/module cache", GOCACHE="/chosen/build cache",
+                               PLAYWRIGHT_BROWSERS_PATH="/chosen/browser cache")
                 r = subprocess.run(["make", "--no-print-directory", "-f", str(fixture), "probe-caches"],
                                    cwd=ROOT, env=env, capture_output=True, text=True, timeout=10)
                 self.assertEqual(r.returncode, 0, r.stderr)
-                expected = [env["GOMODCACHE"], env["GOCACHE"]] if override else [
-                    str(ROOT / ".build/go-mod"), str(ROOT / ".build/go-cache")]
+                expected = [env["GOMODCACHE"], env["GOCACHE"], env["PLAYWRIGHT_BROWSERS_PATH"]] if override else [
+                    str(ROOT / ".build/go-mod"), str(ROOT / ".build/go-cache"), str(ROOT / ".build/playwright")]
                 self.assertEqual(r.stdout.splitlines(), expected)
 
 

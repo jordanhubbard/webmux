@@ -22,26 +22,33 @@ let port = 0;
 const app = fs.readFileSync(path.join(repo, 'webmux/config.defaults/app.yaml'), 'utf8')
   .replace('name: webmux', 'name: source-control-smoke').replace('listen_host: 0.0.0.0', 'listen_host: 127.0.0.1');
 fs.mkdirSync(path.join(home, 'config')); fs.writeFileSync(path.join(home, 'config/app.yaml'), app);
-function control(target: '_start_manual' | '_stop_manual'): void {
+function control(target: 'start' | 'stop' | 'restart' | 'status'): string {
   const env: NodeJS.ProcessEnv = { ...process.env, JWT_SECRET: '', WEBMUX_SLAVE_HOST: '', WEBMUX_SLAVE_PORT: '' };
-  const result = spawnSync('make', ['--no-print-directory', target,
+  const result = spawnSync('make', ['--no-print-directory', '-o', 'build-server', '-o', 'check-guacd', target,
+    'SVC_INSTALLED=false', 'MAKE=make -o build-server -o check-guacd',
     `WEBMUX_HOME=${home}`, `HTTP_PORT=${port}`, 'HTTPS_PORT=8443'], {
     cwd: repo, timeout: 20000, encoding: 'utf8',
     env,
   });
   if (result.error) throw result.error;
   assert.equal(result.status, 0, result.stdout + result.stderr);
+  return result.stdout;
 }
 let started = false;
 try {
+  assert.match(control('status'), /not running/);
+  let previousPID = '';
   for (let attempt = 0; attempt < 2; attempt++) {
     // The existing port helper avoids ports in TIME_WAIT, so choose a fresh
     // candidate on restart while keeping the same persisted state directory.
     port = await freePort();
     const base = `http://127.0.0.1:${port}`;
-    started = true; control('_start_manual');
+    started = true; control(attempt ? 'restart' : 'start');
+    assert.match(control('status'), /is running/);
     const pid = fs.readFileSync(path.join(home, '.webmux.pid'), 'utf8').trim();
     assert.match(pid, /^[1-9]\d*$/); process.kill(Number(pid), 0);
+    assert.notEqual(pid, previousPID, 'Restart did not replace the private server process');
+    previousPID = pid;
     const executable = execFileSync('ps', ['-p', pid, '-o', 'comm='], { encoding: 'utf8', timeout: 5000 }).trim();
     assert.equal(path.basename(executable), 'webmux', `Expected the native server, got ${executable}`);
     let healthy = false;
@@ -57,16 +64,18 @@ try {
     assert(healthy, 'Manual source server did not become healthy');
     assert.equal(fs.readFileSync(path.join(home, 'config/app.yaml'), 'utf8'), app);
     assert(fs.existsSync(path.join(home, 'config/auth.yaml')));
-    control('_stop_manual'); started = false;
-    assert(!fs.existsSync(path.join(home, '.webmux.pid')), 'Stop retained pidfile');
-    await assert.rejects(fetch(`${base}/api/health`, { signal: AbortSignal.timeout(1000) }));
   }
+  control('stop'); started = false;
+  assert(!fs.existsSync(path.join(home, '.webmux.pid')), 'Stop retained pidfile');
+  assert.match(control('status'), /not running/);
+  await assert.rejects(fetch(`http://127.0.0.1:${port}/api/health`, { signal: AbortSignal.timeout(1000) }));
+  control('stop');
   console.log(`Go: Make manual start/stop, restart and preserved state passed.`);
 } catch (error) {
   const log = path.join(home, 'logs/webmux.log');
   if (fs.existsSync(log)) console.error(fs.readFileSync(log, 'utf8'));
   throw error;
 } finally {
-  if (started) control('_stop_manual');
+  if (started) control('stop');
   fs.rmSync(home, { recursive: true, force: true });
 }

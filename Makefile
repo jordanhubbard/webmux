@@ -15,7 +15,7 @@
 #   make install-all      Install both client and server
 #   make uninstall        Remove the client executable
 #   make uninstall-server Remove the server service
-#   make release          Test, bump patch version, tag, push, create GitHub release
+#   make release          Test, bump patch version, open a release PR
 #   make release-minor    Same as release but bumps the minor version
 #   make release-major    Same as release but bumps the major version
 #   make help             Show this help
@@ -34,8 +34,8 @@
 #
 # Examples:
 #   make start HTTP_PORT=9090
-#   make start AUTH_MODE=none
-#   make start SECURE_MODE=true JWT_SECRET=$(openssl rand -hex 32)
+#   make configure AUTH_MODE=none    # then make start
+#   make configure SECURE_MODE=true # then make start JWT_SECRET=...
 
 # ── Colors ────────────────────────────────────────────────────────
 C_RST  := \033[0m
@@ -48,6 +48,12 @@ C_MAG  := \033[35m
 C_CYN  := \033[36m
 C_RED  := \033[31m
 C_WHT  := \033[37m
+
+# Freeze runtime data before any Make shell function or recipe can expand it.
+override JWT_SECRET := $(value JWT_SECRET)
+override HTTP_PORT := $(value HTTP_PORT)
+override HTTPS_PORT := $(value HTTPS_PORT)
+export JWT_SECRET HTTP_PORT HTTPS_PORT
 
 # ── Paths ──────────────────────────────────────────────────────────
 WEBMUX_DIR   := $(CURDIR)/webmux
@@ -72,6 +78,7 @@ export PATH := $(TOOLCHAIN_DIR)/node/bin:$(TOOLCHAIN_DIR)/go/bin:$(PATH)
 # Explicit environment or command-line cache locations remain authoritative.
 export GOMODCACHE ?= $(CURDIR)/.build/go-mod
 export GOCACHE ?= $(CURDIR)/.build/go-cache
+export PLAYWRIGHT_BROWSERS_PATH ?= $(CURDIR)/.build/playwright
 
 export WEBMUX_ROOT
 export WEBMUX_HOME
@@ -83,14 +90,6 @@ LISTEN_HOST  ?=
 AUTH_MODE    ?=
 JWT_SECRET   ?=
 SECURE_MODE  ?=
-
-# Build the env-var exports only for values that are set.
-# HTTP_PORT and HTTPS_PORT are resolved at start time (with port-conflict check)
-# and passed explicitly; only JWT_SECRET needs to be forwarded here.
-RUNTIME_ENV :=
-ifneq ($(JWT_SECRET),)
-  RUNTIME_ENV += JWT_SECRET=$(JWT_SECRET)
-endif
 
 # ── Targets ────────────────────────────────────────────────────────
 .PHONY: all build build-server build-client deps toolchain-node toolchain-go check-tmux check-guacd start stop restart status test test-unit test-e2e lint clean configure help \
@@ -186,29 +185,13 @@ build-client: toolchain-go
 	@cd "$(WEBMUX_DIR)/server" && $(GO) build -o ../bin/webmux-client ./cmd/webmux-client
 	@printf "$(C_GRN)✓$(C_RST) Client build complete.\n"
 
-configure:
-	@printf "$(C_BLU)▸$(C_RST) Configuring webmux…\n"
-	@mkdir -p "$(WEBMUX_HOME)/config"
-ifneq ($(LISTEN_HOST),)
-	@sed -i.bak 's/listen_host:.*/listen_host: $(LISTEN_HOST)/' "$(WEBMUX_HOME)/config/app.yaml" && rm -f "$(WEBMUX_HOME)/config/app.yaml.bak"
-endif
-ifneq ($(HTTP_PORT),)
-	@sed -i.bak 's/http_port:.*/http_port: $(HTTP_PORT)/' "$(WEBMUX_HOME)/config/app.yaml" && rm -f "$(WEBMUX_HOME)/config/app.yaml.bak"
-endif
-ifneq ($(HTTPS_PORT),)
-	@sed -i.bak 's/https_port:.*/https_port: $(HTTPS_PORT)/' "$(WEBMUX_HOME)/config/app.yaml" && rm -f "$(WEBMUX_HOME)/config/app.yaml.bak"
-endif
-ifneq ($(SECURE_MODE),)
-	@sed -i.bak 's/secure_mode:.*/secure_mode: $(SECURE_MODE)/' "$(WEBMUX_HOME)/config/app.yaml" && rm -f "$(WEBMUX_HOME)/config/app.yaml.bak"
-endif
-ifneq ($(AUTH_MODE),)
-	@sed -i.bak 's/mode:.*/mode: $(AUTH_MODE)/' "$(WEBMUX_HOME)/config/auth.yaml" && rm -f "$(WEBMUX_HOME)/config/auth.yaml.bak"
-endif
-	@printf "\n$(C_BLD)Current configuration:$(C_RST)\n"
-	@printf "  $(C_DIM)app.yaml:$(C_RST)\n"
-	@grep -E '(listen_host|http_port|https_port|secure_mode):' "$(WEBMUX_HOME)/config/app.yaml" | sed 's/^/    /'
-	@printf "  $(C_DIM)auth.yaml:$(C_RST)\n"
-	@grep -E 'mode:' "$(WEBMUX_HOME)/config/auth.yaml" | sed 's/^/    /'
+configure: export LISTEN_HOST := $(LISTEN_HOST)
+configure: export HTTP_PORT := $(HTTP_PORT)
+configure: export HTTPS_PORT := $(HTTPS_PORT)
+configure: export SECURE_MODE := $(SECURE_MODE)
+configure: export AUTH_MODE := $(AUTH_MODE)
+configure: deps
+	@$(NODE) scripts/configure.mts
 
 # ── Manual (non-service) process control ────────────────────────────
 # Direct pidfile-based start/stop used for dev runs and hosts where webmux is
@@ -219,20 +202,23 @@ _start_manual: check-tmux
 		printf "$(C_YLW)●$(C_RST) webmux is already running $(C_DIM)(pid $$(cat "$(PIDFILE)"))$(C_RST)\n"; \
 		exit 1; \
 	fi
-	@WANT_HTTP="$(HTTP_PORT)"; [ -z "$$WANT_HTTP" ] && WANT_HTTP=8080; \
-	WANT_HTTPS="$(HTTPS_PORT)"; [ -z "$$WANT_HTTPS" ] && WANT_HTTPS=8443; \
+	@PORTS="$$($(NODE) "$(CURDIR)/scripts/runtime-ports.mts")" || exit 1; \
+	set -- $$PORTS; WANT_HTTP=$$1; WANT_HTTPS=$$2; \
 	if command -v python3 >/dev/null 2>&1; then PYTHON=python3; \
 	elif command -v python >/dev/null 2>&1; then PYTHON=python; \
 	else PYTHON=""; fi; \
 	if [ -n "$$PYTHON" ]; then \
-		ACTUAL_HTTP=$$($$PYTHON "$(CURDIR)/scripts/find_free_port.py" "$$WANT_HTTP") || exit 1; \
-		ACTUAL_HTTPS=$$($$PYTHON "$(CURDIR)/scripts/find_free_port.py" "$$WANT_HTTPS") || exit 1; \
+		ACTUAL_HTTP=$$WANT_HTTP; \
+		if [ "$$WANT_HTTP" != 0 ]; then ACTUAL_HTTP=$$($$PYTHON "$(CURDIR)/scripts/find_free_port.py" "$$WANT_HTTP") || exit 1; fi; \
+		ACTUAL_HTTPS=$$WANT_HTTPS; \
+		if [ "$$WANT_HTTPS" != 0 ]; then ACTUAL_HTTPS=$$($$PYTHON "$(CURDIR)/scripts/find_free_port.py" "$$WANT_HTTPS") || exit 1; fi; \
 	else \
 		printf "$(C_YLW)!$(C_RST) python3/python not found — skipping port availability check\n"; \
 		ACTUAL_HTTP=$$WANT_HTTP; ACTUAL_HTTPS=$$WANT_HTTPS; \
 	fi; \
-	LOG_START=$$(wc -l < "$(LOGFILE)" 2>/dev/null || echo 0); \
-	cd "$(WEBMUX_DIR)" && $(RUNTIME_ENV) HTTP_PORT=$$ACTUAL_HTTP HTTPS_PORT=$$ACTUAL_HTTPS \
+	LOG_START=0; \
+	if [ -f "$(LOGFILE)" ]; then LOG_START=$$(wc -l < "$(LOGFILE)") || exit 1; fi; \
+	cd "$(WEBMUX_DIR)" && HTTP_PORT=$$ACTUAL_HTTP HTTPS_PORT=$$ACTUAL_HTTPS \
 		WEBMUX_ROOT="$(WEBMUX_ROOT)" WEBMUX_HOME="$(WEBMUX_HOME)" \
 		exec $(SERVER_COMMAND) >> "$(LOGFILE)" 2>&1 & echo $$! > "$(PIDFILE)"; \
 	sleep 0.5; \
@@ -313,7 +299,9 @@ restart: check-tmux
 status:
 	@if $(SVC_INSTALLED); then \
 		printf "$(C_BLD)webmux$(C_RST) $(C_DIM)(managed by $(SVC_MGR))$(C_RST)\n"; \
-		$(SVC_STATUS) 2>/dev/null | sed 's/^/  /' || printf "  $(C_DIM)●$(C_RST) not running\n"; \
+		STATUS_OUTPUT=$$($(SVC_STATUS) 2>/dev/null); \
+		if [ -n "$$STATUS_OUTPUT" ]; then printf '%s\n' "$$STATUS_OUTPUT" | sed 's/^/  /'; \
+		else printf "  $(C_DIM)●$(C_RST) not running\n"; fi; \
 	elif [ -f "$(PIDFILE)" ] && kill -0 $$(cat "$(PIDFILE)") 2>/dev/null; then \
 		printf "$(C_GRN)●$(C_RST) webmux is running $(C_DIM)(pid $$(cat "$(PIDFILE)"))$(C_RST)\n"; \
 	else \
@@ -382,7 +370,7 @@ ifeq ($(OS),Darwin)
   export WEBMUX_EXECUTABLE := $(MACOS_APP)/Contents/MacOS/webmux
   SVC_MGR       := launchd
   SVC_INSTALLED := [ -f "$$WEBMUX_SERVICE_OUTPUT" ]
-  SVC_START     := launchctl kickstart "$(LAUNCHD_SVC)" 2>/dev/null || launchctl bootstrap gui/$$(id -u) "$$WEBMUX_SERVICE_OUTPUT"
+  SVC_START     := launchctl kickstart "$(LAUNCHD_SVC)" 2>/dev/null || launchctl bootstrap "$(patsubst %/,%,$(dir $(LAUNCHD_SVC)))" "$$WEBMUX_SERVICE_OUTPUT"
   SVC_STOP      := launchctl kill TERM "$(LAUNCHD_SVC)"
   SVC_RESTART   := launchctl kickstart -k "$(LAUNCHD_SVC)"
   SVC_STATUS    := launchctl print "$(LAUNCHD_SVC)" 2>/dev/null | grep -E 'state = |pid = '
@@ -485,16 +473,16 @@ endif
 #
 # Non-interactive batch mode: BATCH=yes make release
 
-release:
+release: toolchain-node
 	@BATCH=$(BATCH) ./scripts/release.sh prepare patch
 
-release-minor:
+release-minor: toolchain-node
 	@BATCH=$(BATCH) ./scripts/release.sh prepare minor
 
-release-major:
+release-major: toolchain-node
 	@BATCH=$(BATCH) ./scripts/release.sh prepare major
 
-release-publish:
+release-publish: toolchain-node
 	@BATCH=$(BATCH) ./scripts/release.sh publish
 
 changelog-init:

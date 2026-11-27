@@ -46,17 +46,38 @@ Only one worker may use a saved profile at a time, including other controllers
 running under that execution account. An OS lock is released when its worker exits.
 The execution account can read its own saved data; this is not OS-account isolation.
 
-Saved data lives in private `~/webmux-browser-profiles/` directories named by opaque
-keys. The API never accepts filesystem paths or exposes those keys. **Delete saved
+Browser data lives under `~/.config/webmux/browser/` on macOS and ordinary Linux
+installations, or `~/AppData/Local/webmux/browser/` on Windows. Linux hosts with
+Snap Chromium use `~/snap/chromium/common/webmux/browser/` so both the worker and
+the confined browser can access the same files. Each browser data directory is
+private to the execution account. Temporary profiles and transfers live below
+`tmp/`; saved profiles live below `profiles/`, named by opaque keys. No browser
+data is allocated directly in the home-directory root.
+
+For installations using the former `~/webmux-browser-profiles/` layout, stop all
+browser workers on that execution host before moving that directory to the new
+`profiles/` location. Preserve its contents and lock files; do not merge it with
+an existing destination. Move retained `~/webmux-browser-*` and
+`~/webmux-transfer-*` temporary directories below `tmp/` only after verifying no
+process uses them. Saved-profile access refuses unmigrated legacy data rather
+than silently opening an empty replacement. Each SSH execution account needs its
+own migration. Saved data can contain login credentials; do not discard it as a
+build cache.
+
+The API never accepts filesystem paths or exposes those keys. **Delete saved
 profile** removes its data on the execution host, then its registry entry. End its
 browsers first. A failed or unavailable-host deletion keeps the registry entry for
 retry. Keep access to the original execution host/account until deletion succeeds.
 
 Transferred files always remain temporary. A temporary worker uses a fresh private
-`~/webmux-browser-*` directory; a saved worker uses a separate `~/webmux-transfer-*`
-directory, removed when the worker exits. These home locations work with packaged
-Chromium browsers that have a private temporary-file namespace. Abrupt host/process
-termination can leave temporary files for the execution account to remove.
+`tmp/webmux-browser-*` directory below its browser data root; a saved worker uses
+a separate `tmp/webmux-transfer-*` directory there. Both worker and packaged
+Chromium can access this location. On Linux and Windows, cleanup waits for
+verified owned browser processes before removing temporary data. Linux requires
+kernel pidfd support and permission to open these descriptors; if identities or
+exit cannot be verified, files are retained and cleanup reports an error.
+Abrupt host/process termination can also leave temporary files for the execution
+account to remove.
 
 Viewers signed in as the terminal owner share its page, but one viewer controls
 navigation, input, resizing, transfers, dialogs and ending. Other viewers see
@@ -268,10 +289,14 @@ Fresh Linux ARM64 qualification with Snap Chromium 156.0.8078.47 reproduced a
 real upload failure: the chooser accepted a 1,126,400-byte selection but the
 page's HTTP receiver got none of its bytes. Moving only the temporary root to
 a shared home path made the unchanged workspace fixture pass, including exact
-upload and binary download checks. The worker now creates its fresh 0700 profile
-in the account home automatically, keeping transfers and cleanup in the same
-filesystem namespace. Browser sandbox protections and test deadlines are
-unchanged. A real Snap browser also passed root-tab lifecycle and profile removal
+upload and binary download checks. That implementation created its fresh 0700
+profile directly in the account home. The current layout described above places
+it beneath WebMux's private browser data tree and retains a Snap-visible location
+for confined Chromium. The historical result qualifies the original layout;
+the changed Snap layout has separate [native qualification on 2026-11-26](validation/make-target-audit-2026-11-26.md#native-linux-snap-storage-and-shutdown-763--771),
+including the original upload/download, saved-profile and cleanup controls.
+Browser sandbox protections and test deadlines are unchanged. The earlier Snap
+browser also passed root-tab lifecycle and profile removal
 after worker stdin closed. See [#387](https://github.com/jordanhubbard/webmux/issues/387).
 
 A separate ordinary Chrome 157.0.8103.79/macOS 27.2 ARM64 worker on puck passed

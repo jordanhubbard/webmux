@@ -7,6 +7,78 @@ import { test } from 'node:test';
 import { registerService } from './check-launchd.mts';
 import { prepareLaunchdFixture } from './launchd-fixture.mts';
 
+test('configure initializes a fresh home, preserves other settings, and refuses invalid updates', { skip: process.platform === 'win32' }, () => {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'webmux-configure space-'));
+  const root = path.resolve(import.meta.dirname, '..');
+  const run = (...args: string[]) => spawnSync('make', ['--no-print-directory', '-o', 'deps', 'configure', `WEBMUX_HOME=${home}`, ...args], {
+    cwd: root, encoding: 'utf8', timeout: 10000,
+  });
+  try {
+    const initial = run('HTTP_PORT=19271', 'HTTPS_PORT=0', 'AUTH_MODE=none', 'SECURE_MODE=false');
+    assert.equal(initial.status, 0, initial.stdout + initial.stderr);
+    const app = path.join(home, 'config/app.yaml');
+    const auth = path.join(home, 'config/auth.yaml');
+    assert.match(fs.readFileSync(app, 'utf8'), /http_port: 19271/);
+    assert.match(fs.readFileSync(app, 'utf8'), /https_port: 0/);
+    fs.appendFileSync(app, '\ncustom_setting: retained\n');
+    fs.appendFileSync(auth, '\ncustom_auth: retained\n');
+    const update = run('HTTP_PORT=19272', 'LISTEN_HOST=::1');
+    assert.equal(update.status, 0, update.stdout + update.stderr);
+    assert.match(fs.readFileSync(app, 'utf8'), /http_port: 19272/);
+    assert.match(fs.readFileSync(app, 'utf8'), /custom_setting: retained/);
+    assert.match(fs.readFileSync(auth, 'utf8'), /custom_auth: retained/);
+    const before = [app, auth].map(file => fs.readFileSync(file, 'utf8'));
+    for (const bad of ['HTTP_PORT=65536', 'HTTPS_PORT=-1', 'AUTH_MODE=unknown', 'SECURE_MODE=maybe']) {
+      const refused = run(bad);
+      assert.notEqual(refused.status, 0, `accepted ${bad}`);
+      assert.deepEqual([app, auth].map(file => fs.readFileSync(file, 'utf8')), before);
+    }
+    fs.writeFileSync(auth, 'auth: [broken\n');
+    assert.notEqual(run('HTTP_PORT=19273').status, 0);
+    assert.equal(fs.readFileSync(app, 'utf8'), before[0], 'partial write before YAML validation');
+  } finally { fs.rmSync(home, { recursive: true, force: true }); }
+});
+
+test('nested Makefile delegates every public target and quotes repository paths', { skip: process.platform === 'win32' }, () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'webmux-delegate space-'));
+  const root = path.resolve(import.meta.dirname, '..');
+  try {
+    fs.mkdirSync(path.join(directory, 'webmux'));
+    fs.copyFileSync(path.join(root, 'webmux/Makefile'), path.join(directory, 'webmux/Makefile'));
+    const makefile = fs.readFileSync(path.join(root, 'Makefile'), 'utf8');
+    const targets = [...makefile.matchAll(/^([a-z][a-z0-9-]*):/gm)].map(match => match[1]);
+    fs.writeFileSync(path.join(directory, 'Makefile'), [...new Set(targets)].map(target => `.PHONY: ${target}\n${target}:\n\t@echo delegated-${target}\n`).join(''));
+    for (const target of [...new Set(targets)]) {
+      const result = spawnSync('make', ['--no-print-directory', '-C', path.join(directory, 'webmux'), target], { encoding: 'utf8', timeout: 10000 });
+      assert.equal(result.status, 0, `${target}: ${result.stdout}${result.stderr}`);
+      assert.match(result.stdout, new RegExp(`delegated-${target}\\b`));
+    }
+    const result = spawnSync('make', ['--no-print-directory', '-C', path.join(directory, 'webmux')], { encoding: 'utf8', timeout: 10000 });
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    assert.match(result.stdout, /delegated-all/);
+  } finally { fs.rmSync(directory, { recursive: true, force: true }); }
+});
+
+test('Make reports absent managed jobs and bootstraps into the configured launchd domain', { skip: process.platform === 'win32' }, () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'webmux-make-domain-'));
+  const root = path.resolve(import.meta.dirname, '..');
+  const log = path.join(directory, 'commands');
+  const env = { ...process.env, PATH: `${directory}:${process.env.PATH}`, WEBMUX_COMMAND_LOG: log };
+  try {
+    const status = spawnSync('make', ['--no-print-directory', 'status', 'SVC_INSTALLED=true', 'SVC_STATUS=false'], { cwd: root, env, encoding: 'utf8', timeout: 5000 });
+    assert.equal(status.status, 0, status.stderr);
+    assert.match(status.stdout, /not running/);
+    fs.writeFileSync(path.join(directory, 'launchctl'), '#!/bin/sh\nprintf "%s\\n" "$*" >> "$WEBMUX_COMMAND_LOG"\ncase "$1" in kickstart) exit 1;; esac\n', { mode: 0o700 });
+    const start = spawnSync('make', ['--no-print-directory', '-o', 'build-server', '-o', 'check-tmux', '-o', 'check-guacd',
+      'start', 'OS=Darwin', 'SVC_INSTALLED=true', 'SVC_STATUS=true', 'LAUNCHD_SVC=user/501/private-fixture',
+      `PLIST=${path.join(directory, 'fixture.plist')}`, `WEBMUX_HOME=${path.join(directory, 'home')}`], { cwd: root, env, encoding: 'utf8', timeout: 5000 });
+    assert.equal(start.status, 0, start.stdout + start.stderr);
+    assert.deepEqual(fs.readFileSync(log, 'utf8').trim().split('\n'), [
+      'kickstart user/501/private-fixture', `bootstrap user/501 ${path.join(directory, 'fixture.plist')}`,
+    ]);
+  } finally { fs.rmSync(directory, { recursive: true, force: true }); }
+});
+
 test('missing tmux blocks Unix server installation and startup before service changes', { skip: process.platform === 'win32' }, () => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'webmux-tmux-check-'));
   const root = path.resolve(import.meta.dirname, '..');
@@ -315,5 +387,67 @@ chmod +x "$bindir/agent-deck"
       'AGENT_DECK_BINDIR=/qualified/agent-deck'], { cwd: root, encoding: 'utf8', timeout: 10000 });
     assert.ifError(service.error); assert.equal(service.status, 0, service.stdout + service.stderr);
     assert.match(service.stdout, /PATH="\/qualified\/agent-deck:\$PATH" node scripts\/render-service\.mts/);
+  } finally { fs.rmSync(directory, { recursive: true, force: true }); }
+});
+
+test('manual Make startup preserves literal runtime data, zero ports and fresh logs', { skip: process.platform === 'win32' }, async () => {
+  const root = path.resolve(import.meta.dirname, '..');
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'webmux-runtime values-'));
+  const quote = (value: string) => `'${value.replaceAll("'", "'\\''")}'`;
+  try {
+    for (const mode of ['command-line', 'environment', 'zero-ports', 'fresh-log']) {
+      const base = path.join(directory, mode);
+      fs.mkdirSync(base);
+      const home = path.join(base, 'state & config');
+      const receipt = path.join(base, 'runtime.json');
+      const marker = path.join(base, 'must-not-exist');
+      const worker = path.join(base, 'fixture worker.mjs');
+      // Observe the Make-to-runtime boundary. The worker never opens sockets or
+      // allocates a PTY; native server lifecycle is qualified separately.
+      fs.writeFileSync(worker, `import fs from 'node:fs';
+fs.writeFileSync(process.env.WEBMUX_ENV_RECEIPT, JSON.stringify({
+  pid: process.pid, jwt: process.env.JWT_SECRET ?? '',
+  http: process.env.HTTP_PORT, https: process.env.HTTPS_PORT,
+}));
+console.log('listening fixture');
+setTimeout(() => process.exit(2), 15000);
+setInterval(() => {}, 1000);
+`);
+      const secret = ['command-line', 'environment'].includes(mode)
+        ? `qa secret $literal $(shell touch ${quote(marker)}) \`touch ${quote(marker)}\`; 'single' "double"` : '';
+      const env = { ...process.env, JWT_SECRET: mode === 'environment' ? secret : '', WEBMUX_ENV_RECEIPT: receipt };
+      const common = ['--no-print-directory', '-o', 'check-tmux', `WEBMUX_HOME=${home}`,
+        `SERVER_COMMAND=${quote(process.execPath)} ${quote(worker)}`];
+      try {
+        const zero = mode === 'zero-ports';
+        const started = spawnSync('make', [...common, '_start_manual',
+          `HTTP_PORT=${zero ? '0' : '49101'}`, `HTTPS_PORT=${zero ? '0' : '49102'}`,
+          ...(mode === 'command-line' ? [`JWT_SECRET=${secret}`] : [])], {
+          cwd: root, env, encoding: 'utf8', timeout: 10000,
+        });
+        assert.ifError(started.error);
+        assert.equal(started.status, 0, `${mode}: ${started.stdout}${started.stderr}`);
+        // Starting a process and observing its ready message are distinct. Wait
+        // only for this same worker's receipt; never replay the Make operation.
+        const deadline = Date.now() + 5000;
+        while (!fs.existsSync(receipt) && Date.now() < deadline) await new Promise(resolve => setTimeout(resolve, 20));
+        const actual = JSON.parse(fs.readFileSync(receipt, 'utf8')) as { pid: number; jwt: string; http: string; https: string };
+        assert.equal(actual.jwt, secret, `${mode}: runtime secret changed`);
+        assert.equal(Number(fs.readFileSync(path.join(home, '.webmux.pid'), 'utf8')), actual.pid);
+        assert(!fs.existsSync(marker), `${mode}: runtime data was evaluated`);
+        assert.doesNotMatch(started.stderr, /No such file or directory/, `${mode}: fresh log printed an error`);
+        if (zero) {
+          assert.equal(actual.http, '0');
+          assert.equal(actual.https, '0');
+        }
+      } finally {
+        if (fs.existsSync(receipt)) {
+          const stopped = spawnSync('make', [...common, '_stop_manual'], { cwd: root, env, encoding: 'utf8', timeout: 10000 });
+          assert.ifError(stopped.error);
+          assert.equal(stopped.status, 0, `${mode}: ${stopped.stdout}${stopped.stderr}`);
+          assert(!fs.existsSync(path.join(home, '.webmux.pid')), `${mode}: stop retained pidfile`);
+        }
+      }
+    }
   } finally { fs.rmSync(directory, { recursive: true, force: true }); }
 });

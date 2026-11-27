@@ -1,0 +1,50 @@
+{
+  "schema": "webmux.release_candidate.qualification.v1",
+  "version": "1.4.6",
+  "source_commit": "686a695e83493367a24db9b5c137043cd2f72a49",
+  "local_platform": "linux",
+  "local_architecture": "x64",
+  "full_test": {
+    "exit_code": 0,
+    "go_race": true,
+    "go_and_bundled_libraries": true,
+    "strict_typescript_projects": 5,
+    "frontend_passed": 500,
+    "helpers_passed": 299,
+    "helper_skipped": 3,
+    "e2e_passed": 1418,
+    "e2e_failed": 0,
+    "e2e_skipped": 22
+  },
+  "lint_exit_code": 0,
+  "release_guard_tests_passed": 10,
+  "standalone_package_smoke": true,
+  "make_start_saved_explicit_and_zero_ports": true,
+  "saved_configuration_preserved": true,
+  "operator_service_touched": false,
+  "test_secret_service": {
+    "private_bus": true,
+    "encrypted": true,
+    "native_login_collection_unchanged": true
+  },
+  "artifacts": [
+    {
+      "name": "webmux-1.4.6-linux-x64-native.tar.gz",
+      "sha256": "f27342f40306f4b4bca0a7f43d47590616c2f0b5932c6e296ca0c03a016fce7d"
+    },
+    {
+      "name": "webmux-client-1.4.6-linux-x64-native.tar.gz",
+      "sha256": "c0cd7b38103df5f2f8806980c2a84bf4e278894fc93f152c6cab843a3e9e2da5"
+    },
+    {
+      "name": "webmux-server-1.4.6-linux-x64-native.tar.gz",
+      "sha256": "3663f1f397176cdea47c886784d3d35687351b0957e0d8183e11275a9d89fe1e"
+    }
+  ],
+  "remaining_before_publication": [
+    "latest exact-candidate cross-platform CI",
+    "exact-main CI, Packaging and Windows ARM64 native qualification",
+    "published assets and checksums",
+    "Homebrew metadata synchronization"
+  ]
+}

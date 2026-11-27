@@ -11,6 +11,8 @@ case "$tool" in
   go) version=1.27.4; minimum=$(awk '$1 == "go" { print $2; exit }' "$4") ;;
   *) echo "Unknown build tool: $tool" >&2; exit 1 ;;
 esac
+required_tool="$tool >= $minimum"
+if [ "$tool" = node ]; then required_tool="Node.js 24.x (>= $minimum)"; fi
 at_least() {
   awk -v actual="$1" -v required="$2" 'BEGIN {
     split(actual, a, "."); split(required, b, ".");
@@ -26,6 +28,10 @@ usable() {
     go) actual=$("$command" version 2>/dev/null | awk '{ sub(/^go/, "", $3); print $3 }') || return 1 ;;
   esac
   case "$actual" in ''|*[!0-9.]*) return 1 ;; esac
+  # Native coordination helpers deliberately admit only the qualified Node 24
+  # runtime. Accepting a newer major here builds successfully but breaks tests
+  # and native creation later, before their intended admission checks.
+  if [ "$tool" = node ] && [ "${actual%%.*}" != 24 ]; then return 1; fi
   at_least "$actual" "$minimum"
 }
 if usable; then
@@ -33,11 +39,11 @@ if usable; then
   if [ "$tool" != node ] || command -v npm >/dev/null 2>&1; then exit 0; fi
 fi
 if [ "$command" != "$tool" ]; then
-  echo "Explicit $tool override '$command' must provide $tool >= $minimum." >&2
+  echo "Explicit $tool override '$command' must provide $required_tool." >&2
   exit 1
 fi
-case "$(uname -s)" in Linux) os=linux ;; Darwin) os=darwin ;; *) echo "Install $tool >= $minimum for this platform, or set ${tool} explicitly." >&2; exit 1 ;; esac
-case "$(uname -m)" in x86_64|amd64) arch=x64 ;; arm64|aarch64) arch=arm64 ;; *) echo "Install $tool >= $minimum for this architecture." >&2; exit 1 ;; esac
+case "$(uname -s)" in Linux) os=linux ;; Darwin) os=darwin ;; *) echo "Install $required_tool for this platform, or set ${tool} explicitly." >&2; exit 1 ;; esac
+case "$(uname -m)" in x86_64|amd64) arch=x64 ;; arm64|aarch64) arch=arm64 ;; *) echo "Install $required_tool for this architecture." >&2; exit 1 ;; esac
 if [ "$tool" = node ]; then
   archive=node-v$version-$os-$arch.tar.gz
   url=https://nodejs.org/dist/v$version/$archive
