@@ -320,6 +320,16 @@ path. The helper verifies actual provider cgroup ownership and reports a fallbac
 warning if jobs remain bound to the service. It does not change the service's
 kill policy or enable lingering on the user's host.
 
+Provider scopes explicitly use `OOMPolicy=continue`. A workload killed by the
+kernel must not cause systemd to stop the shared tmux server and unrelated
+terminals. This preserves surviving processes; it cannot restore a process the
+kernel killed, protect the tmux server from a direct OOM kill, or change an
+already-running provider's scope policy. Native Linux qualification is available
+with `WEBMUX_QUALIFY_PROVIDER_OOM=1 go test ./internal/recovery -run
+TestProviderWorkloadOOMPreservesOtherSessions -count=1` from `webmux/server`.
+It triggers an OOM within a private, swap-disabled 64 MiB cgroup and checks that
+both original unrelated pane processes survive.
+
 The control path has these boundaries:
 
 1. A stable, session-owned tmux provider is probed before creation. A surviving

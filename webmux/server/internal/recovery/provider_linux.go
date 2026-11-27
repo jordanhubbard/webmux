@@ -32,7 +32,11 @@ func scopedProviderCommand(ctx context.Context, tmux, id string, environment []s
 	if err != nil {
 		return nil
 	}
-	command := exec.CommandContext(ctx, runner, "--user", "--scope", "--collect", "--quiet", "--unit=webmux-provider-"+id+"-"+instance[:8], "--", tmux, "start-server", ";", "source-file", "-")
+	// tmux may share this server across terminals. The manager's default
+	// OOMPolicy=stop would stop the entire scope when one workload is killed,
+	// taking the server and unrelated sessions with it. Leave surviving
+	// processes running; the kernel still enforces any memory limits.
+	command := exec.CommandContext(ctx, runner, "--user", "--scope", "--collect", "--quiet", "--unit=webmux-provider-"+id+"-"+instance[:8], "--property=OOMPolicy=continue", "--", tmux, "start-server", ";", "source-file", "-")
 	for _, item := range environment {
 		name, _, _ := strings.Cut(item, "=")
 		if name != "XDG_RUNTIME_DIR" && name != "DBUS_SESSION_BUS_ADDRESS" {
