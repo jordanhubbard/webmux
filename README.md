@@ -545,6 +545,27 @@ full-suite run. This preserves earlier diagnostic receipts when CI later checks
 screenshot repeatability. Use `npm run test:e2e -- --output=chosen-directory`
 to select a fixed directory; Playwright clears that directory when the run starts.
 
+### Targeted Go tests
+
+Direct Go commands do not inherit Make's private Node toolchain or writable Go
+caches. Native coordination helpers require Node **24.x**; selecting Node 22 or
+26 can refuse native creation before its owner request directory is created.
+For targeted helper checks on Linux/macOS, run from the repository root:
+
+```bash
+make toolchain-node toolchain-go
+PATH="$PWD/.build/toolchains/node/bin:$PWD/.build/toolchains/go/bin:$PATH" \
+GOMODCACHE="$PWD/.build/go-mod" GOCACHE="$PWD/.build/go-cache" \
+CGO_ENABLED=1 GOMAXPROCS=2 \
+  go -C webmux/server test -race -p 2 ./internal/openrigcoord ./internal/nativeobserve -count=1
+```
+
+Race execution requires a native C compiler. These cache settings avoid a
+read-only shared module cache; they do not modify the caller's shell profile.
+The [native x64/ARM64 toolchain qualification](docs/validation/native-create-toolchain-2026-11-27/README.md)
+retains unsupported-runtime failures alongside the unchanged Node 24 controls.
+This targeted command does not replace the full `make test` gate.
+
 ## Contributing
 
 Public bug reports, feature requests, and proposed changes belong in [GitHub Issues](https://github.com/jordanhubbard/webmux/issues) and pull requests. The project does not use beads. Maintainers use [mac](https://github.com/jordanhubbard/mac) for internal task tracking and work dispatch; contributors do not need mac to file an issue or submit a pull request.
