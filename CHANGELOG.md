@@ -5,6 +5,15 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.4.7] - 2026-11-27
+
+### Fixed
+- Keep surviving terminal processes running when a Linux provider workload is killed for exceeding its memory limit. New provider scopes explicitly use `OOMPolicy=continue`; processes directly killed by the kernel and existing scopes are outside this guarantee.
+
+### Documentation
+- Clarify the qualified Node 24.x and Go toolchains for native helper tests, including Linux ARM64 validation, and align coordinator setup guidance with the maintained installer.
+
+
 ## [1.4.6] - 2026-11-27
 
 ### Changed
