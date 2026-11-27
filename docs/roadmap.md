@@ -164,16 +164,27 @@ combined installer checks pass, as do saved-cookie restart and the complete
 unmodified GUI `make test`: 500 frontend, 297 helpers and 1,418 E2E passes, with
 22 existing opt-in/platform skips. #769 fixes screenshot-resize input mapping;
 #770 diagnoses and corrects the private GUI qualifier's launchd resource role,
-with original tests and deadlines unchanged. Source prevention remains in draft
-PR #766. At `169dc3da`, native Linux ARM64 strict Snap storage/shutdown
+with original tests and deadlines unchanged. Source prevention entered main through
+PR #766 and the published v1.4.6 release. At `169dc3da`, native Linux ARM64 strict Snap storage/shutdown
 qualification also passes the browser race package and ten original UI tests;
 #771 adds verified process exit waits before removing temporary files. #764's
 macOS cookie investigation and #765's frontend timing qualification are complete.
 Other native-platform acceptance and the recovery/coordination requirements
 below remain open. These checks do not complete the roadmap or release.
 Release-control follow-ups #767/#768 add retained preparation failure state and
-exact-main CI admission before tagging; their isolated Git/GitHub-service
-controls do not establish release publication or complete this roadmap.
+exact-main CI admission before tagging. Their isolated controls are now backed by
+[published v1.4.6](https://github.com/jordanhubbard/webmux/releases/tag/v1.4.6):
+release main `7f51cea9` passed exact-source CI, packaging and native Windows ARM64
+before publication; all 28 asset files and 14 payload checksums were verified.
+Homebrew #777 and its final main `15d035a0` also passed their applicable gates.
+This release does not complete the open roadmap requirements.
+
+The [native creation toolchain qualification](validation/native-create-toolchain-2026-11-27/README.md)
+under #780 reproduces the unsupported Node-major refusal on Linux x64/ARM64 and
+passes the unchanged owner/dependency fixture with qualified Node 24. Both native
+package race/vet checks pass. Direct Go commands need Make's qualified runtime
+and writable cache selection; this does not complete authenticated recovery
+or native-creation acceptance under #438/#523.
 
 **Retained recovery priority: the original [#318](https://github.com/jordanhubbard/webmux/issues/318)
 requirements and the remaining acceptance below.** The tracker records #318 as

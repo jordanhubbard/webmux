@@ -197,7 +197,7 @@ not admitted as a successful smoke test. Native controls cover immediate child
 creation, normal stop, lost control and owner crash, including actual root and
 child handle waits. The owner is qualification tooling and is not shipped.
 
-On Windows, install Go 1.26 or newer, Node.js 24 and WiX 5, then build the
+On Windows, install Go 1.27.4 or newer, Node.js 24 and WiX 5, then build the
 native Go ZIP and MSI from PowerShell:
 
 ```powershell

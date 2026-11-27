@@ -29,8 +29,8 @@ source checkout.
 
 - A supported 64-bit or ARM64 Linux distribution
 - Make, tar, curl or wget, and sha256sum
-- Go 1.27.4 or newer and Node.js 24 or newer (automatically provisioned by `make`
-  on x64/ARM64 when missing or outdated)
+- Go 1.27.4 or newer and Node.js 24.x (automatically provisioned by `make`
+  on x64/ARM64 when missing or incompatible)
 - Git and OpenSSH Client
 - A C/C++ toolchain and Python if npm must compile a native dependency
 
@@ -99,7 +99,7 @@ sessions. From a WebMux checkout, run `make install-agent-deck`; without a
 checkout, use Agent Deck's checksum-verifying installer:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/asheshgoplani/agent-deck/v1.16.34/install.sh | bash -s -- --version v1.16.34 --non-interactive
+curl -fsSL https://raw.githubusercontent.com/asheshgoplani/agent-deck/v1.16.39/install.sh | bash -s -- --version v1.16.39 --non-interactive
 ```
 
 Use the repository Makefile for service management:

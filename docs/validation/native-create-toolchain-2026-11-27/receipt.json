@@ -1,0 +1,133 @@
+{
+  "schema": "webmux.native_create_toolchain_qualification.v1",
+  "source_commit": "15d035a0ddfe7ee5edf57d2fe3cb8d21fa5463af",
+  "issue": 780,
+  "scope": "Native Linux AMD64 and ARM64 unit/fixture startup, owner namespace, embedded dependency materialization and observer-helper race/vet controls. Not authenticated coding, native creation activation, recovery or roadmap completion.",
+  "root_cause": "Direct Go invocation selected an unsupported Node major instead of the qualified Node24 toolchain and owned Go caches selected by Make. The production native-creation guard refuses before creating request state.",
+  "production_and_fixture_sources_changed": false,
+  "assertions_or_timeouts_changed": false,
+  "native_hosts": [
+    {
+      "platform": "Linux",
+      "arch": "x86_64",
+      "source_commit": "15d035a0ddfe7ee5edf57d2fe3cb8d21fa5463af",
+      "go": "go version go1.27.4 linux/amd64",
+      "qualified_node": "v24.22.3",
+      "race_cgo_enabled": true,
+      "controls": [
+        {
+          "node": "v22.22.1",
+          "exit_code": 1,
+          "log_sha256": "d11956c8df1293408c3f9488bb8666a645d296eebe59c3d5c90c59fd7ec98bdf",
+          "result": "unchanged fixture refused unsupported native-helper runtime"
+        },
+        {
+          "node": "v24.22.3",
+          "exit_code": 0,
+          "log_sha256": "0d05b22b695e9146416a3ee0e78ce05b6ba7c2beededb24082f148b8dd607ea4",
+          "result": "owner-isolation/dependency assertions passed"
+        },
+        {
+          "node": "v22.22.1",
+          "exit_code": 1,
+          "log_sha256": "49a6fa012f1a291710a1eb7286e77b0c0f14e9729005d479d5974f80750a85a4",
+          "result": "unchanged fixture refused unsupported native-helper runtime"
+        }
+      ],
+      "package_checks": [
+        {
+          "command": "go test -race -p 2 ./internal/openrigcoord ./internal/nativeobserve -count=1",
+          "exit_code": 0,
+          "log_sha256": "6bca999e5e0725465638ffb24418872930aae37bbfda3a6c57d38de9165ff838"
+        },
+        {
+          "command": "go vet ./internal/openrigcoord ./internal/nativeobserve",
+          "exit_code": 0,
+          "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ],
+      "source_files": {
+        "scripts/bootstrap-toolchain.sh": "7ce85b994a70c6fcda93a21188d5b5a662a50133ad2df63b83794c6cc8c41471",
+        "webmux/server/internal/openrigcoord/native_create_test.go": "8554daabdb0b0fda45e70599ac4008e0a081d9a022081ada6d04e8f34caa35c5",
+        "webmux/server/internal/openrigcoord/rig-native-create.mts": "e715cebb9fe49811aa4a5f0348af704ade1ad9f2bb31e9696a569623236069b1",
+        "webmux/server/internal/openrigcoord/coord.go": "126d49d671e3eaea833ae8ca4266acd3f54413a4c8944481e421a433f8a4b9d2",
+        "webmux/server/go.mod": "4af68f0e0f8f608a48b842afe0d4d14f3dccbd66b0859d1d7ed1926219e8f3dd",
+        "webmux/server/go.sum": "5d9921a5399b57c9312dcfcc50e3a5fb67de647d2b711fbe7a330cceaec4634d"
+      },
+      "test_environment": {
+        "GOMAXPROCS": "2",
+        "CGO_ENABLED": "1 for race execution",
+        "go_caches": "owned, writable per-qualification caches",
+        "node": "qualified runtime selected first on PATH"
+      }
+    },
+    {
+      "platform": "Linux",
+      "arch": "aarch64",
+      "source_commit": "15d035a0ddfe7ee5edf57d2fe3cb8d21fa5463af",
+      "go": "go version go1.27.4 linux/arm64",
+      "qualified_node": "v24.22.3",
+      "race_cgo_enabled": true,
+      "controls": [
+        {
+          "node": "v26.8.1",
+          "exit_code": 1,
+          "log_sha256": "2b0b88e49946db9fa4c9898dbc5a96d0fc79b67f286764abe90dd4426e4bdc76",
+          "result": "unchanged fixture refused unsupported native-helper runtime"
+        },
+        {
+          "node": "v24.22.3",
+          "exit_code": 0,
+          "log_sha256": "0db6686445536743733dd2c822b831c0a0ebfbaeca5772935fefd2b4b5e34ef9",
+          "result": "owner-isolation/dependency assertions passed"
+        },
+        {
+          "node": "v26.8.1",
+          "exit_code": 1,
+          "log_sha256": "7aacd4696d10c81ece0e0c19c46f74044a500d41f8eaa45d2aa0d06746bd33dc",
+          "result": "unchanged fixture refused unsupported native-helper runtime"
+        }
+      ],
+      "package_checks": [
+        {
+          "command": "go test -race -p 2 ./internal/openrigcoord ./internal/nativeobserve -count=1",
+          "exit_code": 0,
+          "log_sha256": "161d7dd2924b2df5b7f1f4f8584be6ef1c8487498920a0bb5d2fb5b968e7d5f6"
+        },
+        {
+          "command": "go vet ./internal/openrigcoord ./internal/nativeobserve",
+          "exit_code": 0,
+          "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ],
+      "source_files": {
+        "scripts/bootstrap-toolchain.sh": "7ce85b994a70c6fcda93a21188d5b5a662a50133ad2df63b83794c6cc8c41471",
+        "webmux/server/internal/openrigcoord/native_create_test.go": "8554daabdb0b0fda45e70599ac4008e0a081d9a022081ada6d04e8f34caa35c5",
+        "webmux/server/internal/openrigcoord/rig-native-create.mts": "e715cebb9fe49811aa4a5f0348af704ade1ad9f2bb31e9696a569623236069b1",
+        "webmux/server/internal/openrigcoord/coord.go": "126d49d671e3eaea833ae8ca4266acd3f54413a4c8944481e421a433f8a4b9d2",
+        "webmux/server/go.mod": "4af68f0e0f8f608a48b842afe0d4d14f3dccbd66b0859d1d7ed1926219e8f3dd",
+        "webmux/server/go.sum": "5d9921a5399b57c9312dcfcc50e3a5fb67de647d2b711fbe7a330cceaec4634d"
+      },
+      "test_environment": {
+        "GOMAXPROCS": "2",
+        "CGO_ENABLED": "1 for race execution",
+        "go_caches": "owned, writable per-qualification caches",
+        "node": "qualified runtime selected first on PATH"
+      }
+    }
+  ],
+  "retained_setup_failures": [
+    {
+      "case": "Initial AMD64 direct-Go module resolution",
+      "outcome": "setup failed before tests because the shared module cache was root-owned and not writable",
+      "mitigation": "Owned per-checkout cache, matching the public Make contract",
+      "counted_as_test_result": false
+    },
+    {
+      "case": "Initial ARM64 race command",
+      "outcome": "setup refused because ambient CGO_ENABLED=0",
+      "mitigation": "CGO_ENABLED=1 with the existing native C compiler for race execution",
+      "counted_as_test_result": false
+    }
+  ]
+}
