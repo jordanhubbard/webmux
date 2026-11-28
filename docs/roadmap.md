@@ -107,7 +107,12 @@ fixes advertisements for concrete Linux listener bindings and passes the same
 protected application lifecycle and changed-identity refusal for native IPv6
 endpoints on a dual-stack LAN, with default IPv4 regression coverage. IPv6-only
 networks, scoped link-local behavior, other native platforms and the complete
-workflow remain open. The
+workflow remain open. A
+[manual-peer fallback follow-up](validation/manual-discovery-fallback-2026-11-28/README.md)
+passes explicit HTTPS configuration and retained identity through both controller
+and receiver restarts with native IPv4/IPv6 discovery initialization failures,
+including independent zero-UDP-socket checks. This is an absent-interface failure
+on a working LAN; isolated-network and complete workflow acceptance remain open. The
 [built-in coordination checkpoint](session-coordination.md) adds a durable
 node-local ledger and scoped ordinary-session CLI. Real-agent onboarding,
 managed/SSH interfaces and cross-node coordination still require implementation

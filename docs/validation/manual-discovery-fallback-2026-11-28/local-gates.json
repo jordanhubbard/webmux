@@ -1,0 +1,23 @@
+{
+  "source": "5b8d882bc5392aaae14093bb748ff54995a5aa44",
+  "source_tree": "fedfd47b2acdb6ef6bcb50b2d23b1eb94b1b4b6a",
+  "gates": {
+    "fallback-full-test": {
+      "exit_code": 0,
+      "complete_private_log_sha256": "cfda53229cbedd0cef77a41870f4339af048efd448c1e5bb4c3d46f0d91c2c22"
+    },
+    "fallback-full-lint": {
+      "exit_code": 0,
+      "complete_private_log_sha256": "c294cc7d5105880d3bfb8523e2b2b3fdaeebdcb1f5fbd2caa47f66fd171d9746"
+    }
+  },
+  "frontend_passes": 500,
+  "helper_passes": 308,
+  "helper_existing_skips": 3,
+  "e2e_passes": 1418,
+  "e2e_existing_skips": 22,
+  "go_race_and_strict_typescript": "passed",
+  "test_assertions_deadlines_or_host_security_changed": false,
+  "private_keyring": true,
+  "tmux_fixture_socket_contract_preserved": true
+}
