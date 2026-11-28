@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"net"
+	"net/netip"
 	"sync"
 	"time"
 )
@@ -18,10 +19,16 @@ type credentialExchangeGate struct {
 
 func (g *credentialExchangeGate) allow(remote string, now time.Time) bool {
 	host, _, err := net.SplitHostPort(remote)
-	if err != nil || net.ParseIP(host) == nil {
+	if err != nil {
 		return false
 	}
-	host = net.ParseIP(host).String()
+	ip, err := netip.ParseAddr(host)
+	if err != nil {
+		return false
+	}
+	// Canonicalize mapped IPv4 and ignore the kernel's local IPv6 zone name;
+	// neither source-port nor address spelling should create another allowance.
+	host = ip.WithZone("").Unmap().String()
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	if g.start.IsZero() || now.Sub(g.start) >= time.Second {

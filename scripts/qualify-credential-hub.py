@@ -343,6 +343,19 @@ def main():
             for wrong in [{"consumer": "ai.nvidia"}, {"project": "foreign-project"}]:
                 code, _ = wire(node, "issue", **wrong)
                 check(node.name + ":wrong-scope-denied:" + next(iter(wrong)), code == 403, [code])
+        first, second = receivers
+        reserved = [wire(first, "issue") for _ in range(4)]
+        check("enrollment-reserved-handle-budget",
+              all(code == 200 for code, _ in reserved), [code for code, _ in reserved])
+        code, _ = wire(first, "issue")
+        check("enrollment-handle-budget-refused", code == 429, [code])
+        # Exhausting one recipient must leave the other recipient's private
+        # issue/redeem path usable over its actual native peer connection.
+        consume(second, 200, "CREDENTIAL_CANARY_PROVIDER_1")
+        released = [wire(first, "redeem", handle=reply["handle"]) for _, reply in reserved]
+        check("enrollment-handles-remain-redeemable",
+              all(code == 200 and reply.get("value") == hub.config["fake_keys"][0]
+                  for code, reply in released), [code for code, _ in released])
         for node in receivers:
             original_token = node.token
             with node.changed_private_config("auth.yaml", "username: fixture", "username: foreign"):
@@ -358,19 +371,6 @@ def main():
             with node.changed_private_config("servers.yaml",pin,"0"*64):
                 consume(node,403)
             consume(node,200,"CREDENTIAL_CANARY_PROVIDER_1")
-        first, second = receivers
-        reserved = [wire(first, "issue") for _ in range(4)]
-        check("enrollment-reserved-handle-budget",
-              all(code == 200 for code, _ in reserved), [code for code, _ in reserved])
-        code, _ = wire(first, "issue")
-        check("enrollment-handle-budget-refused", code == 429, [code])
-        # Exhausting one recipient must leave the other recipient's private
-        # issue/redeem path usable over its actual native peer connection.
-        consume(second, 200, "CREDENTIAL_CANARY_PROVIDER_1")
-        released = [wire(first, "redeem", handle=reply["handle"]) for _, reply in reserved]
-        check("enrollment-handles-remain-redeemable",
-              all(code == 200 and reply.get("value") == hub.config["fake_keys"][0]
-                  for code, reply in released), [code for code, _ in released])
         code, issued = wire(first, "issue")
         check("handle-issue", code == 200, [code])
         code, _ = wire(second, "redeem", handle=issued["handle"])

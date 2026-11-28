@@ -44,3 +44,27 @@ func TestCredentialExchangeGateBoundsDistributedAndPerSourceTraffic(t *testing.T
 		t.Fatal("unparseable source admitted")
 	}
 }
+
+func TestCredentialExchangeGateCanonicalizesSourceAddresses(t *testing.T) {
+	var gate credentialExchangeGate
+	now := time.Now()
+	for range 32 {
+		if !gate.allow("192.0.2.1:1234", now) {
+			t.Fatal("source prematurely limited")
+		}
+	}
+	if gate.allow("[::ffff:192.0.2.1]:5678", now) {
+		t.Fatal("mapped IPv4 bypassed source limit")
+	}
+	for range 32 {
+		if !gate.allow("[fe80::1%eth0]:1234", now) {
+			t.Fatal("kernel IPv6 zone refused")
+		}
+	}
+	if gate.allow("[fe80::1%eth1]:5678", now) {
+		t.Fatal("zone spelling bypassed source limit")
+	}
+	if !gate.allow("[fe80::2%eth0]:1234", now) {
+		t.Fatal("independent IPv6 source refused")
+	}
+}
