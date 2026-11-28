@@ -678,7 +678,13 @@ updates. The dependency-audit gate remains enabled and passed for this release.
   Owner-scoped browser lease status and Stop controls are implemented under
   [#485](https://github.com/jordanhubbard/webmux/issues/485), with one-use helper
   pairing, durable stop requests and separate confirmed/uncertain cleanup states.
-  Exact-source native simulation and normal merge gates remain required.
+  [#120 is closed](https://github.com/jordanhubbard/webmux/issues/120#issuecomment-7020339498):
+  main `84a331a8aa0848a247543b6c3abb7b8b23c1a871` completed the simulated-device,
+  actual CLI/SSH stream-isolation and browser status/control acceptance with
+  successful post-merge CI, packaging and Windows ARM64 qualification. This is
+  evidence for that source and scope; later candidates retain their own
+  regression and release gates, and other peripherals/backends/OS pairs require
+  separate qualification.
 
 ## External distribution and qualification
 

@@ -207,8 +207,19 @@ verify device release plus worker/listener cleanup. Physical equipment and
 device-specific workflows are optional follow-on checks. Browser status and
 control integration is implemented under #485. Native acceptance additionally
 checks one-use pairing, controller-loss continuity and dashboard Stop while
-retaining the ordinary CLI interruption check. Keep #120 open until the
-candidate's qualification and normal repository gates have evidence.
+retaining the ordinary CLI interruption check.
+
+[#120 is closed](https://github.com/jordanhubbard/webmux/issues/120#issuecomment-7020339498)
+with acceptance at main `84a331a8aa0848a247543b6c3abb7b8b23c1a871`:
+the built CLI/separate worker carried eight concurrent distinct duplex streams
+through real SSH; the four native USB kernel controls and Linux/Windows browser
+status/Stop controls passed. Post-merge
+[CI](https://github.com/jordanhubbard/webmux/actions/runs/44591424467),
+[packaging](https://github.com/jordanhubbard/webmux/actions/runs/44591424415) and
+[Windows ARM64 qualification](https://github.com/jordanhubbard/webmux/actions/runs/44591424509)
+all succeeded. These are historical results for the named source and simulated
+backend, not a new native execution or qualification of every peripheral or OS
+pair. Later candidates retain their own regression and release gates.
 
 
 ### Simulated USB device acceptance
