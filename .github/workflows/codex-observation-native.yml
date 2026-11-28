@@ -7,6 +7,8 @@ on:
       - 'webmux/server/cmd/webmux/main.go'
       - 'webmux/server/go.*'
       - 'scripts/test_codex_observer_process.py'
+      - 'scripts/qualify-codex-observer-startup.py'
+      - 'scripts/qualify-codex-observation-isolation.py'
       - '.github/workflows/codex-observation-native.yml'
   push:
     branches: [main]
@@ -14,6 +16,8 @@ on:
       - 'webmux/server/internal/nativeobserve/**'
       - 'webmux/server/cmd/webmux/main.go'
       - 'scripts/test_codex_observer_process.py'
+      - 'scripts/qualify-codex-observer-startup.py'
+      - 'scripts/qualify-codex-observation-isolation.py'
       - '.github/workflows/codex-observation-native.yml'
   workflow_dispatch:
 
