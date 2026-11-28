@@ -1,9 +1,9 @@
 import { test, expect } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
 
-test('local recovery preserves a surviving job and replays an interrupted command once after approval', async ({ page, request }) => {
+test('local recovery preserves a surviving job and replays an interrupted command once after approval', async ({ page, request }, info) => {
   test.skip(process.platform === 'win32', 'Native tmux lifecycle qualification requires Unix');
   test.setTimeout(90_000);
   const previous = (await (await request.get('/api/config')).json()).app.session_logging?.enabled ?? false;
@@ -16,7 +16,12 @@ test('local recovery preserves a surviving job and replays an interrupted comman
   const executions = path.resolve(__dirname, '.test-home', `recovery-executions-${session.id}.txt`);
   const panePid = () => execFileSync('tmux', ['display-message', '-p', '-t', target, '#{pane_pid}'], { encoding: 'utf8' }).trim();
   const count = () => { try { return readFileSync(executions, 'utf8').trim().split('\n').length; } catch { return 0; } };
-  const recovery = async () => (await request.get(`/api/session-recovery/${session.id}`)).json();
+  const observations: unknown[] = [{ kind: 'test environment', shell: process.env.SHELL ?? null }];
+  const recovery = async () => {
+    const value = await (await request.get(`/api/session-recovery/${session.id}`)).json();
+    observations.push({ at: Date.now(), live: value.live, waiting: value.waiting, shell_ready: value.shell_ready, message: value.message, host_revision: value.host_revision, instance: value.instance, disposition: value.state?.disposition, pending: value.state?.pending, activity_running: value.state?.activity?.running });
+    return value;
+  };
   try {
     await page.goto('/');
     const tile = page.getByTestId(`tile-cell-${session.id}`);
@@ -68,6 +73,10 @@ test('local recovery preserves a surviving job and replays an interrupted comman
     await expect.poll(panePid).toBe(replacementPid);
     expect(count()).toBe(2);
   } finally {
+    const observationFile = info.outputPath('recovery-observations.json');
+    mkdirSync(path.dirname(observationFile), { recursive: true });
+    writeFileSync(observationFile, JSON.stringify(observations, null, 2), { mode: 0o600 });
+    await info.attach('recovery-observations', { path: observationFile, contentType: 'application/json' });
     await request.delete(`/api/sessions/${session.id}`).catch(() => {});
     try { execFileSync('tmux', ['kill-session', '-t', target], { stdio: 'ignore' }); } catch { /* owned provider already stopped */ }
     await request.put('/api/config', { data: { app: { session_logging: { enabled: previous } } } }).catch(() => {});

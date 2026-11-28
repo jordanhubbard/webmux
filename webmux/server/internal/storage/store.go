@@ -249,3 +249,12 @@ func (s *Store) AppendEvent(event map[string]any) error {
 	_, writeErr := f.Write(append(line, '\n'))
 	return errors.Join(writeErr, f.Close())
 }
+
+// InspectConfigs holds one configuration snapshot across related authorization
+// inputs. The callback may read fixed internal names through read; it must not
+// call other Store configuration methods. No network I/O belongs in callbacks.
+func (s *Store) InspectConfigs(inspect func(read func(string, any) error) error) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return inspect(func(name string, out any) error { return readYAML(s.ConfigPath(name), out) })
+}

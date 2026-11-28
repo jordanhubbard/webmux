@@ -129,9 +129,17 @@ export interface MacSetup {
 export interface ConnectedServer { id: string; name: string }
 
 export interface ManagedServer extends ConnectedServer { coordination_reservations?: boolean; coordination_messages?: boolean; coordination_owner?: string; url: string; allow_http: boolean; token_env: string; credential_ready: boolean; identity?: { node_id: string; owner: string; tls_key_sha256: string } }
-export interface ServerGrant { coordination_reservations?: boolean; coordination_messages?: boolean; source_node_id?: string; source_owner?: string; coordination?: boolean; id: string; owner: string; token_env: string; credential_ready: boolean }
+export interface ServerGrant { credential_sharing?: boolean; coordination_reservations?: boolean; coordination_messages?: boolean; source_node_id?: string; source_owner?: string; coordination?: boolean; id: string; owner: string; token_env: string; credential_ready: boolean }
 export interface DiscoveredNode { instance: string; claimed_id: string; host: string; address: string; port: number; tls: boolean; last_seen: string; expires: string }
 export interface NodeDiscovery { contract: string; started: boolean; error: string; policy: { version: number; id: string; browse: boolean; advertise: boolean; interfaces: string[] | null }; candidates: DiscoveredNode[] }
+export type CredentialConsumer = 'ai.openai' | 'ai.nvidia';
+export interface SharedCredential { id: string; owner: string; name: string; consumer: CredentialConsumer; version: number; enabled: boolean }
+export interface SharedCredentialGrant { active?: boolean; id: string; secret_id: string; enrollment_id: string; source_node: string; source_owner: string; consumer: CredentialConsumer }
+export interface CredentialHubInfo {
+ vault: { enabled: boolean; secrets: SharedCredential[]; grants: SharedCredentialGrant[]; audit: { at: string; operation: string; secret_id?: string; enrollment_id?: string; allowed: boolean }[] };
+ binding: { id: string; peer: string; secret_id: string; consumer: CredentialConsumer } | null;
+ storage_supported: boolean;
+}
 export interface ServerDirectory { servers: ManagedServer[]; grants: ServerGrant[] }
 export interface ServerCredentialInput { token_env: string; credential: string }
 
@@ -221,10 +229,20 @@ export const api = {
   setAutoRecovery: (id: string, enabled: boolean) => request<{ auto_resume: boolean }>(`/session-recovery/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify({ auto_resume: enabled }) }),
   verifyServerIdentity: (id: string) => request<void>(`/servers/${encodeURIComponent(id)}/verify-identity`, { method: 'POST', body: '{}' }),
   getDiscoveredNodes: () => request<NodeDiscovery>('/discovered-nodes'),
+  credentialAIChat: (message: string) => request<{ reply: string; model: string; source: string }>('/ai/chat', { method: 'POST', body: JSON.stringify({ message, history: [] }) }),
+  getCredentialHub: () => request<CredentialHubInfo>('/credentials'),
+  enableCredentialHub: () => request<void>('/credentials/setup', { method: 'POST', body: '{}' }),
+  putSharedCredential: (id: string | null, value: { name: string; value: string; consumer: CredentialConsumer; enabled: boolean }) => request<SharedCredential>(id ? `/credentials/secrets/${encodeURIComponent(id)}` : '/credentials/secrets', { method: id ? 'PUT' : 'POST', body: JSON.stringify(value) }),
+  deleteSharedCredential: (id: string) => request<void>(`/credentials/secrets/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+  grantSharedCredential: (value: { secret_id: string; enrollment_id: string; consumer: CredentialConsumer }) => request<SharedCredentialGrant>('/credentials/grants', { method: 'POST', body: JSON.stringify(value) }),
+  revokeSharedCredential: (id: string) => request<void>(`/credentials/grants/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+  getAvailableCredentials: (peer: string, consumer: CredentialConsumer) => request<SharedCredential[]>(`/credentials/peers/${encodeURIComponent(peer)}/available?consumer=${encodeURIComponent(consumer)}`),
+  selectCredentialHub: (value: { peer: string; secret_id: string; consumer: CredentialConsumer }) => request<void>('/credentials/selection', { method: 'PUT', body: JSON.stringify(value) }),
+  clearCredentialHub: () => request<void>('/credentials/selection', { method: 'DELETE' }),
   getServerDirectory: () => request<ServerDirectory>('/server-directory'),
   saveServer: (id: string, input: ServerCredentialInput & { name: string; url: string; allow_http: boolean; coordination_owner?: string; coordination_messages?: boolean; coordination_reservations?: boolean }) => request<void>(`/servers/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(input) }),
   deleteServer: (id: string) => request<void>(`/servers/${encodeURIComponent(id)}`, { method: 'DELETE' }),
-  saveServerGrant: (id: string, input: ServerCredentialInput & { owner: string; coordination?: boolean; coordination_reservations?: boolean; coordination_messages?: boolean; source_node_id?: string; source_owner?: string }) => request<void>(`/server-grants/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(input) }),
+  saveServerGrant: (id: string, input: ServerCredentialInput & { owner: string; credential_sharing?: boolean; coordination?: boolean; coordination_reservations?: boolean; coordination_messages?: boolean; source_node_id?: string; source_owner?: string }) => request<void>(`/server-grants/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(input) }),
   deleteServerGrant: (id: string) => request<void>(`/server-grants/${encodeURIComponent(id)}`, { method: 'DELETE' }),
   getServers: () => request<{ version: number; servers: ConnectedServer[] }>('/servers'),
   getServerSessions: (server: string) => request<Session[]>(`/servers/${encodeURIComponent(server)}/sessions`),

@@ -15,7 +15,7 @@ import (
 func testService(t *testing.T) (*Service, *storage.Store) {
 	t.Helper()
 	defaults := t.TempDir()
-	if err := os.WriteFile(filepath.Join(defaults, "auth.yaml"), []byte("auth:\n  mode: local\n  users: []\n  custom: preserve\n"), 0600); err != nil {
+	if err := os.WriteFile(filepath.Join(defaults, "auth.yaml"), []byte("auth:\n  mode: local\n  users:\n    - username: owner\n      password_hash: salted-fixture-generation\n      admin: true\n  custom: preserve\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
 	store, err := storage.Open(t.TempDir(), defaults)
@@ -142,5 +142,84 @@ func TestPasswordHashAndMalformedParameters(t *testing.T) {
 		if ok, err := VerifyPassword(invalid, "test"); err == nil || ok {
 			t.Errorf("malformed hash accepted: %s", invalid)
 		}
+	}
+}
+
+func TestCredentialGenerationRefreshCannotUpgradeLegacyOrRecreatedAccount(t *testing.T) {
+	s, store := testService(t)
+	if e := storage.UpdateConfig(store, "auth.yaml", func(c *Config) error {
+		c.Auth.Users = []User{{Username: "owner", PasswordHash: "salted-original-generation", Admin: true}}
+		return nil
+	}); e != nil {
+		t.Fatal(e)
+	}
+	current, e := s.Sign("owner")
+	if e != nil {
+		t.Fatal(e)
+	}
+	expected := AccountGeneration("owner", "salted-original-generation")
+	if got, e := s.Generation(current); e != nil || got != expected {
+		t.Fatal("unbound authenticated session", e)
+	}
+	legacy, e := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.RegisteredClaims{Subject: "owner", ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour))}).SignedString(s.secret)
+	if e != nil {
+		t.Fatal(e)
+	}
+	if _, e := s.Verify(legacy); e == nil {
+		t.Fatal("username-only legacy bearer retained local account authority")
+	}
+	if _, e = s.Generation(legacy); e == nil {
+		t.Fatal("legacy credential authority accepted")
+	}
+	if _, e = s.Refresh(legacy); e == nil {
+		t.Fatal("refresh upgraded unauthenticated account generation")
+	}
+	if e = storage.UpdateConfig(store, "auth.yaml", func(c *Config) error { c.Auth.Users[0].PasswordHash = "salted-recreated-generation"; return nil }); e != nil {
+		t.Fatal(e)
+	}
+	if _, e = s.Refresh(current); e == nil {
+		t.Fatal("recreated account inherited token refresh")
+	}
+	fresh, e := s.Sign("owner")
+	if e != nil {
+		t.Fatal(e)
+	}
+	if got, e := s.Generation(fresh); e != nil || got == expected {
+		t.Fatal("new account failed to get independent generation", e)
+	}
+}
+
+func TestTicketsAndNewAdmissionsAreFencedByAccountGeneration(t *testing.T) {
+	s, store := testService(t)
+	current, e := s.Sign("owner")
+	if e != nil {
+		t.Fatal(e)
+	}
+	generation, e := s.Generation(current)
+	if e != nil {
+		t.Fatal(e)
+	}
+	ticket, e := s.IssueTicket("owner", generation)
+	if e != nil {
+		t.Fatal(e)
+	}
+	if e = storage.UpdateConfig(store, "auth.yaml", func(c *Config) error { c.Auth.Users[0].PasswordHash = "new-independent-generation"; return nil }); e != nil {
+		t.Fatal(e)
+	}
+	if _, ok := s.ConsumeTicket(ticket); ok {
+		t.Fatal("pre-reset ticket authenticated a recreated account")
+	}
+	if _, e = s.IssueTicket("owner", generation); e == nil {
+		t.Fatal("prior session admitted a new-generation ticket")
+	}
+	if _, e = s.Verify(current); e == nil {
+		t.Fatal("stale login retained account access")
+	}
+	fresh, e := s.IssueTicket("owner")
+	if e != nil {
+		t.Fatal(e)
+	}
+	if user, ok := s.ConsumeTicket(fresh); !ok || user != "owner" {
+		t.Fatal("fresh generation admission failed")
 	}
 }

@@ -64,8 +64,9 @@ type Status struct {
 	Model     string    `json:"model"`
 }
 type Service struct {
-	env    func(string) string
-	client *http.Client
+	env              func(string) string
+	client           *http.Client
+	credentialClient *http.Client
 }
 
 func New(env func(string) string, client *http.Client) *Service {
@@ -84,7 +85,14 @@ func New(env func(string) string, client *http.Client) *Service {
 			return nil
 		}}
 	}
-	return &Service{env: env, client: client}
+	private := *client
+	if private.Transport == nil {
+		tr := http.DefaultTransport.(*http.Transport).Clone()
+		tr.Proxy = nil
+		private.Transport = tr
+	}
+	private.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
+	return &Service{env: env, client: client, credentialClient: &private}
 }
 func first(values ...string) string {
 	for _, value := range values {
@@ -240,4 +248,32 @@ func (s *Service) Chat(ctx context.Context, input Request) (Response, error) {
 		model, source = first(s.env("WEBMUX_MODEL"), "llm"), "direct"
 	}
 	return Response{Reply: reply, Model: model, Source: source, Timestamp: time.Now().UnixMilli()}, nil
+}
+
+// WithCredential uses one request-local portable key, never ambient provider
+// credentials or RCC fallback. Its fixed provider transport forbids redirects
+// and ambient proxies; trusted embedded tests may supply their own transport.
+func (s *Service) WithCredential(consumer, key string) (*Service, error) {
+	name := ""
+	switch consumer {
+	case "ai.openai":
+		name = "OPENAI_API_KEY"
+	case "ai.nvidia":
+		name = "NVIDIA_API_KEY"
+	default:
+		return nil, errors.New("Unsupported credential consumer")
+	}
+	if key == "" || len(key) > 4096 || strings.ContainsAny(key, "\r\n") {
+		return nil, errors.New("Invalid private provider credential")
+	}
+	env := func(k string) string {
+		if k == name {
+			return key
+		}
+		if k == "WEBMUX_MODEL" {
+			return s.env(k)
+		}
+		return ""
+	}
+	return &Service{env: env, client: s.credentialClient, credentialClient: s.credentialClient}, nil
 }
