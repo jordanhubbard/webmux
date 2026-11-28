@@ -1,0 +1,534 @@
+{
+  "schema": "webmux.discovery-ipv6-native.v1",
+  "recorded_at": "2026-11-28T03:13:21.193622+00:00",
+  "scope": "Native Linux x86_64 receiver and Linux ARM64 controller protected application and browser; explicit unscoped global/ULA IPv6 and default IPv4. No installed-service, OS trust, other-platform or real-agent/MAC acceptance.",
+  "runs": {
+    "ipv6-bound-lifecycle": {
+      "revision": "064dd19e39272cf08906de0ee01b62e5e12db792",
+      "passed": true,
+      "ipFamily": 6,
+      "checks": [
+        "actual Linux ARM64 application discovers Linux x86_64 HTTPS application without enrolling it",
+        "native direct TLS connection reaches the selected IPv6 receiver endpoint",
+        "human browser configures the discovered HTTPS endpoint and explicitly verifies node/account identity",
+        "actual receiver restart and changed port migrate in the controller background without an open browser",
+        "actual controller restart retains verified peer identity and migrated endpoint",
+        "departed receiver expires from discovery while its verified configured peer remains retained and unreachable",
+        "same receiver rejoins discovery with its retained identity and no duplicate enrollment",
+        "normal policy restart disables browsing while the verified configured peer remains accessible"
+      ],
+      "localRuntime": {
+        "kernel": "Linux",
+        "machine": "x86_64",
+        "arch": "x64"
+      },
+      "remoteRuntime": {
+        "kernel": "Linux",
+        "machine": "aarch64"
+      },
+      "binaryTargets": {
+        "receiver": {
+          "role": "receiver",
+          "goos": "linux",
+          "goarch": "amd64"
+        },
+        "controller": {
+          "role": "controller",
+          "goos": "linux",
+          "goarch": "arm64"
+        }
+      },
+      "binarySHA256": {
+        "receiver": "a70760d340ac3d8b1cbc066473783417926e02007754b144497798f7281a9ccb",
+        "controller": "68fe3e636239f92f00ba1571416521ca99f49bba9565f56f2b362b6eadc7fdce"
+      },
+      "diagnosticSHA256": "9f9bce28bb6aaa43b0a63cacf24bb6c670dccecd440894b59a43cbb621294c8a",
+      "cleanup": [
+        "completed",
+        "completed",
+        "completed"
+      ],
+      "sourcesUnchanged": true,
+      "directTLSFamilyConfirmed": 6,
+      "command_exit_code": 0,
+      "expected_failure": false,
+      "receipt_sha256": "c0c7784cd2866f6855a993501a7d2b9b0829d5ef112c767766376ad28b5cd14a",
+      "source_inventory_sha256": "50e776484d186137d665ad58f172ab14b18a388cd8682059561352498616030e",
+      "artifacts": {
+        "controller-ssh.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "enrolled.png": "5737683ae8e1950362c545273abe4f3dfc96cb1aeea2561a6cac6efba56f6367",
+        "tunnel.log": "296540f8acaa3255efd56b6ab3c0316ee5dc04a307589d3b77c1eee94007d0b2",
+        "receipt.json": "c0c7784cd2866f6855a993501a7d2b9b0829d5ef112c767766376ad28b5cd14a",
+        "receiver.log": "e151f2013230b92fd57662f2dc6a9ab859db4ea5fd26031c0e1c6ee827895e01",
+        "controller.log": "09140124b6456b802ea3ce848004fc297fe14e2954046d43fdae0173a81372dc",
+        "tls-diagnostic-build.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "transport-diagnostic.json": "5aa4734bcc907ad014aa8245ec3c0ad0d9ec4747e89f6b778a16f967aaa231c0"
+      }
+    },
+    "ipv6-bound-changed-node": {
+      "revision": "064dd19e39272cf08906de0ee01b62e5e12db792",
+      "passed": false,
+      "ipFamily": 6,
+      "checks": [
+        "actual Linux ARM64 application discovers Linux x86_64 HTTPS application without enrolling it",
+        "native direct TLS connection reaches the selected IPv6 receiver endpoint"
+      ],
+      "localRuntime": {
+        "kernel": "Linux",
+        "machine": "x86_64",
+        "arch": "x64"
+      },
+      "remoteRuntime": {
+        "kernel": "Linux",
+        "machine": "aarch64"
+      },
+      "binaryTargets": {
+        "receiver": {
+          "role": "receiver",
+          "goos": "linux",
+          "goarch": "amd64"
+        },
+        "controller": {
+          "role": "controller",
+          "goos": "linux",
+          "goarch": "arm64"
+        }
+      },
+      "binarySHA256": {
+        "receiver": "a70760d340ac3d8b1cbc066473783417926e02007754b144497798f7281a9ccb",
+        "controller": "68fe3e636239f92f00ba1571416521ca99f49bba9565f56f2b362b6eadc7fdce"
+      },
+      "diagnosticSHA256": "9f9bce28bb6aaa43b0a63cacf24bb6c670dccecd440894b59a43cbb621294c8a",
+      "cleanup": [
+        "completed",
+        "completed",
+        "completed"
+      ],
+      "sourcesUnchanged": true,
+      "directTLSFamilyConfirmed": 6,
+      "command_exit_code": 1,
+      "expected_failure": true,
+      "receipt_sha256": "fc4267c760afcd695c6f96fe163efc93218e5e8caecceebc4ca7f6888c16dc02",
+      "source_inventory_sha256": "50e776484d186137d665ad58f172ab14b18a388cd8682059561352498616030e",
+      "artifacts": {
+        "controller-ssh.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "tunnel.log": "a00fb15bd6a945618a315bbf68bdbae94f07099e60718c268abb0c69e6108e84",
+        "receipt.json": "fc4267c760afcd695c6f96fe163efc93218e5e8caecceebc4ca7f6888c16dc02",
+        "receiver.log": "9f041d98581a907c27a840fecdec6b3de9bcd61c9ec110b44b0dfff7ae8433e5",
+        "controller.log": "0879fc617539a2807da01067668225e7a4af6d12c8faf8b121ac24628035ca5f",
+        "tls-diagnostic-build.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "failure.png": "5e7a24ed650ce66ea26f8a32939eeed77170c8e86721ea71d11878b51db89336",
+        "transport-diagnostic.json": "4426ebd8a3df256a068df77bbb69a1ae60ff3683f3478ecd0b5b53ecca54a709"
+      },
+      "verification_status": 502,
+      "changed_node_refused_without_pin": true
+    },
+    "ipv4-bound-lifecycle": {
+      "revision": "064dd19e39272cf08906de0ee01b62e5e12db792",
+      "passed": true,
+      "ipFamily": 4,
+      "checks": [
+        "actual Linux ARM64 application discovers Linux x86_64 HTTPS application without enrolling it",
+        "native direct TLS connection reaches the selected IPv4 receiver endpoint",
+        "human browser configures the discovered HTTPS endpoint and explicitly verifies node/account identity",
+        "actual receiver restart and changed port migrate in the controller background without an open browser",
+        "actual controller restart retains verified peer identity and migrated endpoint",
+        "departed receiver expires from discovery while its verified configured peer remains retained and unreachable",
+        "same receiver rejoins discovery with its retained identity and no duplicate enrollment",
+        "normal policy restart disables browsing while the verified configured peer remains accessible"
+      ],
+      "localRuntime": {
+        "kernel": "Linux",
+        "machine": "x86_64",
+        "arch": "x64"
+      },
+      "remoteRuntime": {
+        "kernel": "Linux",
+        "machine": "aarch64"
+      },
+      "binaryTargets": {
+        "receiver": {
+          "role": "receiver",
+          "goos": "linux",
+          "goarch": "amd64"
+        },
+        "controller": {
+          "role": "controller",
+          "goos": "linux",
+          "goarch": "arm64"
+        }
+      },
+      "binarySHA256": {
+        "receiver": "a70760d340ac3d8b1cbc066473783417926e02007754b144497798f7281a9ccb",
+        "controller": "68fe3e636239f92f00ba1571416521ca99f49bba9565f56f2b362b6eadc7fdce"
+      },
+      "diagnosticSHA256": "9f9bce28bb6aaa43b0a63cacf24bb6c670dccecd440894b59a43cbb621294c8a",
+      "cleanup": [
+        "completed",
+        "completed",
+        "completed"
+      ],
+      "sourcesUnchanged": true,
+      "directTLSFamilyConfirmed": 4,
+      "command_exit_code": 0,
+      "expected_failure": false,
+      "receipt_sha256": "34eba88655b78cce1ede185407e6a767d8e75d17f64cc893119cfee02ce40f34",
+      "source_inventory_sha256": "50e776484d186137d665ad58f172ab14b18a388cd8682059561352498616030e",
+      "artifacts": {
+        "controller-ssh.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "enrolled.png": "09a61127471b770a606a4554f28d6a466be87d12f0902c3e373cbbcea89fe7bb",
+        "tunnel.log": "14d3ca5fec2e9be3924211f9943d50c6078f9868d3025f0544e203a592437a5f",
+        "receipt.json": "34eba88655b78cce1ede185407e6a767d8e75d17f64cc893119cfee02ce40f34",
+        "receiver.log": "18d320a0b91f72cda427ea55917abb3e79702b00803f3abf2f17300ad2e68090",
+        "controller.log": "aebd1ae672c7195543910f85f2742d4afd911f2ff862fddaa56104c5d0e18bf6",
+        "tls-diagnostic-build.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "transport-diagnostic.json": "791eebc4b7c268e76943c2e1da4170840295d7b3091d61aa8461c37166b3e23b"
+      }
+    },
+    "ipv4-bound-changed-node": {
+      "revision": "064dd19e39272cf08906de0ee01b62e5e12db792",
+      "passed": false,
+      "ipFamily": 4,
+      "checks": [
+        "actual Linux ARM64 application discovers Linux x86_64 HTTPS application without enrolling it",
+        "native direct TLS connection reaches the selected IPv4 receiver endpoint"
+      ],
+      "localRuntime": {
+        "kernel": "Linux",
+        "machine": "x86_64",
+        "arch": "x64"
+      },
+      "remoteRuntime": {
+        "kernel": "Linux",
+        "machine": "aarch64"
+      },
+      "binaryTargets": {
+        "receiver": {
+          "role": "receiver",
+          "goos": "linux",
+          "goarch": "amd64"
+        },
+        "controller": {
+          "role": "controller",
+          "goos": "linux",
+          "goarch": "arm64"
+        }
+      },
+      "binarySHA256": {
+        "receiver": "a70760d340ac3d8b1cbc066473783417926e02007754b144497798f7281a9ccb",
+        "controller": "68fe3e636239f92f00ba1571416521ca99f49bba9565f56f2b362b6eadc7fdce"
+      },
+      "diagnosticSHA256": "9f9bce28bb6aaa43b0a63cacf24bb6c670dccecd440894b59a43cbb621294c8a",
+      "cleanup": [
+        "completed",
+        "completed",
+        "completed"
+      ],
+      "sourcesUnchanged": true,
+      "directTLSFamilyConfirmed": 4,
+      "command_exit_code": 1,
+      "expected_failure": true,
+      "receipt_sha256": "b0900f2ecc6e6b9cfc79c6f339c87ea6ca02b51b0619cb9fe97b58a5a030c15a",
+      "source_inventory_sha256": "50e776484d186137d665ad58f172ab14b18a388cd8682059561352498616030e",
+      "artifacts": {
+        "controller-ssh.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "tunnel.log": "a00fb15bd6a945618a315bbf68bdbae94f07099e60718c268abb0c69e6108e84",
+        "receipt.json": "b0900f2ecc6e6b9cfc79c6f339c87ea6ca02b51b0619cb9fe97b58a5a030c15a",
+        "receiver.log": "770b1ad4e4c6e809c7505444f555625fdaebad927f4526502bda2e37ca70b13c",
+        "controller.log": "8a64eb90fd7b9769aa6bee3c13755ec3af14beada5d365923c24c31e9d5a2da7",
+        "tls-diagnostic-build.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "failure.png": "576757ab8d2ab7307025b1e073806743d2e7aee90f39598642384984bf7da696",
+        "transport-diagnostic.json": "05815a2ee817e1fa503381d960a230998a8c5ff2b87687f2c578826b11cf07dd"
+      },
+      "verification_status": 502,
+      "changed_node_refused_without_pin": true
+    },
+    "integrated-ipv6-lifecycle": {
+      "revision": "bff9e3d2843fa161c2833abbd41a3d24a26e764a",
+      "passed": true,
+      "ipFamily": 6,
+      "checks": [
+        "actual Linux ARM64 application discovers Linux x86_64 HTTPS application without enrolling it",
+        "native direct TLS connection reaches the selected IPv6 receiver endpoint",
+        "human browser configures the discovered HTTPS endpoint and explicitly verifies node/account identity",
+        "actual receiver restart and changed port migrate in the controller background without an open browser",
+        "actual controller restart retains verified peer identity and migrated endpoint",
+        "departed receiver expires from discovery while its verified configured peer remains retained and unreachable",
+        "same receiver rejoins discovery with its retained identity and no duplicate enrollment",
+        "normal policy restart disables browsing while the verified configured peer remains accessible"
+      ],
+      "localRuntime": {
+        "kernel": "Linux",
+        "machine": "x86_64",
+        "arch": "x64"
+      },
+      "remoteRuntime": {
+        "kernel": "Linux",
+        "machine": "aarch64"
+      },
+      "binaryTargets": {
+        "receiver": {
+          "role": "receiver",
+          "goos": "linux",
+          "goarch": "amd64"
+        },
+        "controller": {
+          "role": "controller",
+          "goos": "linux",
+          "goarch": "arm64"
+        }
+      },
+      "binarySHA256": {
+        "receiver": "47b902b28cb4de8626cbbded16d1481e10c592a8869d7e9856e1094f96043d56",
+        "controller": "21a3f4a03aa2f1e6ceb56fd838ce50af04d2cbc1fc79e9046ff4a67e99b0478a"
+      },
+      "diagnosticSHA256": "9f9bce28bb6aaa43b0a63cacf24bb6c670dccecd440894b59a43cbb621294c8a",
+      "cleanup": [
+        "completed",
+        "completed",
+        "completed"
+      ],
+      "sourcesUnchanged": true,
+      "directTLSFamilyConfirmed": 6,
+      "command_exit_code": 0,
+      "expected_failure": false,
+      "receipt_sha256": "5cb7ecee6525e36304994d25f5b4fd552e4900c074c970435c86580287db5888",
+      "source_inventory_sha256": "455f1660b3f1a9efe5e263ffaacf064f4d9bbf0a57ae5ae5497bbc40febf3e24",
+      "artifacts": {
+        "controller-ssh.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "enrolled.png": "460af51f06a2fca5046f18ac07a11263926d6b3e3d4ceff534b8e40a3524f0ab",
+        "tunnel.log": "80b96659f8a625f64860687469cb3ee96cec85a259ee8ef0cca1a655126d434b",
+        "receipt.json": "5cb7ecee6525e36304994d25f5b4fd552e4900c074c970435c86580287db5888",
+        "receiver.log": "adf896dd85a97d8790cb30062a66a72dd2e0926e3c26e3ea1bce822f9fb40c90",
+        "controller.log": "1383abfa77e484e093709eb699fea4ca430e60854ad7e08d4220b693e0947e3a",
+        "tls-diagnostic-build.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "transport-diagnostic.json": "23eb0cc01e0c90fde04eb067d1667d1af4d33cd0c037263cb809a851466247bc"
+      }
+    },
+    "integrated-ipv6-changed-node": {
+      "revision": "bff9e3d2843fa161c2833abbd41a3d24a26e764a",
+      "passed": false,
+      "ipFamily": 6,
+      "checks": [
+        "actual Linux ARM64 application discovers Linux x86_64 HTTPS application without enrolling it",
+        "native direct TLS connection reaches the selected IPv6 receiver endpoint"
+      ],
+      "localRuntime": {
+        "kernel": "Linux",
+        "machine": "x86_64",
+        "arch": "x64"
+      },
+      "remoteRuntime": {
+        "kernel": "Linux",
+        "machine": "aarch64"
+      },
+      "binaryTargets": {
+        "receiver": {
+          "role": "receiver",
+          "goos": "linux",
+          "goarch": "amd64"
+        },
+        "controller": {
+          "role": "controller",
+          "goos": "linux",
+          "goarch": "arm64"
+        }
+      },
+      "binarySHA256": {
+        "receiver": "47b902b28cb4de8626cbbded16d1481e10c592a8869d7e9856e1094f96043d56",
+        "controller": "21a3f4a03aa2f1e6ceb56fd838ce50af04d2cbc1fc79e9046ff4a67e99b0478a"
+      },
+      "diagnosticSHA256": "9f9bce28bb6aaa43b0a63cacf24bb6c670dccecd440894b59a43cbb621294c8a",
+      "cleanup": [
+        "completed",
+        "completed",
+        "completed"
+      ],
+      "sourcesUnchanged": true,
+      "directTLSFamilyConfirmed": 6,
+      "command_exit_code": 1,
+      "expected_failure": true,
+      "receipt_sha256": "3d065a9e0e9b80eb0d5d1b92df561a82149b60dcd9f6f45a3c2217adfda96520",
+      "source_inventory_sha256": "455f1660b3f1a9efe5e263ffaacf064f4d9bbf0a57ae5ae5497bbc40febf3e24",
+      "artifacts": {
+        "controller-ssh.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "tunnel.log": "a00fb15bd6a945618a315bbf68bdbae94f07099e60718c268abb0c69e6108e84",
+        "receipt.json": "3d065a9e0e9b80eb0d5d1b92df561a82149b60dcd9f6f45a3c2217adfda96520",
+        "receiver.log": "d6a63c09449ee36a9ac5d1e4ab6b5e020e33003051816ca7dd72857229f435e3",
+        "controller.log": "9868abb44d7f0fafd74c5fd52a8abf87d03dec034d79ae318771c708fb78aea4",
+        "tls-diagnostic-build.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "failure.png": "aa168bf08562ee0893c73de32b4ef3b861eb735626e48f812ba3c1909eca2d55",
+        "transport-diagnostic.json": "542c3a58044c0701a29bee10fbf7ad8fbe3598c75165de64e7a74ee2ba15df80"
+      },
+      "verification_status": 502,
+      "changed_node_refused_without_pin": true
+    },
+    "integrated-ipv4-lifecycle": {
+      "revision": "bff9e3d2843fa161c2833abbd41a3d24a26e764a",
+      "passed": true,
+      "ipFamily": 4,
+      "checks": [
+        "actual Linux ARM64 application discovers Linux x86_64 HTTPS application without enrolling it",
+        "native direct TLS connection reaches the selected IPv4 receiver endpoint",
+        "human browser configures the discovered HTTPS endpoint and explicitly verifies node/account identity",
+        "actual receiver restart and changed port migrate in the controller background without an open browser",
+        "actual controller restart retains verified peer identity and migrated endpoint",
+        "departed receiver expires from discovery while its verified configured peer remains retained and unreachable",
+        "same receiver rejoins discovery with its retained identity and no duplicate enrollment",
+        "normal policy restart disables browsing while the verified configured peer remains accessible"
+      ],
+      "localRuntime": {
+        "kernel": "Linux",
+        "machine": "x86_64",
+        "arch": "x64"
+      },
+      "remoteRuntime": {
+        "kernel": "Linux",
+        "machine": "aarch64"
+      },
+      "binaryTargets": {
+        "receiver": {
+          "role": "receiver",
+          "goos": "linux",
+          "goarch": "amd64"
+        },
+        "controller": {
+          "role": "controller",
+          "goos": "linux",
+          "goarch": "arm64"
+        }
+      },
+      "binarySHA256": {
+        "receiver": "47b902b28cb4de8626cbbded16d1481e10c592a8869d7e9856e1094f96043d56",
+        "controller": "21a3f4a03aa2f1e6ceb56fd838ce50af04d2cbc1fc79e9046ff4a67e99b0478a"
+      },
+      "diagnosticSHA256": "9f9bce28bb6aaa43b0a63cacf24bb6c670dccecd440894b59a43cbb621294c8a",
+      "cleanup": [
+        "completed",
+        "completed",
+        "completed"
+      ],
+      "sourcesUnchanged": true,
+      "directTLSFamilyConfirmed": 4,
+      "command_exit_code": 0,
+      "expected_failure": false,
+      "receipt_sha256": "c8aa7bd7cd972fe4992c03c289ad195d1634c657aeb44b06ad1a86d0a3f3f626",
+      "source_inventory_sha256": "455f1660b3f1a9efe5e263ffaacf064f4d9bbf0a57ae5ae5497bbc40febf3e24",
+      "artifacts": {
+        "controller-ssh.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "enrolled.png": "be55316cc1d6ddac2527087c240454b91d854dffc22583305e801a89d7714900",
+        "tunnel.log": "296540f8acaa3255efd56b6ab3c0316ee5dc04a307589d3b77c1eee94007d0b2",
+        "receipt.json": "c8aa7bd7cd972fe4992c03c289ad195d1634c657aeb44b06ad1a86d0a3f3f626",
+        "receiver.log": "7ec9ffabb37bd0db81f3d4de5591dde37a832ee36f1a8279a6917cca928ebda5",
+        "controller.log": "e804cb4b7ea70fac74001fe3c0383af622a087806fe99ec19f66deed94ed43ea",
+        "tls-diagnostic-build.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "transport-diagnostic.json": "b8b45b4f694099716d640407bb236156b4b895ce7c556658a6bd1b49a4587443"
+      }
+    },
+    "integrated-ipv4-changed-node": {
+      "revision": "bff9e3d2843fa161c2833abbd41a3d24a26e764a",
+      "passed": false,
+      "ipFamily": 4,
+      "checks": [
+        "actual Linux ARM64 application discovers Linux x86_64 HTTPS application without enrolling it",
+        "native direct TLS connection reaches the selected IPv4 receiver endpoint"
+      ],
+      "localRuntime": {
+        "kernel": "Linux",
+        "machine": "x86_64",
+        "arch": "x64"
+      },
+      "remoteRuntime": {
+        "kernel": "Linux",
+        "machine": "aarch64"
+      },
+      "binaryTargets": {
+        "receiver": {
+          "role": "receiver",
+          "goos": "linux",
+          "goarch": "amd64"
+        },
+        "controller": {
+          "role": "controller",
+          "goos": "linux",
+          "goarch": "arm64"
+        }
+      },
+      "binarySHA256": {
+        "receiver": "47b902b28cb4de8626cbbded16d1481e10c592a8869d7e9856e1094f96043d56",
+        "controller": "21a3f4a03aa2f1e6ceb56fd838ce50af04d2cbc1fc79e9046ff4a67e99b0478a"
+      },
+      "diagnosticSHA256": "9f9bce28bb6aaa43b0a63cacf24bb6c670dccecd440894b59a43cbb621294c8a",
+      "cleanup": [
+        "completed",
+        "completed",
+        "completed"
+      ],
+      "sourcesUnchanged": true,
+      "directTLSFamilyConfirmed": 4,
+      "command_exit_code": 1,
+      "expected_failure": true,
+      "receipt_sha256": "80a38c5e8c0461e1ff747648379a2e65d5c894f6ba28767b18bf8b6704c73f7f",
+      "source_inventory_sha256": "455f1660b3f1a9efe5e263ffaacf064f4d9bbf0a57ae5ae5497bbc40febf3e24",
+      "artifacts": {
+        "controller-ssh.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "tunnel.log": "a00fb15bd6a945618a315bbf68bdbae94f07099e60718c268abb0c69e6108e84",
+        "receipt.json": "80a38c5e8c0461e1ff747648379a2e65d5c894f6ba28767b18bf8b6704c73f7f",
+        "receiver.log": "4b56217cdbde7a16439ca1c9daa7f37e2d542c1581a530175d5fbec976a10f06",
+        "controller.log": "e8e37f2c952b8ac76c430057986ae64e78e5775ee62ab4dbe7a51a984cd76a23",
+        "tls-diagnostic-build.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "failure.png": "ebfbbdd4396ccb8df7679fcba824693ec64c6ba6d20db8c32956043631c463dc",
+        "transport-diagnostic.json": "5fd4d3e3fec02f148a5308969967eb032360bebcd9f52d2682a0da536ed3371b"
+      },
+      "verification_status": 502,
+      "changed_node_refused_without_pin": true
+    }
+  },
+  "initial_failure": {
+    "source": "7d48b61710b88554f9aa1339861e022083a60d5c",
+    "passed": false,
+    "failure_boundary": "Unchanged eight-second exact candidate predicate; explicit IPv6 app listener was not advertised at that address",
+    "receipt_sha256": "fb91b9ddd0212a5709dc54ecc9e0ae7d2b06b0f6506f8c8bb626cbafacaedf60",
+    "log_sha256": "09f4db66098cc51d107de596fabbbe6e927993a755e299b1c1423e89efe5f45d",
+    "checks": [],
+    "sources_unchanged": true,
+    "cleanup": [
+      "completed",
+      "completed",
+      "completed"
+    ]
+  },
+  "native_carriers": {
+    "ipv6_tcp_duplex": true,
+    "exact_nonce_multicast_delivery": [
+      {
+        "direction": "x64-to-arm64",
+        "received_exact_nonce_query": true,
+        "observation_seconds": 5,
+        "sender_completed": true
+      },
+      {
+        "direction": "arm64-to-x64",
+        "received_exact_nonce_query": true,
+        "observation_seconds": 5,
+        "sender_completed": true
+      }
+    ],
+    "application_acceptance_substitute": false,
+    "application_discovery_packet_family_attributed": false
+  },
+  "policy_changes": {
+    "installed_services": false,
+    "network_or_firewall": false,
+    "os_trust": false,
+    "real_accounts_or_credentials": false,
+    "canonical_mac_enrollment": false
+  },
+  "independent_cleanup": {
+    "at": "2026-11-28T03:13:50.873629+00:00",
+    "owned_runs_checked": 9,
+    "owned_receiver_images_remaining": 0,
+    "owned_controller_images_remaining": 0,
+    "scope": "Independent exact-argv0 process scans for original failed and all corrected native application runs; no unrelated processes terminated"
+  }
+}

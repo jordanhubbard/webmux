@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"net/netip"
 	"sort"
 	"strings"
 	"sync"
@@ -26,14 +27,15 @@ const maxCandidates = 256
 // NodeOptions is server-wide startup policy. Empty Interfaces selects all
 // suitable multicast interfaces. Explicit names fail closed if unavailable.
 type NodeOptions struct {
-	ID         string
-	Browse     bool
-	Advertise  bool
-	Interfaces []string
-	Host       string // Raw mDNS host hint. macOS uses the OS-authoritative Bonjour hostname.
-	HTTPPort   int    // Optional legacy HTTP listener advertisement, under the same policy.
-	Port       int
-	TLS        bool
+	ListenAddress string // Actual bound listener IP; wildcard addresses retain interface selection.
+	ID            string
+	Browse        bool
+	Advertise     bool
+	Interfaces    []string
+	Host          string // Raw mDNS host hint. macOS uses the OS-authoritative Bonjour hostname.
+	HTTPPort      int    // Optional legacy HTTP listener advertisement, under the same policy.
+	Port          int
+	TLS           bool
 }
 
 // Candidate is untrusted network input. These fields must never automatically
@@ -98,6 +100,23 @@ func nodeService(o NodeOptions) (mdns.ServiceInstance, error) {
 	return mdns.ServiceInstance{Instance: "WebMux-" + o.ID, Service: NodeService, Host: host + ".", Port: uint16(o.Port), Text: []mdns.TXTEntry{{Key: "v", Value: []byte("1")}, {Key: "id", Value: []byte(o.ID)}, {Key: "tls", Value: []byte(tls)}}}, nil
 }
 
+// nodeListenAddress preserves automatic interface selection for wildcard
+// listeners and pins explicit bindings to the address actually served.
+func nodeListenAddress(value string) (net.IP, error) {
+	if value == "" {
+		return nil, nil
+	}
+	address, err := netip.ParseAddr(value)
+	if err != nil || address.Zone() != "" || address.IsMulticast() || address.IsLoopback() || address.IsLinkLocalUnicast() {
+		return nil, errors.New("invalid explicit discovery listener address")
+	}
+	address = address.Unmap()
+	if address.IsUnspecified() {
+		return nil, nil
+	}
+	return net.IP(address.AsSlice()), nil
+}
+
 // StartNodes makes no HTTP requests and sends no credentials. Short browse
 // rounds compensate for library deduplication and absent departure events.
 func StartNodes(parent context.Context, o NodeOptions) (*NodeBrowser, error) {
@@ -114,6 +133,16 @@ func StartNodes(parent context.Context, o NodeOptions) (*NodeBrowser, error) {
 		return nil, err
 	}
 	options := []mdns.ServerOption{mdns.WithCacheRefresh(false)}
+	address, err := nodeListenAddress(o.ListenAddress)
+	if err != nil {
+		cancel()
+		return nil, err
+	}
+	// Pion otherwise chooses IPv4 first for service records, even when the
+	// application listener accepts only a specific IPv6 address.
+	if o.Advertise && !nativeNodeAnnouncements && address != nil {
+		options = append(options, mdns.WithLocalAddress(address))
+	}
 	var interfaces []net.Interface
 	if len(o.Interfaces) != 0 {
 		interfaces = make([]net.Interface, 0, len(o.Interfaces))
