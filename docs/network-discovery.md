@@ -99,15 +99,25 @@ HTTPS certificate verification, and choosing an HTTP candidate does not check th
 connection form's explicit HTTP permission on the operator's behalf.
 
 On macOS, the server registers node and legacy listener services directly with
-the system Bonjour API. Bonjour owns the current hostname/address records and
-interface changes; the raw `Host` hint is not a separately registered alias.
-Explicit interface policy becomes native interface indexes. Stable instance names
-are not automatically renamed on collision. Startup waits up to three seconds
-for registration acknowledgments after submitting the requests; rejection or a
-later daemon/socket failure reports discovery unavailable. Cancellation releases
-only this server's registrations. The standalone build remains `CGO_ENABLED=0`
-using pinned PureGo bindings; no `dns-sd` helper process is launched. Browsing
-continues through Pion. Linux and Windows retain their existing transport.
+the system Bonjour API. Bonjour owns the current hostname and its address
+records. Registration passes a null host, so this process does not claim the
+hostname or create an alias for it. Explicit interface policy becomes native
+interface indexes. Stable instance names are not automatically renamed on
+collision. Startup waits up to three seconds for registration acknowledgments
+after submitting the requests; rejection or a later daemon/socket failure
+reports discovery unavailable. Cancellation releases only this server's
+registrations. The standalone build remains `CGO_ENABLED=0` using pinned
+PureGo bindings; no `dns-sd` helper process is launched. Browsing continues
+through Pion.
+
+On Linux and Windows, WebMux publishes DNS-SD PTR, SRV, and TXT records only.
+It does not register the host name and does not answer or announce A or AAAA
+records. Avahi, or the platform mDNS responder, remains the hostname authority.
+SRV targets still name that host. Browsers use an address record when the
+system responder supplies one, and otherwise the source address of the service
+response. Publishing an address record for the hostname is what made Avahi
+treat the name as contested and rename the host, for example from
+`sparky.local` to `sparky-2.local`.
 
 ## Host-only listener selection
 
