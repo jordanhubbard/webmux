@@ -1,0 +1,308 @@
+{
+  "source_base": "f55db3440369ed5d6b38de5e3590f6555b71e11b",
+  "source_sha256": {
+    "webmux/server/internal/maccoord/read_access.go": "6922c2241e516d380cb403e2f8ccee68a351fd8b942c103f5b1b95e25de07068",
+    "webmux/server/internal/maccoord/registration.go": "eb761c0838bfd0425840288016ffbc2b05b19e092c888d413ae0d0bec50ffc5e",
+    "webmux/server/internal/maccoord/registration_test.go": "031f1f4d3913b798c39af4e03751f10ae868aa63bbb5b57652dae52ca93e7bc5",
+    "webmux/server/internal/maccoord/native_registration_darwin_test.go": "352e79db04fae01300c9b3f11e0fbf52cd6bd239ae06c846bfa1c91576264364",
+    "webmux/server/internal/maccoord/bindings.go": "389eb6b3ee97163fe74da8e08aede18852d371103e65838a33fb4e1d4a9d2e16"
+  },
+  "toolchain": "Go1.27.4; native Linux x86_64 race/vet; Darwin ARM64 and Windows AMD64 cross-builds",
+  "checks": {
+    "final-v2-race": {
+      "exit_code": 0,
+      "log_sha256": "6719abeb284d278cf14fba2de5837b486d1e1dce03b7e6d305b5e662f03245dc"
+    },
+    "final-v2-vet": {
+      "exit_code": 0,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "final-darwin-build": {
+      "exit_code": 0,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "final-windows-build": {
+      "exit_code": 0,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "full-test-corrected": {
+      "exit_code": 0,
+      "log_sha256": "6c9a622192382c4f3cf3bfded112f20a2f43412ea412743576f3789028e532fc"
+    },
+    "full-lint-corrected": {
+      "exit_code": 0,
+      "log_sha256": "66eee00f557ac4cd993690e4a42352361e0cce412d5eb9b93e8beaecb9193049"
+    },
+    "private-tmux-fixture-control": {
+      "exit_code": 0,
+      "log_sha256": "9f9fec2c70ba2b329c16a8776ec2c1a9d00441d4e467e7736f3f0cdfcff1dce7"
+    },
+    "registration-revocation-darwin-build": {
+      "exit_code": 0,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  "native_darwin_operator_read": {
+    "exit_code": 0,
+    "binary_sha256": "1bef3d832c2b4ca40e134d7130567244bb05d2921238e844e263c00e9a7a2930",
+    "test_log_sha256": "f4d655109fc9792ba12d3776dcf5c14e30e2fcecd3797175a3d38820f939626a",
+    "records": [
+      {
+        "schema": "webmux.mac.native-registration-proof.v1",
+        "observed_at": "2026-11-28T00:31:48.813554Z",
+        "publisher_fingerprint": "544659d335f968702ddac3c0e5601f7a96caa49fb08b6a24990ac359526c3d72",
+        "observation": {
+          "schema": "webmux.mac.project-registration.v1",
+          "binding_revision": "de0c97c5b74a8988b28b1a7093520eed8ec4901baeb1b1641fa5a0f8760dd558",
+          "authority_id": "native-operator-registration-proof",
+          "project_key": "mac",
+          "project_id": "project_72e44675ee154038a8b7bcf2f28b6433",
+          "registration_status": "active",
+          "repository_registration_reported": true,
+          "repository_link_state": "unverified",
+          "freshness": "unqualified",
+          "created_at": "2026-06-19T05:48:09.533349Z",
+          "updated_at": "2026-09-16T12:38:47.177852Z",
+          "observed_at": "2026-11-28T00:31:48.791756Z",
+          "read_authentication": {
+            "schema": "webmux.mac.read-authentication.v1",
+            "authority_id": "native-operator-registration-proof",
+            "project_key": "mac",
+            "binding_revision": "de0c97c5b74a8988b28b1a7093520eed8ec4901baeb1b1641fa5a0f8760dd558",
+            "observed_at": "2026-11-28T00:31:48.791756Z",
+            "upstream_schema": "mac.project_registration.v1",
+            "missing_credentials_refused": true,
+            "invalid_credentials_refused": true,
+            "supplied_credential_accepted": true,
+            "principal_identity": "unverified",
+            "other_operations": "unqualified"
+          }
+        },
+        "foreign_account_refused": true,
+        "scope": "Existing operator-backed loopback registration read only; test binding does not enroll WebMux or prove least-privilege scope, actual revocation, repository registration, UI/agent integration or three-host acceptance"
+      }
+    ],
+    "credential_source": "existing native MAC operator environment; value never persisted or moved to another host",
+    "profile_or_service_changes": false
+  },
+  "wire_contract": {
+    "upstream_schema": "mac.project_registration.v1",
+    "projection_schema": "webmux.mac.project-registration.v1",
+    "body_limit_bytes": 16384,
+    "total_context_seconds": 5,
+    "fixed_route": "GET /projects/{exact_project_key}/registration",
+    "input_fields": 8,
+    "raw_description_returned": false,
+    "raw_repository_registration_returned": false,
+    "repository_link_verified": false,
+    "principal_identity_verified": false,
+    "freshness_qualified": false
+  },
+  "retained_initial_test_failure": {
+    "log_sha256": "aba8349ab4e50cf0bc6798c485d3cc8dd89164bc18048a34349d655c32d30909",
+    "cause": "New unsafe-key test assumed all malformed keys reached the reader; existing binding parser already rejects slash, backslash and query forms. Final controls separately assert the existing parser rejection and reader rejection; production validation unchanged."
+  },
+  "limits": [
+    "Native read-only client proof establishes registration reads, generic nonexistent-route write refusal and immediate revocation before expiry; it is not a complete least-privilege or principal-identity audit.",
+    "Existing historical read-only enrollment remains expired; the new uniquely named five-minute probe was revoked and its temporary manifest removed.",
+    "Explicit native test mappings do not enroll a canonical WebMux project/repository/session.",
+    "Windows cross-build is not native Windows authority authentication.",
+    "No product setting, browser/MCP consumer or execution/publication path invokes this new reader yet."
+  ],
+  "operator_probe_source_sha256": {
+    "webmux/server/internal/maccoord/read_access.go": "6922c2241e516d380cb403e2f8ccee68a351fd8b942c103f5b1b95e25de07068",
+    "webmux/server/internal/maccoord/registration.go": "eb761c0838bfd0425840288016ffbc2b05b19e092c888d413ae0d0bec50ffc5e",
+    "webmux/server/internal/maccoord/registration_test.go": "031f1f4d3913b798c39af4e03751f10ae868aa63bbb5b57652dae52ca93e7bc5",
+    "webmux/server/internal/maccoord/native_registration_darwin_test.go": "6d64d78a1c7059050a842b5a731c12efedc16d060adce0b984974c09bc81f010",
+    "webmux/server/internal/maccoord/bindings.go": "389eb6b3ee97163fe74da8e08aede18852d371103e65838a33fb4e1d4a9d2e16"
+  },
+  "native_read_client_lifecycle": {
+    "schema": "webmux.mac.native-registration-read-lifecycle.v1",
+    "client_id": "webmux-registration-probe-07565b7314cf",
+    "requested_scopes": [
+      "read"
+    ],
+    "requested_lifetime_seconds": 300,
+    "steps": [
+      {
+        "name": "read-client-scope-positive",
+        "exit_code": 0,
+        "expected_refusal": false,
+        "log_sha256": "8105df9aae6fd68a51c730848375e7310dbb9e7cc9866ff7091db2530c4f61b8",
+        "receipt": {
+          "schema": "webmux.mac.native-read-qualification.v1",
+          "client_id": "webmux-registration-probe-07565b7314cf",
+          "observed_at": "2026-11-28T00:52:56.349157Z",
+          "credential_expires_at": "2026-11-28T00:57:54.743647Z",
+          "publisher_fingerprint": "544659d335f968702ddac3c0e5601f7a96caa49fb08b6a24990ac359526c3d72",
+          "repository_id": "e9319885c4b08dd63c754f1b02a84ae5d125ef37d0f91ad4fa72408f2a0868ee",
+          "read": {
+            "schema": "webmux.mac.read-authentication.v1",
+            "authority_id": "explicit-local-mac-qualification",
+            "project_key": "webmux-auth-qualification",
+            "binding_revision": "1c8801f98547471f7d2702801c4a4f5b75ff9b1d4a6a5a0d40b77e0a20d80af6",
+            "observed_at": "2026-11-28T00:52:56.217609Z",
+            "upstream_schema": "mac.dashboard.observe.project_graph.v1",
+            "missing_credentials_refused": true,
+            "invalid_credentials_refused": true,
+            "supplied_credential_accepted": true,
+            "principal_identity": "unverified",
+            "other_operations": "unqualified"
+          },
+          "expected_refusal": false,
+          "write_refused": true,
+          "scope": "Native read/scope and optional user-supplied fleet-task observations only; test binding is not WebMux project/session enrollment or admission"
+        }
+      },
+      {
+        "name": "registration-read-client-positive",
+        "exit_code": 0,
+        "expected_refusal": false,
+        "log_sha256": "881c68f97af61f8633a48704083a1d4e27ad40b3e20822ccd24df6adf098de44",
+        "receipt": {
+          "schema": "webmux.mac.native-registration-proof.v1",
+          "observed_at": "2026-11-28T00:52:56.846812Z",
+          "publisher_fingerprint": "544659d335f968702ddac3c0e5601f7a96caa49fb08b6a24990ac359526c3d72",
+          "observation": {
+            "schema": "webmux.mac.project-registration.v1",
+            "binding_revision": "de0c97c5b74a8988b28b1a7093520eed8ec4901baeb1b1641fa5a0f8760dd558",
+            "authority_id": "native-operator-registration-proof",
+            "project_key": "mac",
+            "project_id": "project_72e44675ee154038a8b7bcf2f28b6433",
+            "registration_status": "active",
+            "repository_registration_reported": true,
+            "repository_link_state": "unverified",
+            "freshness": "unqualified",
+            "created_at": "2026-06-19T05:48:09.533349Z",
+            "updated_at": "2026-09-16T12:38:47.177852Z",
+            "observed_at": "2026-11-28T00:52:56.728301Z",
+            "read_authentication": {
+              "schema": "webmux.mac.read-authentication.v1",
+              "authority_id": "native-operator-registration-proof",
+              "project_key": "mac",
+              "binding_revision": "de0c97c5b74a8988b28b1a7093520eed8ec4901baeb1b1641fa5a0f8760dd558",
+              "observed_at": "2026-11-28T00:52:56.728301Z",
+              "upstream_schema": "mac.project_registration.v1",
+              "missing_credentials_refused": true,
+              "invalid_credentials_refused": true,
+              "supplied_credential_accepted": true,
+              "principal_identity": "unverified",
+              "other_operations": "unqualified"
+            }
+          },
+          "foreign_account_refused": true,
+          "expected_refusal": false,
+          "scope": "Explicit credential loopback registration read only; test binding does not enroll WebMux or prove least-privilege scope, actual revocation, repository registration, UI/agent integration or three-host acceptance"
+        }
+      },
+      {
+        "name": "read-client-scope-revoked",
+        "exit_code": 0,
+        "expected_refusal": true,
+        "log_sha256": "f25b2c23ea9a86f1014157293f8dc8daa31139160c393f1ab56755fa9cf0d04d",
+        "receipt": {
+          "schema": "webmux.mac.native-read-qualification.v1",
+          "client_id": "webmux-registration-probe-07565b7314cf",
+          "observed_at": "2026-11-28T00:52:58.352934Z",
+          "credential_expires_at": "2026-11-28T00:57:54.743647Z",
+          "publisher_fingerprint": "544659d335f968702ddac3c0e5601f7a96caa49fb08b6a24990ac359526c3d72",
+          "repository_id": "e9319885c4b08dd63c754f1b02a84ae5d125ef37d0f91ad4fa72408f2a0868ee",
+          "read": {
+            "schema": "",
+            "authority_id": "",
+            "project_key": "",
+            "binding_revision": "",
+            "observed_at": "0001-01-01T00:00:00Z",
+            "upstream_schema": "",
+            "missing_credentials_refused": false,
+            "invalid_credentials_refused": false,
+            "supplied_credential_accepted": false,
+            "principal_identity": "",
+            "other_operations": ""
+          },
+          "expected_refusal": true,
+          "write_refused": true,
+          "scope": "Native read/scope and optional user-supplied fleet-task observations only; test binding is not WebMux project/session enrollment or admission"
+        }
+      },
+      {
+        "name": "registration-read-client-revoked",
+        "exit_code": 0,
+        "expected_refusal": true,
+        "log_sha256": "e86744586c57d8942780a2319761097e2e54d29e9cab5a12bdfea9645f45145a",
+        "receipt": {
+          "schema": "webmux.mac.native-registration-proof.v1",
+          "observed_at": "2026-11-28T00:52:58.887881Z",
+          "publisher_fingerprint": "544659d335f968702ddac3c0e5601f7a96caa49fb08b6a24990ac359526c3d72",
+          "observation": {
+            "schema": "",
+            "binding_revision": "",
+            "authority_id": "",
+            "project_key": "",
+            "project_id": "",
+            "registration_status": "",
+            "repository_registration_reported": false,
+            "repository_link_state": "",
+            "freshness": "",
+            "created_at": "0001-01-01T00:00:00Z",
+            "updated_at": "0001-01-01T00:00:00Z",
+            "observed_at": "0001-01-01T00:00:00Z",
+            "read_authentication": {
+              "schema": "",
+              "authority_id": "",
+              "project_key": "",
+              "binding_revision": "",
+              "observed_at": "0001-01-01T00:00:00Z",
+              "upstream_schema": "",
+              "missing_credentials_refused": false,
+              "invalid_credentials_refused": false,
+              "supplied_credential_accepted": false,
+              "principal_identity": "",
+              "other_operations": ""
+            }
+          },
+          "foreign_account_refused": true,
+          "expected_refusal": true,
+          "scope": "Explicit credential loopback registration read only; test binding does not enroll WebMux or prove least-privilege scope, actual revocation, repository registration, UI/agent integration or three-host acceptance"
+        }
+      }
+    ],
+    "credentials_left_host": false,
+    "project_or_worker_registration": false,
+    "profile_switch": false,
+    "source_or_service_changes": false,
+    "binary_sha256": "2dad6686ea05ccb2ad6f6a65ff3c9dbe921ecc30c9cbbd53ac752c6c33e905c3",
+    "credential_expires_at": "2026-11-28T00:57:54.743647+00:00",
+    "revocation": {
+      "id": "webmux-registration-probe-07565b7314cf",
+      "scopes": [
+        "read"
+      ],
+      "issued_at": "2026-11-28T00:52:54.743647+00:00",
+      "expires_at": "2026-11-28T00:57:54.743647+00:00",
+      "revoked_at": "2026-11-28T00:52:57.747853+00:00",
+      "credential_version": 1
+    },
+    "revoked_before_expiry": true,
+    "passed": true,
+    "client_revoked": true,
+    "temporary_manifest_removed": true
+  },
+  "retained_full_suite_environment_failure": {
+    "exit_code": 2,
+    "log_sha256": "3087351a03c215fdc20ed77c9a81a352142dcb75ecff01e79e00378ece178f7c",
+    "cause": "External qualification shim forced -L even when maintained runWithPrivateTmux selected its own TMUX_TMPDIR/default socket; fixed external shim honors explicit private location. Original 9 cleanup controls then pass, and full unchanged make test/make lint pass. Original failed fixture PID is absent.",
+    "corrected_launcher_sha256": "3023dc4384a993a6f6d6eeb471195446fae39653b9fb8ad76d6360487866debf"
+  },
+  "full_suite": {
+    "make_test_exit": 0,
+    "make_lint_exit": 0,
+    "e2e_passed": 1418,
+    "e2e_skipped": 22,
+    "original_test_assertions_or_deadlines_changed": false,
+    "native_browser": "/usr/bin/google-chrome",
+    "sandbox_disabled": false,
+    "private_keyring": true,
+    "private_tmux_honors_fixture_location": true
+  }
+}

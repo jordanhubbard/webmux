@@ -224,6 +224,32 @@ members: the future project view still needs a supported retained-inventory path
 before it can expose offline/revoked sessions. These helper tests do not complete
 that lifecycle requirement or #673/#674.
 
+## Canonical project registration observation
+
+`ObserveProjectRegistration` adds the bounded reader for MAC's published
+`GET /projects/{project}/registration`, schema `mac.project_registration.v1`.
+It resolves the receiving account/repository binding before I/O, repeats the
+negative/intended credential controls, and returns an explicit canonical record
+ID only for the exact selected key and supported eight-field wire shape. The
+body bound is 16 KiB within the same five-second context. Existing graph/task/
+worker readers retain their original body limits.
+
+The projection withholds descriptions and raw repository-registration values.
+A record is not repository enrollment or task/session/admission authority:
+repository linkage, principal identity, freshness and other operations remain
+unqualified. A 404 returns no evidence and cannot distinguish an absent record
+from an unsupported endpoint by itself. There is no graph-found fallback.
+
+[Controlled and native qualification](validation/mac-registration-2026-11-27/README.md)
+includes the full package race/vet suite, portable cross-builds and a short actual
+operator-backed Darwin ARM64 read of the existing canonical `mac` project. The
+native mapping is explicitly test-only; no canonical WebMux project was enrolled.
+The prior read-only client expired. A separate five-minute read-only native
+probe now passes read/generic-write-refusal controls and actual revocation before
+expiry; it is revoked and its private manifest removed. Complete least-privilege/
+principal-identity and human/agent integration acceptance remain open. No
+product setting or consumer invokes this new reader yet.
+
 ## Ordered implementation
 
 The following are sub-issues of #664 with actual GitHub blocker relationships;

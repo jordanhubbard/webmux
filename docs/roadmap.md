@@ -97,7 +97,11 @@ managed/existing-agent onboarding and full workflow acceptance remain open. The
 announcements untrusted and retains manual enrollment. Authenticated HTTPS node/
 account identity and address migration now have a native macOS/Linux component
 result; complete discovered two-host acceptance and automatic coordination remain
-open; this checkpoint does not complete any of the requirements above. The
+open; this checkpoint does not complete any of the requirements above. A
+[native Linux x86_64/ARM64 application follow-up](validation/discovery-linux-x64-arm64-2026-11-27/README.md)
+now passes protected browser enrollment, port migration, controller restart,
+departure/rejoin, disabled-discovery fallback and changed-node refusal within its
+recorded IPv4 fixture scope. The
 [built-in coordination checkpoint](session-coordination.md) adds a durable
 node-local ledger and scoped ordinary-session CLI. Real-agent onboarding,
 managed/SSH interfaces and cross-node coordination still require implementation
@@ -133,6 +137,13 @@ scope/roadmap admission → [#677](https://github.com/jordanhubbard/webmux/issue
 review/publication → [#678](https://github.com/jordanhubbard/webmux/issues/678)
 three-host acceptance. These issues remain open; this sequence does not dispatch
 parallel fleet work.
+
+The [canonical MAC registration reader](validation/mac-registration-2026-11-27/README.md)
+adds the supported project-record boundary for #673, with controlled refusal
+checks and actual loopback reads on Darwin ARM64, including read/generic-write
+refusal and revocation controls with a temporary read-only client. It does not
+enroll WebMux, verify the repository relation or complete a least-privilege audit,
+shared human/agent observation or the later authority stages.
 
 The [private SSH channel checkpoint](validation/coordination-ssh-channel-2026-11-22/README.md)
 adds automatic scoped startup through an authenticated private socket forward.

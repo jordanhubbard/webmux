@@ -21,9 +21,15 @@ const output = values.output, peer = values.peer;
 const localBind = values['local-bind'], remoteBind = values['remote-bind'];
 if (!output || !path.isAbsolute(output) || !peer || !/^[a-zA-Z0-9][a-zA-Z0-9._-]*$/.test(peer)
   || !localBind || !remoteBind || [localBind, remoteBind].some(ip => net.isIP(ip) !== 4 || ip.startsWith('127.') || ip === '0.0.0.0')) {
-  throw new Error('Require --output FRESH_ABSOLUTE_DIRECTORY --peer AUTHORIZED_LINUX_ARM64_SSH_HOST --local-bind MACOS_LAN_IP --remote-bind LINUX_LAN_IP');
+  throw new Error('Require --output FRESH_ABSOLUTE_DIRECTORY --peer AUTHORIZED_LINUX_ARM64_SSH_HOST --local-bind RECEIVER_LAN_IP --remote-bind LINUX_ARM64_LAN_IP');
 }
-if (process.platform !== 'darwin' || process.arch !== 'arm64') throw new Error('Native macOS ARM64 primary required');
+if (!((process.platform === 'darwin' && process.arch === 'arm64') || (process.platform === 'linux' && process.arch === 'x64'))) {
+  throw new Error('Native macOS ARM64 or Linux x86_64 primary required');
+}
+const receiverTarget = { role: 'receiver', goos: process.platform, goarch: process.arch === 'arm64' ? 'arm64' : 'amd64' };
+const controllerTarget = { role: 'controller', goos: 'linux', goarch: 'arm64' };
+const receiverLabel = process.platform === 'darwin' ? 'macOS ARM64' : 'Linux x86_64';
+
 process.umask(0o077);
 fs.mkdirSync(output, { mode: 0o700 });
 const root = path.resolve(import.meta.dirname, '../..');
@@ -77,6 +83,8 @@ async function freePort(bind: string) {
 type Directory = { servers: Array<{ id: string; url: string; identity?: { node_id: string; owner: string; tls_key_sha256: string } }> };
 type Candidate = { claimed_id: string; host: string; address: string; port: number; tls: boolean; last_seen: string; expires: string };
 const localHome = path.join(output, 'receiver-home');
+const receiverImage = path.join(output, 'receiver-webmux');
+const controllerImage = path.join(output, 'controller-webmux');
 let remoteRoot = '', localProcess: ChildProcess | undefined, remoteProcess: ChildProcess | undefined, tunnel: ChildProcess | undefined;
 let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
 let token = '', controllerURL = '';
@@ -136,8 +144,12 @@ try {
   expect(native).toEqual({ kernel: 'Linux', machine: 'aarch64' });
   receipt.remoteRuntime = native;
   run('npm', ['run', 'build', '--workspace=frontend'], undefined, path.join(root, 'webmux'));
-  for (const target of ['darwin', 'linux']) run('go', ['run', './cmd/build', '-goos', target, '-goarch', 'arm64', '-o', path.join(output, target+'-webmux')], undefined, path.join(root, 'webmux/server'));
-  receipt.binarySHA256 = Object.fromEntries(['darwin','linux'].map(target => [target,sha(fs.readFileSync(path.join(output,target+'-webmux')))]));
+  receipt.localRuntime = { kernel: os.type(), machine: os.machine(), arch: process.arch };
+  receipt.binaryTargets = { receiver: receiverTarget, controller: controllerTarget };
+  for (const target of [receiverTarget, controllerTarget]) {
+    run('go', ['run', './cmd/build', '-goos', target.goos, '-goarch', target.goarch, '-o', path.join(output, target.role+'-webmux')], undefined, path.join(root, 'webmux/server'));
+  }
+  receipt.binarySHA256 = { receiver: sha(fs.readFileSync(receiverImage)), controller: sha(fs.readFileSync(controllerImage)) };
   fs.writeFileSync(path.join(output,'tls-diagnostic.go'),tlsDiagnostic);
   const diagnosticBuild=spawnSync('go',['build','-trimpath','-o',path.join(output,'tls-diagnostic'),path.join(output,'tls-diagnostic.go')],{env:{...process.env,GOOS:'linux',GOARCH:'arm64',CGO_ENABLED:'0'},encoding:'utf8',timeout:120_000});
   fs.writeFileSync(path.join(output,'tls-diagnostic-build.log'),diagnosticBuild.stdout+diagnosticBuild.stderr);
@@ -152,7 +164,7 @@ print(json.dumps({'root':r,'port':port}))`)) as { root: string; port: number };
   remoteRoot = prepared.root;
   if (!/^\/[A-Za-z0-9_./-]+\/discovered-app-[A-Za-z0-9_]+$/.test(remoteRoot)) throw new Error('Unexpected owned remote path');
   receipt.remoteRoot = remoteRoot;
-  run('scp', ['-B', ...sshArgs, path.join(output, 'linux-webmux'), `${peer}:${remoteRoot}/webmux`]);
+  run('scp', ['-B', ...sshArgs, controllerImage, `${peer}:${remoteRoot}/webmux`]);
   run('scp', ['-B', ...sshArgs, path.join(output, 'tls-diagnostic'), `${peer}:${remoteRoot}/tls-diagnostic`]);
   const httpPort = await freePort(localBind), tlsPort = await freePort(localBind), movedPort = await freePort(localBind), forward = await freePort('127.0.0.1');
   const password = randomBytes(24).toString('hex'), grant = randomBytes(32).toString('hex');
@@ -173,11 +185,11 @@ print(json.dumps({'root':r,'port':port}))`)) as { root: string; port: number };
     'servers.yaml':yaml.dump({version:1,servers:[],grants:[{id:'native-application',owner:'qualifier',token_env:'NATIVE_APP_GRANT'}]}) };
   for (const [name,text] of Object.entries(receiverFiles)) fs.writeFileSync(path.join(localHome,'config',name),text,{mode:0o600});
   Object.assign(localEnv,{WEBMUX_HOME:localHome,WEBMUX_ROOT:'',NATIVE_APP_GRANT:grant});
-  const payload = { root:remoteRoot,sha256:sha(fs.readFileSync(path.join(output,'linux-webmux'))),files:{...defaults,'auth.yaml':auth,'app.yaml':app(remoteBind,prepared.port,8443),'fixture-ca.pem':fs.readFileSync(path.join(localHome,'config/tls/cert.pem'),'utf8'),
+  const payload = { root:remoteRoot,sha256:sha(fs.readFileSync(controllerImage)),files:{...defaults,'auth.yaml':auth,'app.yaml':app(remoteBind,prepared.port,8443),'fixture-ca.pem':fs.readFileSync(path.join(localHome,'config/tls/cert.pem'),'utf8'),
     'node-discovery.yaml':yaml.dump({version:1,id:controllerID,browse:true,advertise:false,interfaces:values['remote-interface']?[values['remote-interface']]:[]}),
     'servers.yaml':yaml.dump({version:1,servers:[],grants:[]})},env:{} };
   const launchRemote = () => { const p=child('ssh',[...sshArgs,peer,'python3 -c '+quote(launcher)],'controller-ssh.log');p.stdin!.end(JSON.stringify(payload));return p; };
-  localProcess=child(path.join(output,'darwin-webmux'),[],'receiver.log',localEnv);
+  localProcess=child(receiverImage,[],'receiver.log',localEnv);
   remoteProcess=launchRemote();
   controllerURL=`http://127.0.0.1:${forward}`;
   tunnel=child('ssh',[...sshArgs,'-o','ExitOnForwardFailure=yes','-N','-L',`127.0.0.1:${forward}:${remoteBind}:${prepared.port}`,peer],'tunnel.log');
@@ -188,7 +200,7 @@ print(json.dumps({'root':r,'port':port}))`)) as { root: string; port: number };
   let observed: Candidate | undefined;
   await expect.poll(async()=>{const r=await api('/discovered-nodes');expect(r.status).toBe(200);const view=await r.json() as {candidates:Candidate[]};observed=view.candidates.find(c=>c.claimed_id===nodeID&&c.port===tlsPort&&c.address===localBind&&c.tls);return !!observed;},{timeout:8000,intervals:[100,200,500]}).toBe(true);
   expect((await directory()).servers).toEqual([]);
-  passed('actual Linux application discovers macOS HTTPS application without enrolling it');
+  passed(`actual Linux ARM64 application discovers ${receiverLabel} HTTPS application without enrolling it`);
   const diagnostic=remote(`import os,sys,json,pathlib,subprocess,hashlib
 p=json.load(sys.stdin);r=pathlib.Path(p['root']);b=r/'tls-diagnostic';assert hashlib.sha256(b.read_bytes()).hexdigest()==p['sha256']
 env=dict(os.environ,SSL_CERT_FILE=str(r/'home'/'config'/'fixture-ca.pem'))
@@ -236,7 +248,7 @@ sys.stdout.write(result.stdout);sys.stderr.write(result.stderr);sys.exit(result.
   await page.screenshot({path:path.join(output,'enrolled.png'),fullPage:true});await browser.close();browser=undefined;
   await stop(localProcess);localProcess=undefined;
   fs.writeFileSync(path.join(localHome,'config/app.yaml'),app(localBind,httpPort,movedPort));
-  localProcess=child(path.join(output,'darwin-webmux'),[],'receiver.log',localEnv);
+  localProcess=child(receiverImage,[],'receiver.log',localEnv);
   await expect.poll(async()=>{const entry=(await directory()).servers.find(s=>s.id===enrolled.id);return entry?.url.endsWith(':'+movedPort);},{timeout:20_000,intervals:[200,500,1000]}).toBe(true);
   const migrated=(await directory()).servers[0];expect(migrated.identity).toEqual(enrolled.identity);
   receipt.migratedIdentity=migrated.identity;
@@ -276,7 +288,7 @@ sys.stdout.write(result.stdout);sys.stderr.write(result.stderr);sys.exit(result.
     expect((await directory()).servers).toEqual([migrated]);
     expect((await api(`/servers/${enrolled.id}/sessions`)).status).toBe(502);
     passed('departed receiver expires from discovery while its verified configured peer remains retained and unreachable');
-    localProcess = child(path.join(output, 'darwin-webmux'), [], 'receiver.log', localEnv);
+    localProcess = child(receiverImage, [], 'receiver.log', localEnv);
     await expect.poll(async () => (await discovery()).candidates.some(c => c.claimed_id === nodeID && c.port === movedPort),
       { timeout: 38_000, intervals: [500, 1000] }).toBe(true);
     await expect.poll(async () => (await api(`/servers/${enrolled.id}/sessions`)).status,
