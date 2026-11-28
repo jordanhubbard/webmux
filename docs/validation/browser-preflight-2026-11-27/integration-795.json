@@ -1,0 +1,64 @@
+{
+  "schema": "webmux.browser-preflight-integration.v1",
+  "at": "2026-11-28T03:32:22.823630+00:00",
+  "qualified_code_revision": "3a06693eddd08e6133976168d147d30eb0364766",
+  "integrated_main": "23a88a1b94702883dbacce425d1193423eaae9f7",
+  "resolved_conflict": "Only package.json test:helpers; retain both preflight and IPv6 fixture endpoint tests exactly once; all other package metadata/scripts match both sides",
+  "preflight_source_identical_to": "afad3e67ba6f6de90249f2fa61a473d9cfb6431b",
+  "preflight_source_sha256": {
+    "tests/e2e/start-server.mts": "041f56bedfd5999e6e736daecc07941d5fbc92ecdb1e11a7142195252e6c1129",
+    "webmux/scripts/browser-companion-preflight.mts": "8f60f5ccfaf1517b9463420570a754b2720e2d63baa6d32d43b9c344e6425a1f",
+    "webmux/scripts/browser-companion-preflight.test.mts": "a8a99f6028b45f93e2e2620e574dd0d7ee5b901ca1f62ff10a8c98332a1dff0a",
+    "webmux/scripts/playwright-runs.test.mts": "785cc47789d94b02470eac5d1e6733e82462403337f7996bad1d8f97a8c921ba",
+    "webmux/scripts/run-playwright.mts": "63c78877cf1e971a432fe90e61314bc993b56bf238688ae5e52f187befd5acd0"
+  },
+  "full_make_test": {
+    "exit_code": 0,
+    "frontend_passed": 500,
+    "helpers": {
+      "tests": 311,
+      "pass": 308,
+      "fail": 0,
+      "skipped": 3
+    },
+    "e2e_passed": 1418,
+    "e2e_skipped": 22,
+    "log_sha256": "8e45dae8c7596d69180f2a1c1eb51946e2b9dfa67ac9e674075d8e803b687bea"
+  },
+  "full_make_lint": {
+    "exit_code": 0,
+    "log_sha256": "b32ffe3202383fb8ec426f89089e20fddc6c82ee24a93e3b54caef251f1a7200"
+  },
+  "previous_exact_head_hosted": {
+    "Windows ARM64 native qualification": {
+      "databaseId": 46098378349,
+      "headSha": "afad3e67ba6f6de90249f2fa61a473d9cfb6431b",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/jordanhubbard/webmux/actions/runs/46098378349"
+    },
+    "Packaging": {
+      "databaseId": 46098378354,
+      "headSha": "afad3e67ba6f6de90249f2fa61a473d9cfb6431b",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/jordanhubbard/webmux/actions/runs/46098378354"
+    },
+    "CI": {
+      "databaseId": 46098378433,
+      "headSha": "afad3e67ba6f6de90249f2fa61a473d9cfb6431b",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/jordanhubbard/webmux/actions/runs/46098378433"
+    },
+    "Browser startup diagnostics": {
+      "databaseId": 46098378452,
+      "headSha": "afad3e67ba6f6de90249f2fa61a473d9cfb6431b",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/jordanhubbard/webmux/actions/runs/46098378452"
+    }
+  },
+  "hosted_result_scope": "New hosted admission is required for the actual published integration head; previous-head success does not qualify it.",
+  "runtime_scope": "Native Linux x86_64 maintained suite with isolated encrypted keyring/tmux and installed Chrome; no product sandbox or host policy changes"
+}

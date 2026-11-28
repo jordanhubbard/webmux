@@ -109,7 +109,11 @@ test('retained ${phase} diagnostic', async ({}, info) => {
       // Positional arguments are regex filters, not literal filesystem paths;
       // a Windows absolute path would turn backslashes into regex escapes.
       const run = spawnSync(process.execPath, [path.join(import.meta.dirname, 'run-playwright.mts'), '--config', config, path.basename(spec)], {
-        cwd: webmuxDir, env: { ...process.env, FORCE_COLOR: '0' }, encoding: 'utf8', timeout: 12_000,
+        cwd: webmuxDir, env: { ...process.env, FORCE_COLOR: '0',
+          WEBMUX_BROWSER_EXECUTABLE: path.join(fixture, 'absent-companion'),
+          PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH: path.join(fixture, 'absent-driver'),
+          PLAYWRIGHT_BROWSERS_PATH: path.join(fixture, 'absent-managed-browsers'),
+        }, encoding: 'utf8', timeout: 12_000,
       });
       assert.equal(run.status, 0, `${run.error?.message ?? ''}\n${run.stdout}\n${run.stderr}`);
       const { receipt } = JSON.parse(readFileSync(index, 'utf8')) as { receipt: string };

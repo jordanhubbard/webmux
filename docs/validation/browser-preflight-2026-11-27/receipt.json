@@ -1,0 +1,111 @@
+{
+  "at": "2026-11-28T02:19:22.260307+00:00",
+  "base_commit": "7329129894b020f3db8283df0fdc7343288a0550",
+  "platform": "Linux x86_64",
+  "source_sha256": {
+    "webmux/scripts/browser-companion-preflight.mts": "8f60f5ccfaf1517b9463420570a754b2720e2d63baa6d32d43b9c344e6425a1f",
+    "webmux/scripts/browser-companion-preflight.test.mts": "a8a99f6028b45f93e2e2620e574dd0d7ee5b901ca1f62ff10a8c98332a1dff0a",
+    "webmux/scripts/run-playwright.mts": "63c78877cf1e971a432fe90e61314bc993b56bf238688ae5e52f187befd5acd0",
+    "tests/e2e/start-server.mts": "041f56bedfd5999e6e736daecc07941d5fbc92ecdb1e11a7142195252e6c1129",
+    "webmux/package.json": "1ce198229373cb4000461d7e20c1673955a222a16f112f06d68ca0a956f2c6f0",
+    "webmux/scripts/check-browser.mts": "3d759cedd9904f85a39b2cea2b46986971e8fc527ecf1dea6af9c2d3dae06ca6",
+    "webmux/server/internal/browser/worker.go": "bb5575212b2a91efff3bb38d0dbfae9cf8f7d8a33a70b81eb8b787b904f29ff6",
+    "scripts/ensure-e2e-browser.sh": "d4355083911d63d6c6d57e801971e7400d2caa2bf32aad2195d8da504f738bf4",
+    "webmux/scripts/playwright-runs.test.mts": "785cc47789d94b02470eac5d1e6733e82462403337f7996bad1d8f97a8c921ba"
+  },
+  "scope": "Companion sandbox/CDP admission for actual default Linux application test runs; browser-free custom configs and CLI metadata remain browser-free",
+  "native_controls": [
+    {
+      "case": "managed-default-refusal",
+      "command_exit": 1,
+      "log_sha256": "b25b82d097fc1895d64f9122c0e0db076f9c88c4be83018e737c071b2c447eb7",
+      "refused_before_application_fixture": true,
+      "refusal": "OS sandbox admission"
+    },
+    {
+      "case": "installed-sandbox-admission",
+      "command_exit": 0,
+      "log_sha256": "d17d533596a27659a4997c6aebc5dcdc5deebf90dd5f9af6baeceecc2549d56c",
+      "admission": {
+        "executablePath": "/usr/bin/google-chrome",
+        "source": "WEBMUX_BROWSER_EXECUTABLE",
+        "version": "158.0.8127.36",
+        "sandbox": true
+      }
+    },
+    {
+      "case": "explicit-invalid-default-refusal",
+      "command_exit": 1,
+      "log_sha256": "7d66fe050d8d66fb8a71c8ed1bfb3b076855136f14a54620cb2be23898b3384b",
+      "refused_before_application_fixture": true,
+      "refusal": "Explicit executable absent; no fallback"
+    },
+    {
+      "case": "browserfree-default-list",
+      "command_exit": 0,
+      "log_sha256": "c368b8dc0820f4e04d895fb4506531c6e2f79445231f84bd309b14b289934c08",
+      "metadata_only_without_browser": true,
+      "top_level_suites": 41
+    }
+  ],
+  "focused_tests": {
+    "exit_code": 0,
+    "passed": 13,
+    "log_sha256": "0ee7ce9455a0803f4842b24e7fb0151cd9e34a972f17c635ff28a81c7e24a540"
+  },
+  "strict_typecheck": {
+    "exit_code": 0,
+    "log_sha256": "ceb954dc8a5dbf5cd8fa3319092613d0e576a89ddb7850cbd38e87dbac62cbd3"
+  },
+  "full_quality_gates": {
+    "scope-full-test": {
+      "exit_code": 0,
+      "log_sha256": "cbdfde94a59503236b134b3d1172b92ec5e513ca786034c348aa7fe14b8ea346"
+    },
+    "scope-full-lint": {
+      "exit_code": 0,
+      "log_sha256": "cb85646cd666a314ce8f6b31c992b764734469b9528b5db40f0ed79ff1d19f9f"
+    },
+    "e2e_passed": 1418,
+    "e2e_existing_platform_optin_skips": 22,
+    "frontend_passed": 500,
+    "helper_passed": 305,
+    "helper_existing_platform_optin_skips": 3,
+    "private_encrypted_keyring": true,
+    "private_tmux": true,
+    "native_browser": "/usr/bin/google-chrome",
+    "corrected_default_application_scope": true
+  },
+  "bounds": {
+    "launch_ms": 20000,
+    "navigation_ms": 5000,
+    "contexts": 2,
+    "sandbox_enabled": true,
+    "executable_selection_precedence_changed": false,
+    "fallback_after_refusal": false,
+    "production_browser_source_changed": false,
+    "host_sandbox_policy_changed": false,
+    "application_assertions_or_deadlines_changed": false,
+    "non_linux_admission_changed": false
+  },
+  "source_revision": "1b35945637d2a35e24c57a44d864305c8b55708f",
+  "complete_browserfree_helper_suite": {
+    "exit_code": 0,
+    "passed": 305,
+    "existing_platform_optin_skips": 3,
+    "all_browser_paths_deliberately_absent": true,
+    "log_sha256": "bf1045acab39199c536901c2c34d5ad7a5bf326c2b0513a2aaba67b4be236907"
+  },
+  "initial_head_scope_failure": {
+    "head": "38e22c6d542d0abd26f61d1940f556bbe4ad2492",
+    "failed_workflow": 46093411783,
+    "failed_job": 140819298119,
+    "failed_existing_test": "later real Playwright invocation preserves the earlier attached receipt",
+    "cause": "Generic custom browser-free runner use was incorrectly forced through default-application companion admission; local browser installation masked clean-CI absence.",
+    "ci_log_sha256": "b3e4d7027e998ca1735f383706fc21aadbadad3a8ed5dcf4efc19dc55cbe6b58",
+    "published_initial_receipt_sha256": "27af3280163599ca755d9fb12886e91b0245389a64296dcf97415f4f49e63f23",
+    "strengthened_local_regression_before_fix_exit": 1,
+    "local_red_log_sha256": "d574a68b255ea373696e9042be4cb9c104004d22f503cd993acbdeed78492cb9",
+    "mitigation": "Scope guard to actual default application runs and require the unchanged real receipt test and complete helper suite to pass with deliberately absent browser paths."
+  }
+}

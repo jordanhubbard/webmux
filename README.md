@@ -539,6 +539,21 @@ npm run test:e2e
 
 If Playwright does not publish a bundled Chromium build for the host OS, set `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` to a compatible installed Chrome or Chromium executable before running `npm run test:e2e`.
 
+The native browser companion is selected separately from the test driver.
+`WEBMUX_BROWSER_EXECUTABLE` takes precedence; otherwise macOS prefers installed
+Chromium/Chrome, followed by `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` and Playwright's
+managed Chromium. Default Linux application E2E test runs check the selected companion with its sandbox
+enabled, renders and reopens two private contexts, and reports its executable and
+version before discovering tests or allocating server fixtures. An unusable
+selection fails immediately without choosing a replacement. If host sandbox
+policy refuses managed Chromium, explicitly select a compatible installed browser,
+for example `WEBMUX_BROWSER_EXECUTABLE=/usr/bin/google-chrome make test-e2e`.
+This readiness check does not replace the application's browser/profile tests.
+Browser-free custom configurations and `--list`/`--help` keep their browser-free
+startup. Custom application configurations own their fixture readiness; the
+standalone `node scripts/browser-companion-preflight.mts` check is available from
+`webmux/` when they use the native companion.
+
 Browser test invocations without an explicit `--output` use separate
 `webmux/test-results/run-<id>/` directories, with per-file directories inside a
 full-suite run. This preserves earlier diagnostic receipts when CI later checks

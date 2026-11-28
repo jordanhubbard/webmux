@@ -1,10 +1,10 @@
 import fs from 'node:fs';
 import { randomBytes } from 'node:crypto';
 import path from 'node:path';
-import { createRequire } from 'node:module';
 import { spawn, spawnSync } from 'node:child_process';
 import { startOpenRigFixture } from './openrig-fixture.mts';
 import { prepareBrowserTestHome } from '../../webmux/scripts/browser-test-home.mts';
+import { selectBrowserCompanion } from '../../webmux/scripts/browser-companion-preflight.mts';
 import { prebuiltBrowserFixture } from '../../webmux/scripts/prebuilt-browser-fixture.mts';
 
 const prebuilt = prebuiltBrowserFixture(process.env, process.platform);
@@ -56,16 +56,7 @@ process.env.WEBMUX_HOME = testHome;
 // macOS use the installed companion browser, as production does, when available.
 // A working managed headless-shell driver does not qualify managed full Chrome
 // for the companion's native CDP and saved-profile operations (#282, #764).
-const nativeMacBrowser = process.platform === 'darwin' ? [
-  '/Applications/Chromium.app/Contents/MacOS/Chromium',
-  '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-].find(candidate => {
-  try { fs.accessSync(candidate, fs.constants.X_OK); return true; } catch { return false; }
-}) : undefined;
-// Use Playwright's supported executable lookup for the fallback, not its registry.
-const testRequire = createRequire(path.resolve(import.meta.dirname, '../../webmux/package.json'));
-const { chromium } = testRequire('playwright-core') as { chromium: { executablePath(): string } };
-process.env.WEBMUX_BROWSER_EXECUTABLE ||= nativeMacBrowser || process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH || chromium.executablePath();
+process.env.WEBMUX_BROWSER_EXECUTABLE = selectBrowserCompanion().executablePath;
 if (process.env.WEBMUX_REAL_SSH === '1' || process.env.WEBMUX_REAL_MOSH === '1') {
   if (process.platform !== 'linux' && !(process.env.WEBMUX_REAL_MOSH === '1' && process.platform === 'darwin')) throw new Error('The real SSH/Mosh fixture requires Linux, or macOS for Mosh');
   const directory = path.join(testHome, 'ssh-bin');
