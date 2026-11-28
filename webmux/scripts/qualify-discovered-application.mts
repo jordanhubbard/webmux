@@ -9,20 +9,23 @@ import { parseArgs } from 'node:util';
 import { chromium, expect } from '@playwright/test';
 import argon2 from 'argon2';
 import * as yaml from 'js-yaml';
+import { discoveryFixtureFamily, fixtureHostPort } from './discovery-fixture-endpoints.mts';
 
 const { values } = parseArgs({ options: {
   output: { type: 'string' }, peer: { type: 'string' },
   'local-bind': { type: 'string' }, 'remote-bind': { type: 'string' },
   'local-interface': { type: 'string' }, 'remote-interface': { type: 'string' },
+  'ip-family': { type: 'string' },
   'changed-node-proof': { type: 'boolean', default: false },
   lifecycle: { type: 'boolean', default: false },
 } });
 const output = values.output, peer = values.peer;
 const localBind = values['local-bind'], remoteBind = values['remote-bind'];
 if (!output || !path.isAbsolute(output) || !peer || !/^[a-zA-Z0-9][a-zA-Z0-9._-]*$/.test(peer)
-  || !localBind || !remoteBind || [localBind, remoteBind].some(ip => net.isIP(ip) !== 4 || ip.startsWith('127.') || ip === '0.0.0.0')) {
+  || !localBind || !remoteBind) {
   throw new Error('Require --output FRESH_ABSOLUTE_DIRECTORY --peer AUTHORIZED_LINUX_ARM64_SSH_HOST --local-bind RECEIVER_LAN_IP --remote-bind LINUX_ARM64_LAN_IP');
 }
+const ipFamily = discoveryFixtureFamily(values['ip-family'], localBind, remoteBind);
 if (!((process.platform === 'darwin' && process.arch === 'arm64') || (process.platform === 'linux' && process.arch === 'x64'))) {
   throw new Error('Native macOS ARM64 or Linux x86_64 primary required');
 }
@@ -56,6 +59,7 @@ const checks: string[] = [];
 const receipt: Record<string, unknown> = { passed: false, revision, sourcesBefore, checks,
   changedNodeProof: values['changed-node-proof'],
   lifecycle: values.lifecycle,
+  ipFamily,
   scope: 'Actual protected cmd/webmux processes and browser enrollment; isolated homes and process-local Linux fixture certificate trust. Not installed-service, OS trust or real-agent/MAC acceptance.' };
 const passed = (name: string) => { checks.push(name); console.log(`PASS ${name}`); };
 function child(program: string, args: string[], log: string, env = process.env) {
@@ -103,16 +107,17 @@ with (r/'server.log').open('ab') as log:
  (r/'pid').write_text(str(child.pid));sys.exit(child.wait())`;
 const tlsDiagnostic = String.raw`package main
 import("context";"crypto/tls";"encoding/json";"net";"os";"runtime";"time")
-func probe(host,address string) string {
+func probe(host,address string) (string,string) {
  ctx,cancel:=context.WithTimeout(context.Background(),3*time.Second);defer cancel()
  d:=tls.Dialer{NetDialer:&net.Dialer{},Config:&tls.Config{MinVersion:tls.VersionTLS12,ServerName:host,NextProtos:[]string{"http/1.1"}}}
- c,e:=d.DialContext(ctx,"tcp",address);if e!=nil{return e.Error()};c.Close();return "ok"
+ c,e:=d.DialContext(ctx,"tcp",address);if e!=nil{return e.Error(),""};remote:=c.RemoteAddr().String();c.Close();return "ok",remote
 }
 func main(){
  host,ip,port:=os.Args[1],os.Args[2],os.Args[3]
  ctx,cancel:=context.WithTimeout(context.Background(),3*time.Second);defer cancel()
  addresses,e:=net.DefaultResolver.LookupIPAddr(ctx,host)
- result:=map[string]any{"os":runtime.GOOS,"arch":runtime.GOARCH,"lookup_addresses":addresses,"hostname_tls":probe(host,net.JoinHostPort(host,port)),"direct_address_tls":probe(host,net.JoinHostPort(ip,port))}
+ hostStatus,_:=probe(host,net.JoinHostPort(host,port));directStatus,directRemote:=probe(host,net.JoinHostPort(ip,port))
+ result:=map[string]any{"os":runtime.GOOS,"arch":runtime.GOARCH,"lookup_addresses":addresses,"hostname_tls":hostStatus,"direct_address_tls":directStatus,"direct_remote_address":directRemote}
  if e!=nil{result["lookup_error"]=e.Error()};json.NewEncoder(os.Stdout).Encode(result)
 }
 `;
@@ -159,7 +164,7 @@ try {
   const prepared = JSON.parse(remote(`import os,tempfile,json,pathlib,socket
 base=pathlib.Path.home()/'.cache'/'webmux';base.mkdir(exist_ok=True)
 r=tempfile.mkdtemp(prefix='discovered-app-',dir=base);os.chmod(r,0o700)
-s=socket.socket();s.bind((${JSON.stringify(remoteBind)},0));port=s.getsockname()[1];s.close()
+s=socket.socket(socket.AF_INET6 if ${ipFamily}==6 else socket.AF_INET,socket.SOCK_STREAM);s.bind((${JSON.stringify(remoteBind)},0));port=s.getsockname()[1];s.close()
 print(json.dumps({'root':r,'port':port}))`)) as { root: string; port: number };
   remoteRoot = prepared.root;
   if (!/^\/[A-Za-z0-9_./-]+\/discovered-app-[A-Za-z0-9_]+$/.test(remoteRoot)) throw new Error('Unexpected owned remote path');
@@ -192,7 +197,7 @@ print(json.dumps({'root':r,'port':port}))`)) as { root: string; port: number };
   localProcess=child(receiverImage,[],'receiver.log',localEnv);
   remoteProcess=launchRemote();
   controllerURL=`http://127.0.0.1:${forward}`;
-  tunnel=child('ssh',[...sshArgs,'-o','ExitOnForwardFailure=yes','-N','-L',`127.0.0.1:${forward}:${remoteBind}:${prepared.port}`,peer],'tunnel.log');
+  tunnel=child('ssh',[...sshArgs,'-o','ExitOnForwardFailure=yes','-N','-L',`127.0.0.1:${forward}:${fixtureHostPort(remoteBind,prepared.port)}`,peer],'tunnel.log');
   await expect.poll(async()=>{try{return(await fetch(controllerURL+'/api/health',{signal:AbortSignal.timeout(1000)})).status;}catch{return 0;}},{timeout:20_000}).toBe(200);
   const login=await fetch(controllerURL+'/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:'qualifier',password})});
   expect(login.status).toBe(200);token=(await login.json() as {token:string}).token;
@@ -207,6 +212,11 @@ env=dict(os.environ,SSL_CERT_FILE=str(r/'home'/'config'/'fixture-ca.pem'))
 result=subprocess.run([str(b),p['host'],p['address'],str(p['port'])],env=env,capture_output=True,text=True,timeout=12)
 sys.stdout.write(result.stdout);sys.stderr.write(result.stderr);sys.exit(result.returncode)`,{root:remoteRoot,sha256:diagnosticHash,host:observed!.host,address:localBind,port:tlsPort});
   fs.writeFileSync(path.join(output,'transport-diagnostic.json'),diagnostic+'\n');receipt.transportDiagnostic=JSON.parse(diagnostic);
+  const transport = receipt.transportDiagnostic as { direct_address_tls: string; direct_remote_address: string };
+  expect(transport.direct_address_tls).toBe('ok');
+  expect(new URL('https://'+transport.direct_remote_address).host).toBe(new URL('https://'+fixtureHostPort(localBind,tlsPort)).host);
+  receipt.directTLSFamilyConfirmed = ipFamily;
+  passed(`native direct TLS connection reaches the selected IPv${ipFamily} receiver endpoint`);
   browser=await chromium.launch({headless:true,...(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH?{executablePath:process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH}:{})});
   const context=await browser.newContext({viewport:{width:1440,height:1000}});
   await context.addInitScript(token=>localStorage.setItem('webmux_token',token),token);
