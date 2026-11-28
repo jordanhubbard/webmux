@@ -1,0 +1,120 @@
+{
+  "schema": "webmux.discovery-native-application.v1",
+  "verified_at": "2026-11-28T01:49:36.928002+00:00",
+  "source_revision": "154139c86f3d3c7933c7804f3cfec1916dc8834c",
+  "scope": "Actual protected cmd/webmux processes and browser enrollment; isolated homes and process-local Linux fixture certificate trust. Not installed-service, OS trust or real-agent/MAC acceptance.",
+  "maintained_qualifier_sha256": "94eb561ac18f5cef282cf89f0fbe783ad1cfb1a82c5641ce1f509fe0be388312",
+  "tracked_source_inventory_sha256": "4e0fc2bf5f994e692612a33a677ec18e0517ac7a8abac52226cf59efd901829d",
+  "platforms": {
+    "receiver": {
+      "kernel": "Linux",
+      "machine": "x86_64",
+      "arch": "x64"
+    },
+    "controller": {
+      "kernel": "Linux",
+      "machine": "aarch64"
+    }
+  },
+  "binary_targets": {
+    "receiver": {
+      "role": "receiver",
+      "goos": "linux",
+      "goarch": "amd64"
+    },
+    "controller": {
+      "role": "controller",
+      "goos": "linux",
+      "goarch": "arm64"
+    }
+  },
+  "positive": {
+    "command_exit": 0,
+    "passed": true,
+    "checks": [
+      "actual Linux ARM64 application discovers Linux x86_64 HTTPS application without enrolling it",
+      "human browser configures the discovered HTTPS endpoint and explicitly verifies node/account identity",
+      "actual receiver restart and changed port migrate in the controller background without an open browser",
+      "actual controller restart retains verified peer identity and migrated endpoint",
+      "departed receiver expires from discovery while its verified configured peer remains retained and unreachable",
+      "same receiver rejoins discovery with its retained identity and no duplicate enrollment",
+      "normal policy restart disables browsing while the verified configured peer remains accessible"
+    ],
+    "verification_status": 204,
+    "binary_sha256": {
+      "receiver": "5306841dafa8fbd78653967676665eaece94916cbee81f81c3b3759ab597b21f",
+      "controller": "f2c88aaa8ff7de65ff6b1bf1c6190770d20cc95aa8969cb29dd1595fd420a8ef"
+    },
+    "diagnostic_sha256": "d3c7759078801ee6e61860a7d7afdfa44f52f3b899d3bd7829611bfe4b13db52",
+    "same_enrolled_identity_through_port_migration": true,
+    "enrolled_identity_sha256": "150ea3ed341819ba52c17037454b9cbbc83516e9e57a0a7ab1a0ee44afeedf13",
+    "controller_restart_retained_identity": true,
+    "lifecycle_evidence_sha256": "b710ffd941bb46213db97de2273b81df3e1d64be2e980fc297916a38a622221b",
+    "cleanup": [
+      "completed",
+      "completed",
+      "completed"
+    ],
+    "sources_unchanged": true,
+    "private_receipt_sha256": "4f991737f7b7b4cf6824e7b216a65778c52969f6bc93453d272adc2a12814713",
+    "private_log_sha256": "43207ec749b527500b9e53a990754a92d07f1c9935f659665d16af9e5364fae4"
+  },
+  "changed_node_negative": {
+    "command_exit": 1,
+    "expected_refusal_admitted": true,
+    "verification_status": 502,
+    "changed_node_refused_without_pin": true,
+    "binary_sha256": {
+      "receiver": "5306841dafa8fbd78653967676665eaece94916cbee81f81c3b3759ab597b21f",
+      "controller": "f2c88aaa8ff7de65ff6b1bf1c6190770d20cc95aa8969cb29dd1595fd420a8ef"
+    },
+    "cleanup": [
+      "completed",
+      "completed",
+      "completed"
+    ],
+    "sources_unchanged": true,
+    "private_receipt_sha256": "f28920b4002748a6ef7b791cfd4b6e0df5984386918b9e73a2e1cac12040dee7",
+    "private_log_sha256": "b608053e3ac0c60bd86450dd368a24898a74677f564bbfba7f9a4f1993d4a542"
+  },
+  "active_owned_application_processes_after": {
+    "receiver": 0,
+    "controller": 0
+  },
+  "quality_gates": {
+    "full-test-corrected": {
+      "exit_code": 0,
+      "log_sha256": "29179ddac280729afbe95784ae0538cdfeed651781bc3700f64f194d7a51a466"
+    },
+    "full-lint-corrected": {
+      "exit_code": 0,
+      "log_sha256": "66eee00f557ac4cd993690e4a42352361e0cce412d5eb9b93e8beaecb9193049"
+    },
+    "strict_typecheck_exit": 0,
+    "strict_typecheck_log_sha256": "ceb954dc8a5dbf5cd8fa3319092613d0e576a89ddb7850cbd38e87dbac62cbd3",
+    "e2e_passed": 1418,
+    "e2e_existing_platform_optin_skips": 22,
+    "frontend_passed": 500,
+    "helper_passed": 299,
+    "helper_existing_platform_optin_skips": 3,
+    "private_encrypted_keyring": true,
+    "private_tmux": true,
+    "native_browser": "/usr/bin/google-chrome",
+    "native_sandbox_policy_unchanged": true,
+    "new_hosted_qualification_requested": false
+  },
+  "limits": [
+    "Fresh protected fixture homes and disposable credentials; no native user account or canonical MAC enrollment.",
+    "Process-local Linux certificate trust only, no OS trust-store or network-policy change.",
+    "Both images built on Linux x86_64; Linux ARM64 image cross-built and actually executed on the independent native host.",
+    "IPv4 application paths only; other platform, IPv6, isolated multicast, spoofing/duplicate/interface and real-agent/MAC acceptance remain open.",
+    "Original discovery, migration, departure/rejoin and cleanup bounds unchanged.",
+    "No installed-service deployment/restart and no new native macOS/Windows execution claim."
+  ],
+  "delivery_policy": {
+    "local_only": true,
+    "skip_ci_on_final_commit_and_merge": true,
+    "policy_source": "docs/validation/discovery-lifecycle-2026-11-23/README.md",
+    "new_hosted_qualification_requested": false
+  }
+}

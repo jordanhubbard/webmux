@@ -1,0 +1,156 @@
+{
+  "verified_at": "2026-11-28T01:41:42.161239+00:00",
+  "source_commit": "175ae6fd831fbffc2df4b18feaacf43c3e8bef82",
+  "source_sha256": {
+    "webmux/server/internal/discovery/transport_control_test.go": "7d31fa3839626e2a4b97a865e0a78224b6a5b615e908f7d795f0d78c31788701",
+    "webmux/server/internal/discovery/discovery.go": "550b38bb4a8cad870a398c013c73c4f8a522847b6ec96f8f2192e334397c64a4",
+    "webmux/server/internal/discovery/discovery_test.go": "fb850bd07323805f54bea6687605e35227ab035728a1a1fc1762ae09d263a20a",
+    "webmux/server/internal/discovery/nodes_test.go": "587dfdd13c5fe7a628b1774db0d453ef6f6fc6a8124cf68cb4ca791be3e12947",
+    "webmux/server/internal/discovery/policy.go": "6f28e23d3b120466554b38049e91c66d150e548b3c2206297325e2d7533f57f0",
+    "webmux/server/internal/discovery/native_bonjour_test.go": "ae0d4860051daf7aee50654a7e51d4f45d58785787908795cb6c7e5ebe9dd29f",
+    "webmux/server/internal/discovery/nodes.go": "6feb100e8b629a2c40d800657dafa3b30af3a593936483e32dbd9e8698c1f101",
+    "webmux/server/internal/discovery/native_announcements_other.go": "eff09deacfe1fcbd208691c3026599c972fb5e483f8a1dae1e370a687bb9dee0",
+    "webmux/server/internal/discovery/listener_selection_test.go": "32a557ebdb5ab51a1e1b5c181b73ecf62b07a567d5cfdb341a7f5ca9c0cea8ca",
+    "webmux/server/internal/discovery/native_endpoint_test.go": "539d086b334b323f862c2f28566b41ed5241890b3f40a8da9596dd9b8f179dd4",
+    "webmux/server/internal/discovery/native_announcements_darwin_test.go": "30f924b46752e10bd1e2f67de2aeb8939ba9d5ae6b6231d90e56addbcdfbbf42",
+    "webmux/server/internal/discovery/native_announcements_darwin.go": "6b465bbd6863e0baa2f496caaa8714807ed9117fffcbefce8601b4e26d47af3f",
+    "webmux/server/go.mod": "4af68f0e0f8f608a48b842afe0d4d14f3dccbd66b0859d1d7ed1926219e8f3dd",
+    "webmux/server/go.sum": "5d9921a5399b57c9312dcfcc50e3a5fb67de647d2b711fbe7a330cceaec4634d"
+  },
+  "binaries": {
+    "amd64": {
+      "sha256": "5ee80d78d263c0da6d86ccd2913e1f42f3cc1b32723dca5a0c729ce0971e4786",
+      "bytes": 8057835
+    },
+    "arm64": {
+      "sha256": "3a837088b3c24867a6c0c55d92a2d5be92247db133f2e270df4c22271486fc58",
+      "bytes": 7579335
+    }
+  },
+  "go": "go version go1.27.4 linux/amd64",
+  "build_scope": "Both images built on Linux x86_64; ARM64 cross-built and actually executed on native Linux ARM64",
+  "scope": "Unchanged production discovery component on native Linux x86_64/ARM64; no HTTP, enrollment, installed-service, application, IPv6 transport or MAC acceptance",
+  "phases": [
+    {
+      "name": "arm-advertises",
+      "passed": true,
+      "expected_failure": false,
+      "amd64": {
+        "exit_code": 0,
+        "process_reaped": true,
+        "log_sha256": "f75258e3246b4d6ee707c896199ed0060b53404f30daae8dbecf9f42cd28ae52",
+        "observed_address_families": [
+          4
+        ],
+        "exact_listener_record_ports": [
+          19310,
+          19311
+        ]
+      },
+      "arm64": {
+        "exit_code": 0,
+        "process_reaped": true,
+        "log_sha256": "5554b5fa5cf7b7664d281d49b0e9fde5fb4b9ef5710d29104e79d15808ce6523",
+        "observed_address_families": [],
+        "exact_listener_record_ports": []
+      }
+    },
+    {
+      "name": "x64-advertises",
+      "passed": true,
+      "expected_failure": false,
+      "amd64": {
+        "exit_code": 0,
+        "process_reaped": true,
+        "log_sha256": "9c5d897663d348df5329030fad4b8592c4cafd42e6e424115360554daf7773c3",
+        "observed_address_families": [],
+        "exact_listener_record_ports": []
+      },
+      "arm64": {
+        "exit_code": 0,
+        "process_reaped": true,
+        "log_sha256": "a090b833d768088ed689db6e3a10dfe0790d0d17b7ca7c10676400abbfa2853e",
+        "observed_address_families": [
+          4
+        ],
+        "exact_listener_record_ports": [
+          19310,
+          19311
+        ]
+      }
+    },
+    {
+      "name": "simultaneous",
+      "passed": true,
+      "expected_failure": false,
+      "amd64": {
+        "exit_code": 0,
+        "process_reaped": true,
+        "log_sha256": "640c03fc3cef016cd625d3ed500af61e6f355e12b746329c3ca71d714cc6e987",
+        "observed_address_families": [
+          4
+        ],
+        "exact_listener_record_ports": [
+          19310,
+          19311
+        ]
+      },
+      "arm64": {
+        "exit_code": 0,
+        "process_reaped": true,
+        "log_sha256": "640c03fc3cef016cd625d3ed500af61e6f355e12b746329c3ca71d714cc6e987",
+        "observed_address_families": [
+          4
+        ],
+        "exact_listener_record_ports": [
+          19310,
+          19311
+        ]
+      }
+    },
+    {
+      "name": "silent-expected-peer-amd64",
+      "passed": true,
+      "expected_failure": true,
+      "result": {
+        "exit_code": 1,
+        "process_reaped": true,
+        "log_sha256": "06f8f108e2c307ec08489acec85919840045e51f484ba985447967594813c16b"
+      }
+    },
+    {
+      "name": "silent-expected-peer-arm64",
+      "passed": true,
+      "expected_failure": true,
+      "result": {
+        "exit_code": 1,
+        "process_reaped": true,
+        "log_sha256": "06f8f108e2c307ec08489acec85919840045e51f484ba985447967594813c16b"
+      }
+    }
+  ],
+  "source_inputs_unchanged": true,
+  "active_owned_fixture_processes_after": {
+    "amd64": 0,
+    "arm64": 0
+  },
+  "limits": {
+    "browse_seconds": 8,
+    "advertiser_seconds": 12,
+    "go_test_timeout_seconds": 20,
+    "http_listener_started": false,
+    "enrollment_or_authority_changed": false,
+    "installed_service_changed": false,
+    "network_policy_changed": false,
+    "application_or_native_ipv6_transport_acceptance": false
+  },
+  "private_corrected_harness_sha256": "c72162a3acc43c477d03fecce978d6b532c867d7dbe7d0c960092cad8fd6490b",
+  "private_receipt_sha256": "4165f74835de7e0dd86e3afa6d31cb120de7ffc6f52a423ae76249fe34ffe487",
+  "initial_setup_failure": {
+    "exit_code": 1,
+    "native_network_started": false,
+    "cause": "Launcher precreated the fixture-owned directory; Go fixture refused before StartNodes",
+    "retained_receipt_sha256": "f535cfb4250605a6402c668e32cbd8cd838796a60d0a99cac9b93410b46fb0a0",
+    "corrective_action": "Keep launcher logs beside the fresh fixture path and wait for explicit native readiness; same production source and observation bounds"
+  }
+}

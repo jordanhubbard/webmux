@@ -97,7 +97,11 @@ managed/existing-agent onboarding and full workflow acceptance remain open. The
 announcements untrusted and retains manual enrollment. Authenticated HTTPS node/
 account identity and address migration now have a native macOS/Linux component
 result; complete discovered two-host acceptance and automatic coordination remain
-open; this checkpoint does not complete any of the requirements above. The
+open; this checkpoint does not complete any of the requirements above. A
+[native Linux x86_64/ARM64 application follow-up](validation/discovery-linux-x64-arm64-2026-11-27/README.md)
+now passes protected browser enrollment, port migration, controller restart,
+departure/rejoin, disabled-discovery fallback and changed-node refusal within its
+recorded IPv4 fixture scope. The
 [built-in coordination checkpoint](session-coordination.md) adds a durable
 node-local ledger and scoped ordinary-session CLI. Real-agent onboarding,
 managed/SSH interfaces and cross-node coordination still require implementation
