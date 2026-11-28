@@ -158,16 +158,40 @@ only through a loopback connection. Skipping is stored in
 `~/.config/webmux/config/macos-setup.yaml`. Permission grants remain managed by
 macOS; WebMux does not modify TCC databases.
 
-### App signing and release packaging
+### App signing and which process macOS asks
 
-`make install-server` and macOS native archives assemble `WebMux.app` with bundle ID
-`com.webmux.server`, protected-folder usage descriptions, and a verified code
-signature. Homebrew runs the packaged app executable on macOS. Source and
-Homebrew builds default to a development (ad-hoc) signature: recheck permissions
-after rebuilding or upgrading; these builds are not notarized releases.
+`make install-server` bootstraps a LaunchAgent in the `gui` domain. Its program
+is `~/Applications/WebMux.app/Contents/MacOS/webmux`, bundle ID `com.webmux.server`.
+macOS treats that bundle as the TCC responsible process. A local PTY, and a tmux
+server WebMux itself starts, inherit that responsibility. An existing tmux server
+keeps the responsibility of whoever started it.
 
-For a Developer ID signed and notarized app, run packaging on a Mac with an
-unlocked signing keychain and a configured `notarytool` keychain profile:
+SSH does not inherit it. An `ssh` or `sshd` session is its own responsible
+process, and its login keychain stays locked because the session is not the
+Aqua login session. Signing WebMux does not move a Terminal.app or ssh grant
+onto WebMux, and it does not unlock the keychain for a remote shell. Same-user
+loopback on port 22 with no explicit credentials already skips that hop so the
+shell stays in WebMux's session. Remote Login's "Allow full disk access for
+remote users" switch is a separate control. Programs the shell runs, such as
+`ssh`, `gh`, and `codesign`, have their own keychain access-control entries.
+
+Homebrew's service runs the app executable directly and sets `WEBMUX_ROOT` and
+`PATH` on the job. Homebrew's generated plist also allows a Background session,
+so starting `brew services` from SSH still does not unlock the login keychain.
+Use a GUI login, or `make install-server`, which bootstraps the `gui` domain.
+The `webmux` command on `PATH` is still a shell wrapper for foreground use.
+Starting that wrapper, or `make start` without a service, from Terminal.app or
+SSH leaves Terminal or ssh responsible. The server does not sign itself at launch.
+
+Source and Homebrew builds use an ad-hoc signature unless
+`WEBMUX_MACOS_SIGN_IDENTITY` is set. Ad-hoc and unsigned binaries do not keep
+TCC grants across a rebuild. Replacing an already stable signature with an
+ad-hoc one is refused. `make check-macos-signature` only displays the signature
+twice. It fails if the app is missing, unsigned, or ad-hoc, and it fails if the
+CDHash changes between those reads.
+
+For a Developer ID signed and notarized app, run packaging on a Mac whose login
+keychain is unlocked and whose `notarytool` profile is configured:
 
 ```bash
 export WEBMUX_MACOS_SIGN_IDENTITY='Developer ID Application: Your Name (TEAMID)'
@@ -175,13 +199,18 @@ export WEBMUX_MACOS_NOTARY_PROFILE='webmux'
 make package
 ```
 
-The packaging helper signs with the hardened runtime, verifies the signature,
-submits for notarization, staples the ticket, and checks Gatekeeper acceptance.
-Signing or notarization failures fail packaging rather than silently producing
-an unsigned substitute. Keep the same Developer ID and bundle identifier across
-releases, and qualify permission persistence on upgrades. Do not put signing
-credentials in the repository. Managed enterprise Macs can receive the required
-privacy policy through MDM.
+The release host's Developer ID team is `ULQA4V44V5`. The private key and the
+`webmux` notary profile are not in this repository. An SSH session cannot use
+them while the login keychain is locked. The packaging helper signs with the
+hardened runtime and `packaging/macos/WebMux.entitlements` (an empty dict:
+WebMux is not sandboxed, and keychain unlock is not an entitlement), verifies the
+signature, and, when the profile is set, notarizes, staples, and checks
+Gatekeeper. Signing or notarization failures fail packaging rather than
+silently producing an unsigned substitute. Keep the same Developer ID and bundle
+identifier, install the app at a stable path, then grant Full Disk Access to
+WebMux.app once. Managed enterprise Macs can receive the privacy policy through
+MDM. CI does not have the certificate, so pull-request packages stay ad-hoc and
+`make check-macos-signature` is the release gate that fails until you sign.
 
 Logs are written to `~/.config/webmux/logs/webmux.log` unless `WEBMUX_HOME` is overridden.
 
