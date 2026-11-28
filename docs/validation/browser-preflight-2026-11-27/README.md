@@ -50,3 +50,21 @@ render/reopen readiness. A default `--list` with absent browser paths succeeds
 without launching an application fixture. Updated source/log hashes are bound in
 the receipt; the earlier `--list` refusal was an initial-head result and is not a
 promise for metadata-only commands in the corrected scope.
+
+## Integration with the qualified IPv6 follow-up
+
+The earlier exact head `afad3e67ba6f6de90249f2fa61a473d9cfb6431b` passes all
+four hosted workflows. Main subsequently advanced through the worker authority
+and explicit Linux IPv6 endpoint changes. Integration source
+`3a06693eddd08e6133976168d147d30eb0364766` includes main
+`23a88a1b94702883dbacce425d1193423eaae9f7`; its sole conflict was the helper
+test list. Both new helper files remain included exactly once. Preflight
+implementation and control source bytes match the qualified earlier head.
+
+The integrated source passes fresh full local `make test` and `make lint`: 500
+frontend tests, 308 helper passes with three existing skips, 1,418 E2E passes
+with 22 existing skips, plus maintained Go/race and strict TypeScript checks.
+[integration-795.json](integration-795.json) records source and complete private
+log hashes. New hosted results belong to the actual published integration head;
+older-head success is retained separately. Later evidence-only edits leave the
+qualified application and preflight source bytes unchanged.
