@@ -106,6 +106,14 @@ func (b *Bindings) CheckReadAccess(ctx context.Context, owner string, repository
 // Each caller resolves its receiving-account scope and supplies a fixed route.
 // This helper is deliberately private: it is not an arbitrary fleet API proxy.
 func authenticatedReadJSON(ctx context.Context, endpoint, token string, roots *x509.CertPool) ([]byte, error) {
+	return authenticatedReadJSONLimit(ctx, endpoint, token, roots, 1<<20)
+}
+
+// Smaller wire contracts can set a tighter bound without changing other readers.
+func authenticatedReadJSONLimit(ctx context.Context, endpoint, token string, roots *x509.CertPool, maximum int64) ([]byte, error) {
+	if maximum < 1 || maximum > 1<<20 {
+		return nil, ErrInvalid
+	}
 	tlsConfig := &tls.Config{MinVersion: tls.VersionTLS12}
 	if roots != nil {
 		tlsConfig.RootCAs = roots.Clone()
@@ -170,11 +178,11 @@ func authenticatedReadJSON(ctx context.Context, endpoint, token string, roots *x
 	default:
 		return nil, ErrUnavailable
 	}
-	body, err := io.ReadAll(io.LimitReader(response.Body, (1<<20)+1))
+	body, err := io.ReadAll(io.LimitReader(response.Body, maximum+1))
 	if err != nil {
 		return nil, &UnavailableError{canceled: errors.Is(ctx.Err(), context.Canceled), timedOut: errors.Is(ctx.Err(), context.DeadlineExceeded)}
 	}
-	if len(body) > 1<<20 || !utf8.Valid(body) || !uniqueJSON(body) {
+	if int64(len(body)) > maximum || !utf8.Valid(body) || !uniqueJSON(body) {
 		return nil, ErrInvalid
 	}
 

@@ -138,6 +138,13 @@ review/publication → [#678](https://github.com/jordanhubbard/webmux/issues/678
 three-host acceptance. These issues remain open; this sequence does not dispatch
 parallel fleet work.
 
+The [canonical MAC registration reader](validation/mac-registration-2026-11-27/README.md)
+adds the supported project-record boundary for #673, with controlled refusal
+checks and actual loopback reads on Darwin ARM64, including read/generic-write
+refusal and revocation controls with a temporary read-only client. It does not
+enroll WebMux, verify the repository relation or complete a least-privilege audit,
+shared human/agent observation or the later authority stages.
+
 The [private SSH channel checkpoint](validation/coordination-ssh-channel-2026-11-22/README.md)
 adds automatic scoped startup through an authenticated private socket forward.
 Native ordinary SSH shell/CLI startup, first-use trust, same-provider reconnect,
