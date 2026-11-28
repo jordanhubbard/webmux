@@ -298,7 +298,7 @@ func buildView(tx *bolt.Tx, owner string, self *Member, after uint64, now time.T
 		}
 	}
 	resource := "node:" + string(bucket(tx, "meta").Get([]byte("node"))) + ":heavy"
-	r := ResourceView{ID: resource, Authority: string(bucket(tx, "meta").Get([]byte("node")))}
+	r := ResourceView{QueueContract: WorkerQueueContract, Capacity: 1, ID: resource, Authority: string(bucket(tx, "meta").Get([]byte("node")))}
 	if held, exists, err := get[Reservation](bucket(tx, "reservations"), resource); err != nil {
 		return view, err
 	} else if exists && now.Before(held.Expires) {

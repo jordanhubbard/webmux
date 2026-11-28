@@ -170,7 +170,7 @@ func Request(ctx context.Context, access Access, method, path string, body io.Re
 			Action string `json:"action"`
 		}
 		_ = json.Unmarshal(data, &operation)
-		if operation.Action == "reserve" || operation.Action == "renew-reservation" || operation.Action == "release-reservation" {
+		if coordination.IsReservationAction(operation.Action) {
 			timeout = 12 * time.Second
 		}
 		body = bytes.NewReader(data)
@@ -236,6 +236,9 @@ func Run(args []string, in io.Reader, out io.Writer) error {
 		_, err = out.Write(append(data, '\n'))
 		return err
 	}
+	if args[0] == "wait" {
+		return waitReservation(args[1:], access, out)
+	}
 	if args[0] == "act" {
 		body, err := io.ReadAll(io.LimitReader(in, (16<<10)+1))
 		if err != nil || len(body) > 16<<10 {
@@ -254,7 +257,7 @@ func Run(args []string, in io.Reader, out io.Writer) error {
 		}
 		return AdmissionError(result)
 	}
-	return errors.New("usage: webmux coordinate [view|guide|act|mcp]; act reads a JSON request with a stable request_id from stdin")
+	return errors.New("usage: webmux coordinate [view|guide|act|wait|mcp]; act reads a JSON request with a stable request_id from stdin")
 }
 
 // AdmissionError preserves denial, expiry and advisory-conflict semantics for all clients.

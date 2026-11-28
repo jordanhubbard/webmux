@@ -102,7 +102,7 @@ func initialize(tx *bolt.Tx, node string, now time.Time) error {
 		if string(meta.Get([]byte("node"))) != node {
 			return ErrIdentity
 		}
-		if (string(meta.Get([]byte("version"))) != "1" && string(meta.Get([]byte("version"))) != "2" && string(meta.Get([]byte("version"))) != "3") || len(meta.Get([]byte("key"))) != 32 || (string(meta.Get([]byte("enabled"))) != "1" && string(meta.Get([]byte("enabled"))) != "0") {
+		if (string(meta.Get([]byte("version"))) != "1" && string(meta.Get([]byte("version"))) != "2" && string(meta.Get([]byte("version"))) != "3" && string(meta.Get([]byte("version"))) != "4") || len(meta.Get([]byte("key"))) != 32 || (string(meta.Get([]byte("enabled"))) != "1" && string(meta.Get([]byte("enabled"))) != "0") {
 			return errors.New("invalid coordination database metadata")
 		}
 		required := buckets
@@ -139,7 +139,12 @@ func initialize(tx *bolt.Tx, node string, now time.Time) error {
 			return errors.New("invalid coordination history epoch")
 		}
 		if string(meta.Get([]byte("version"))) == "2" {
-			return meta.Put([]byte("version"), []byte("3"))
+			if err := meta.Put([]byte("version"), []byte("3")); err != nil {
+				return err
+			}
+		}
+		if string(meta.Get([]byte("version"))) == "4" && bucket(tx, "worker_queue") == nil {
+			return errors.New("missing worker queue bucket")
 		}
 		return nil
 	}
