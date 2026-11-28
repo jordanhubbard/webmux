@@ -168,6 +168,14 @@ protected homes and process-local Linux fixture certificate trust. Installed
 services, OS trust, other native platforms, and real-agent/MAC acceptance remain
 separate requirements; #631/#664 remain open.
 
+The [native Linux x86_64/ARM64 application follow-up](validation/discovery-linux-x64-arm64-2026-11-27/README.md)
+passes the same protected browser enrollment, background port migration,
+controller restart, departure/rejoin and disabled-discovery fallback on two real
+Linux hosts. A separate changed-node proof refuses verification without a pin.
+The receipt records actual platforms, role-specific image hashes and unchanged
+sources. It extends native coverage within those IPv4 fixture boundaries;
+remaining platform/network variants and the complete agent workflow stay open.
+
 Deterministic tests cover malformed/foreign/self announcements, duplicate TXT
 keys, unrelated service/domain, credential metadata refusal, invalid endpoints,
 unscoped IPv6, address multiplicity, expiry/refresh, concurrent bounded snapshots,
