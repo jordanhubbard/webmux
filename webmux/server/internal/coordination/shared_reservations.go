@@ -89,19 +89,54 @@ func (r ReservationReply) Valid(e ReservationEnvelope) bool {
 		if e.Request.Action == "reserve" && (result.Status != "reserved" || result.Record != digest([]byte("reserve\n"+e.Actor.Key()+"\n"+e.Request.ID))) {
 			return false
 		}
-		if e.Request.Action != "reserve" && (e.Request.Action != "renew-reservation" || result.Status != "renewed" || result.Record != e.Request.Record || result.Fence != e.Request.Fence) {
+		if e.Request.Action == "acquire-reservation" {
+			if result.Status != "reserved" || result.Record != e.Request.Record {
+				return false
+			}
+		} else if e.Request.Action != "reserve" && (e.Request.Action != "renew-reservation" || result.Status != "renewed" || result.Record != e.Request.Record || result.Fence != e.Request.Fence) {
 			return false
 		}
 		return !r.Current || (result.Expires.After(r.Now) && !result.Expires.After(r.Now.Add(900*time.Second)))
 	case "released":
 		return !r.Current && e.Request.Action == "release-reservation" && result.Record == e.Request.Record && result.Fence == e.Request.Fence
-	case "busy", "lease-lost", "project-changed", "project-unavailable", "fence-exhausted", "unknown-resource":
+	case "queued", "queue-cancelled", "queue-expired", "queue-completed", "queue-granted":
+		if r.Current || result.Queue == nil || !validHex(result.Record, 32) || result.Queue.Sequence == 0 || result.Queue.Deadline.IsZero() || result.Queue.Position < 0 || result.Queue.Position > 1024 {
+			return false
+		}
+		state := strings.TrimPrefix(result.Status, "queue-")
+		if result.Status == "queued" {
+			state = "waiting"
+		}
+		if result.Queue.State != state {
+			return false
+		}
+		if result.Status == "queued" {
+			if result.Queue.Position < 1 || result.Queue.Ready && (e.Request.Action != "inspect-reservation" || result.Queue.Position != 1) {
+				return false
+			}
+		} else if result.Queue.Position != 0 || result.Queue.Ready {
+			return false
+		}
+		if e.Request.Action == "enqueue-reservation" {
+			return result.Status == "queued"
+		}
+		return (e.Request.Action == "acquire-reservation" || e.Request.Action == "cancel-reservation" || e.Request.Action == "inspect-reservation") && result.Record == e.Request.Record
+	case "queue-full", "queue-exhausted", "not-owned", "busy", "lease-lost", "project-changed", "project-unavailable", "fence-exhausted", "unknown-resource":
 		return !r.Current
 	}
 	return false
 }
+
+// IsReservationAction identifies operations governed by the fenced lease protocol.
+func IsReservationAction(action string) bool {
+	switch action {
+	case "reserve", "renew-reservation", "release-reservation", "enqueue-reservation", "acquire-reservation", "cancel-reservation", "inspect-reservation":
+		return true
+	}
+	return false
+}
 func ReservationTarget(r Request) (string, bool) {
-	if r.Action != "reserve" && r.Action != "renew-reservation" && r.Action != "release-reservation" {
+	if !IsReservationAction(r.Action) {
 		return "", false
 	}
 	node := strings.TrimSuffix(strings.TrimPrefix(r.Resource, "node:"), ":heavy")
@@ -134,7 +169,7 @@ func decorateLease(tx *bolt.Tx, node string, actor Ref, r Request, result *Resul
 }
 func queueReservation(tx *bolt.Tx, actor Member, r Request, route *RemoteRoute, now time.Time) (Result, *ReservationIntent, error) {
 	project := projectID(actor)
-	if r.Action == "release-reservation" {
+	if r.Action == "release-reservation" || r.Action == "cancel-reservation" {
 		saved, exists, err := get[RemoteRoute](bucket(tx, "meta"), leaseRouteKey(actor.Ref, r))
 		if err != nil {
 			return Result{}, nil, err
@@ -216,7 +251,7 @@ func (s *Service) SharedIntent(node, token string, inputs []MemberInput, r Reque
 		}
 		intent = *saved.Reservation
 		result = sharedResult(tx, saved, now)
-		if r.Action != "release-reservation" && projectID(actor) != intent.Envelope.Project {
+		if r.Action != "release-reservation" && r.Action != "cancel-reservation" && projectID(actor) != intent.Envelope.Project {
 			intent.Terminal = true
 			if result.Lease != nil {
 				result.Lease.Current = false
@@ -277,7 +312,7 @@ func (s *Service) BeginSharedAttempt(node, token string, inputs []MemberInput, r
 		if intent.Terminal || intent.Resolved {
 			return nil
 		}
-		if r.Action != "release-reservation" && projectID(actor) != intent.Envelope.Project {
+		if r.Action != "release-reservation" && r.Action != "cancel-reservation" && projectID(actor) != intent.Envelope.Project {
 			intent.Transport = "project-changed"
 			intent.Terminal = true
 			saved.Result = Result{Status: "project-changed"}
@@ -391,7 +426,7 @@ func (s *Service) ApplySharedReply(node string, e ReservationEnvelope, reply Res
 			}
 			intent.Transport = "resolved"
 			intent.Current = reply.Current && saved.Result.Expires != nil && now.Before(*saved.Result.Expires)
-			if saved.Result.Status == "reserved" || saved.Result.Status == "renewed" {
+			if saved.Result.Status == "reserved" || saved.Result.Status == "renewed" || saved.Result.Status == "queued" {
 				request := e.Request
 				request.Record = saved.Result.Record
 				request.Fence = saved.Result.Fence
@@ -459,7 +494,7 @@ func (s *Service) ExchangeReservation(node string, scope SenderScope, inputs []M
 				}
 			}
 			result := Result{Status: "project-unavailable"}
-			if projectAvailable || e.Request.Action == "release-reservation" {
+			if projectAvailable || e.Request.Action == "release-reservation" || e.Request.Action == "cancel-reservation" {
 				actor := Member{MemberInput: MemberInput{Ref: e.Actor, Active: true, Project: &Binding{ID: e.Project}}}
 				result, err = reserveWorkerAt(tx, node, scope.ReceiverOwner, actor, e.Request, now)
 				if err != nil {

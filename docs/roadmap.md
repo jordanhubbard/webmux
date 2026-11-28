@@ -102,6 +102,12 @@ open; this checkpoint does not complete any of the requirements above. A
 now passes protected browser enrollment, port migration, controller restart,
 departure/rejoin, disabled-discovery fallback and changed-node refusal within its
 recorded IPv4 fixture scope. The
+[explicit IPv6 endpoint follow-up](validation/discovery-ipv6-linux-2026-11-28/README.md)
+fixes advertisements for concrete Linux listener bindings and passes the same
+protected application lifecycle and changed-identity refusal for native IPv6
+endpoints on a dual-stack LAN, with default IPv4 regression coverage. IPv6-only
+networks, scoped link-local behavior, other native platforms and the complete
+workflow remain open. The
 [built-in coordination checkpoint](session-coordination.md) adds a durable
 node-local ledger and scoped ordinary-session CLI. Real-agent onboarding,
 managed/SSH interfaces and cross-node coordination still require implementation
@@ -683,7 +689,13 @@ updates. The dependency-audit gate remains enabled and passed for this release.
   Owner-scoped browser lease status and Stop controls are implemented under
   [#485](https://github.com/jordanhubbard/webmux/issues/485), with one-use helper
   pairing, durable stop requests and separate confirmed/uncertain cleanup states.
-  Exact-source native simulation and normal merge gates remain required.
+  [#120 is closed](https://github.com/jordanhubbard/webmux/issues/120#issuecomment-7020339498):
+  main `84a331a8aa0848a247543b6c3abb7b8b23c1a871` completed the simulated-device,
+  actual CLI/SSH stream-isolation and browser status/control acceptance with
+  successful post-merge CI, packaging and Windows ARM64 qualification. This is
+  evidence for that source and scope; later candidates retain their own
+  regression and release gates, and other peripherals/backends/OS pairs require
+  separate qualification.
 
 ## External distribution and qualification
 

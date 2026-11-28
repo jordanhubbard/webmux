@@ -9,8 +9,8 @@ import (
 )
 
 // StartNodeDiscovery must be called after binding listeners and before serving
-// requests. It uses the actual bound port, never an advertised default.
-func (s *Server) StartNodeDiscovery(host string, httpPort, httpsPort int) {
+// requests. It uses the actual bound address and ports, never advertised defaults.
+func (s *Server) StartNodeDiscovery(host string, httpPort, httpsPort int, listenAddress string) {
 	port := httpPort
 	if httpsPort > 0 {
 		port = httpsPort
@@ -18,7 +18,7 @@ func (s *Server) StartNodeDiscovery(host string, httpPort, httpsPort int) {
 	p, err := discovery.LoadNodePolicy(s.store)
 	s.nodePolicy = p
 	if err == nil {
-		s.nodes, err = discovery.StartNodes(context.Background(), discovery.NodeOptions{ID: p.ID, Browse: p.Browse, Advertise: p.Advertise, Interfaces: p.Interfaces, Host: host, HTTPPort: httpPort, Port: port, TLS: httpsPort > 0})
+		s.nodes, err = discovery.StartNodes(context.Background(), discovery.NodeOptions{ListenAddress: listenAddress, ID: p.ID, Browse: p.Browse, Advertise: p.Advertise, Interfaces: p.Interfaces, Host: host, HTTPPort: httpPort, Port: port, TLS: httpsPort > 0})
 	}
 	if err == nil && p.Browse && s.nodes != nil {
 		ctx, cancel := context.WithCancel(context.Background())

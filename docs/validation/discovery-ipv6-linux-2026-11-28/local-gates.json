@@ -1,0 +1,29 @@
+{
+  "schema": "webmux.local-gates.v1",
+  "at": "2026-11-28T03:17:26.776481+00:00",
+  "qualified_code_revision": "bff9e3d2843fa161c2833abbd41a3d24a26e764a",
+  "includes_main": "f05959e4982845337ea4dd09f4b399632523e725",
+  "runtime": "Native Linux x86_64; private encrypted test keyring and owned tmux namespaces; installed Chrome",
+  "full_make_test": {
+    "exit_code": 0,
+    "frontend_passed": 500,
+    "helper_total": 305,
+    "helper_passed": 302,
+    "helper_skipped": 3,
+    "helper_failed": 0,
+    "e2e_passed": 1418,
+    "e2e_skipped": 22,
+    "log_sha256": "66f46fdb0fc4cd2131489d3c5fd2347ef353eabf7472ad557f57c3b26aab3138"
+  },
+  "full_make_lint": {
+    "exit_code": 0,
+    "log_sha256": "2a27ff4579fa19dcb0fe3a4a3da5543cb88894013c8f0bbfef0594c315193add"
+  },
+  "application_code_changed_after_qualification": false,
+  "preintegration_run": {
+    "source": "064dd19e39272cf08906de0ee01b62e5e12db792",
+    "disposition": "Owned test job deliberately interrupted before main browser matrix to integrate newly merged main; not admitted as a complete gate",
+    "log_sha256": "b7459a621fbf222fd6d0806f4694e7f6b9da1ac954004733ac4a4702318b6a13"
+  },
+  "hosted_native_jobs_requested_for_this_change": false
+}
