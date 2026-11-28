@@ -186,6 +186,15 @@ package race/vet checks pass. Direct Go commands need Make's qualified runtime
 and writable cache selection; this does not complete authenticated recovery
 or native-creation acceptance under #438/#523.
 
+The [Linux native owner configuration investigation](validation/linux-native-owner-config-2026-11-27/README.md)
+adds an authenticated native Codex 0.169.0 headless exact-conversation baseline.
+It also reproduces #787: the qualified native manager changes a disposable owner
+configuration before its custom launch wrapper, including with an empty profile
+and disabled hooks. Its default preservation control fails. A supported owner
+configuration boundary remains required before authenticated manager-owned
+creation/helper-loss/recovery acceptance under #523/#438; neither the headless
+baseline nor successful defect reproduction completes that requirement.
+
 **Retained recovery priority: the original [#318](https://github.com/jordanhubbard/webmux/issues/318)
 requirements and the remaining acceptance below.** The tracker records #318 as
 closed on 2026-11-20. Its earlier [#322](https://github.com/jordanhubbard/webmux/pull/322)
