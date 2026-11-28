@@ -1,0 +1,148 @@
+{
+  "schema": "webmux.browser-storage.acceptance.v1",
+  "checked_at": "2026-11-28T05:23:33.285966+00:00",
+  "issue": 763,
+  "relocation": {
+    "original_time": "2026-11-26T16:51:01.700167+00:00",
+    "original_report_sha256": "c1e9dc7451b93bb718ce7bb81e7cc1e361053270cc5a36fe8a9bf452943c432a",
+    "original_execution_exit_code": 0,
+    "original_execution_timestamp": "2026-11-26T16:51:01.704Z",
+    "original_command_sha256": "4b8ca8003624402166c27ea3c20b3af65ea82666c485231fc82e7900bef5e490",
+    "verification_method": "Successful original command required no open files, then compared each pre/post rename manifest of regular-file SHA256/size, modes and symlink targets; report written after all comparisons passed",
+    "roots": 7,
+    "entries": 4208,
+    "temporary_browser_entry_counts": [
+      916,
+      916,
+      1003,
+      871
+    ],
+    "saved_profile_entries": 500,
+    "transfer_entry_counts": [
+      1,
+      1
+    ],
+    "all_original_destinations_present_now": true,
+    "home_root_webmux_entries_now": 0,
+    "private_storage_root_modes_now": {
+      ".": "0o700",
+      "profiles": "0o700",
+      "tmp": "0o700"
+    },
+    "browser_contents_published": false
+  },
+  "native_macos": {
+    "source": "2cc3a26d249f9b04e17e0a85f49466128ba47855",
+    "command": "make test",
+    "process_type": "Interactive",
+    "exit_code": 0,
+    "source_unchanged": true,
+    "receipt_sha256": "f3d450087b344e928e557dd228ebc8c90dc762efdf51b9ca83459dcf268061c6",
+    "actual_stdout_sha256": "f15aa7427c8c0c749a9d26389fcdb0a7c2b639fed62b03559cf028fd5122d6bd",
+    "actual_stderr_sha256": "028a5951b164502aad3ee51438be7b75dce0919595e129d0242c0343246d638e",
+    "actual_log_hashes_match": true,
+    "frontend_passes": 500,
+    "helper_passes": 297,
+    "e2e_passes": 1418,
+    "e2e_failures": 0,
+    "e2e_existing_skips": 22
+  },
+  "native_snap_arm64": {
+    "source": "169dc3da16e2dc7979de7145a3644046c563ba20",
+    "receipt_sha256": "45c22cccea4146f694e0cd6839f7ce1c4d7afe2c852ed9228ea09471ff32b672",
+    "actual_archive_sha256": "443417cecf8b2853fc4c123d4f9263e37651b077840d6a5621acc84d3bca32bf",
+    "actual_archive_hash_matches": true,
+    "qualification_exit_code": 0,
+    "go_top_level": {
+      "PASS": 50,
+      "FAIL": 0,
+      "SKIP": 1
+    },
+    "ui": {
+      "browser-accessible-actions.spec.ts": {
+        "exit_code": 0,
+        "passes": 1
+      },
+      "browser-profiles.spec.ts": {
+        "exit_code": 0,
+        "passes": 1
+      },
+      "browser-workspace.spec.ts": {
+        "exit_code": 0,
+        "passes": 1
+      },
+      "browser-companion.spec.ts": {
+        "exit_code": 0,
+        "passes": 7
+      }
+    },
+    "owned_home_unchanged": true,
+    "all_observed_processes_snap_enforced": true,
+    "primary_forbidden_flags": false,
+    "shutdown": "normal_powerdown",
+    "retained_inputs_unchanged": true
+  },
+  "earlier_attempts": [
+    {
+      "receipt": "gui-make-test.json",
+      "sha256": "c46917c51f724bcc04edb91c35820ad937af667c6f89a9c473e246e089fbfcdd",
+      "source": "73baf25f4e3a478c9b00950301656ada14505a74",
+      "exit_code": 2
+    },
+    {
+      "receipt": "gui-resize-make.json",
+      "sha256": "9293d1d23308607e41f256de0da369a85e013768cb3eba30da783fe87cfcabfd",
+      "source": "2cc3a26d249f9b04e17e0a85f49466128ba47855",
+      "exit_code": 2
+    },
+    {
+      "receipt": "snap-native.json",
+      "sha256": "e05da468bfd92c54b934fd162e1c199e3fd34899c86e3cb2eaab85ce57eb572f",
+      "source": "cbcaef3893d6c6cdfa45cd4e55e10d8aee6cbfad",
+      "exit_code": 1
+    },
+    {
+      "receipt": "snap-mode-fixed.json",
+      "sha256": "9b9313938e12f7a273a544be94cfb2b98fefc5f8cc7f24e4a93538a7da21dd0a",
+      "source": "cbcaef3893d6c6cdfa45cd4e55e10d8aee6cbfad",
+      "exit_code": 1
+    }
+  ],
+  "installed_operator_observation": {
+    "bundle_version": "1.4.5",
+    "binary_sha256": "2b002f34c89a32eec8721708da13884a52a5d94a313a51e3fc454c8ae841d07a",
+    "running_main_image_inode_matches_current_file": true,
+    "observation_method": "launchctl PID and exact executable text inode via lsof; no command arguments or environment published",
+    "source_revision": "unattested",
+    "deployment_or_restart_performed": false,
+    "observed_at": "2026-11-28T05:23:57.889309+00:00"
+  },
+  "scope": "Source/data relocation and native browser acceptance at the recorded revisions. This is not an installed fleet upgrade, Windows signing, external provider authentication, or complete roadmap acceptance.",
+  "current_source_comparison": {
+    "base": "a1deb5a46b8ef32e2104a54c6b619578cac52e33",
+    "native_source": "169dc3da16e2dc7979de7145a3644046c563ba20",
+    "release": "v1.4.7",
+    "files": [
+      {
+        "path": "webmux/server/internal/browser/paths.go",
+        "sha256": "e995c231cd529c4d06b777f7553a6106236360dae8efd892ed0c2ac6743b7902",
+        "native169_current_base_and_release147_identical": true
+      },
+      {
+        "path": "webmux/server/internal/browser/profile.go",
+        "sha256": "d78e6ba206a626fd1563b7f705c6b864444baaac8298f5c816cf0e2f67767966",
+        "native169_current_base_and_release147_identical": true
+      },
+      {
+        "path": "webmux/server/internal/browser/worker.go",
+        "sha256": "bb5575212b2a91efff3bb38d0dbfae9cf8f7d8a33a70b81eb8b787b904f29ff6",
+        "native169_current_base_and_release147_identical": true
+      },
+      {
+        "path": "webmux/server/internal/browser/process_exit_linux.go",
+        "sha256": "1e6f517d651540b071d1e9757196d7987dfce9c25c05b5d321d6410fd11666e7",
+        "native169_current_base_and_release147_identical": true
+      }
+    ]
+  }
+}

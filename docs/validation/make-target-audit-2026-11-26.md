@@ -214,6 +214,12 @@ directories were absent after relocation and after the complete E2E run. The
 existing operator service was left undisturbed; the source fix in PR #766 has not
 been deployed to that service.
 
+The [2026-11-28 browser-storage acceptance reconciliation](browser-storage-acceptance-2026-11-28/README.md)
+recovers the original successful relocation execution/receipt, verifies the
+actual native GUI log and Snap archive hashes, and binds the unchanged storage
+sources to current main and v1.4.7. It completes the scoped source/data acceptance
+under #763 while retaining installed-service and broader platform/roadmap limits.
+
 ## Remaining roadmap scope
 
 ### Release-control follow-up: #767 and #768
