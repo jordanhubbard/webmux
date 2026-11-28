@@ -1,5 +1,9 @@
 # Native credential hub qualification
 
+This is the historical initial checkpoint. See the
+[qualification after adversarial-review fixes](../credential-hub-review-fixes-2026-11-28/README.md)
+for the revised source and 103-control native runs.
+
 The production HTTP API ran on three distinct native machines: Linux AMD64,
 Linux ARM64 and macOS ARM64. Each machine served as the designated hub and both
 other machines consumed its granted keys. Every receipt passed all controls.

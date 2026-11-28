@@ -1,0 +1,758 @@
+{
+  "schema": "webmux.credential-hub.native-qualification.v1",
+  "source_head": "bcb5202ec6d31086926b6c2e825196aa5d4861d7",
+  "passed": true,
+  "failure": null,
+  "checks": [
+    {
+      "name": "exact-clean-source-builds",
+      "passed": true,
+      "statuses": []
+    },
+    {
+      "name": "three-independent-native-hosts",
+      "passed": true,
+      "statuses": []
+    },
+    {
+      "name": "native-os-and-architecture",
+      "passed": true,
+      "statuses": []
+    },
+    {
+      "name": "explicit-hub-setup",
+      "passed": true,
+      "statuses": [
+        204
+      ]
+    },
+    {
+      "name": "encrypted-secret-create",
+      "passed": true,
+      "statuses": [
+        200
+      ]
+    },
+    {
+      "name": "linux-arm64:ordinary-link-grant",
+      "passed": true,
+      "statuses": [
+        204
+      ]
+    },
+    {
+      "name": "linux-arm64:peer-configure",
+      "passed": true,
+      "statuses": [
+        204
+      ]
+    },
+    {
+      "name": "linux-arm64:same-connection-enrollment",
+      "passed": true,
+      "statuses": [
+        204
+      ]
+    },
+    {
+      "name": "linux-arm64:ordinary-permission-denied",
+      "passed": true,
+      "statuses": [
+        403
+      ]
+    },
+    {
+      "name": "linux-arm64:credential-enrollment-enable",
+      "passed": true,
+      "statuses": [
+        204
+      ]
+    },
+    {
+      "name": "linux-arm64:named-grant-still-required",
+      "passed": true,
+      "statuses": [
+        403
+      ]
+    },
+    {
+      "name": "linux-arm64:named-grant",
+      "passed": true,
+      "statuses": [
+        200
+      ]
+    },
+    {
+      "name": "linux-arm64:named-metadata",
+      "passed": true,
+      "statuses": [
+        200
+      ]
+    },
+    {
+      "name": "linux-arm64:metadata-is-scoped",
+      "passed": true,
+      "statuses": []
+    },
+    {
+      "name": "linux-arm64:explicit-selection",
+      "passed": true,
+      "statuses": [
+        204
+      ]
+    },
+    {
+      "name": "linux-arm64:consumer:200",
+      "passed": true,
+      "statuses": [
+        200
+      ]
+    },
+    {
+      "name": "linux-arm64:wrong-scope-denied:consumer",
+      "passed": true,
+      "statuses": [
+        403
+      ]
+    },
+    {
+      "name": "linux-arm64:wrong-scope-denied:project",
+      "passed": true,
+      "statuses": [
+        403
+      ]
+    },
+    {
+      "name": "darwin-arm64:ordinary-link-grant",
+      "passed": true,
+      "statuses": [
+        204
+      ]
+    },
+    {
+      "name": "darwin-arm64:peer-configure",
+      "passed": true,
+      "statuses": [
+        204
+      ]
+    },
+    {
+      "name": "darwin-arm64:same-connection-enrollment",
+      "passed": true,
+      "statuses": [
+        204
+      ]
+    },
+    {
+      "name": "darwin-arm64:ordinary-permission-denied",
+      "passed": true,
+      "statuses": [
+        403
+      ]
+    },
+    {
+      "name": "darwin-arm64:credential-enrollment-enable",
+      "passed": true,
+      "statuses": [
+        204
+      ]
+    },
+    {
+      "name": "darwin-arm64:named-grant-still-required",
+      "passed": true,
+      "statuses": [
+        403
+      ]
+    },
+    {
+      "name": "darwin-arm64:named-grant",
+      "passed": true,
+      "statuses": [
+        200
+      ]
+    },
+    {
+      "name": "darwin-arm64:named-metadata",
+      "passed": true,
+      "statuses": [
+        200
+      ]
+    },
+    {
+      "name": "darwin-arm64:metadata-is-scoped",
+      "passed": true,
+      "statuses": []
+    },
+    {
+      "name": "darwin-arm64:explicit-selection",
+      "passed": true,
+      "statuses": [
+        204
+      ]
+    },
+    {
+      "name": "darwin-arm64:consumer:200",
+      "passed": true,
+      "statuses": [
+        200
+      ]
+    },
+    {
+      "name": "darwin-arm64:wrong-scope-denied:consumer",
+      "passed": true,
+      "statuses": [
+        403
+      ]
+    },
+    {
+      "name": "darwin-arm64:wrong-scope-denied:project",
+      "passed": true,
+      "statuses": [
+        403
+      ]
+    },
+    {
+      "name": "enrollment-reserved-handle-budget",
+      "passed": true,
+      "statuses": [
+        200,
+        200,
+        200,
+        200
+      ]
+    },
+    {
+      "name": "enrollment-handle-budget-refused",
+      "passed": true,
+      "statuses": [
+        429
+      ]
+    },
+    {
+      "name": "darwin-arm64:consumer:200",
+      "passed": true,
+      "statuses": [
+        200
+      ]
+    },
+    {
+      "name": "enrollment-handles-remain-redeemable",
+      "passed": true,
+      "statuses": [
+        200,
+        200,
+        200,
+        200
+      ]
+    },
+    {
+      "name": "linux-arm64:foreign-receiving-account-refused",
+      "passed": true,
+      "statuses": [
+        403
+      ]
+    },
+    {
+      "name": "linux-arm64:consumer:403",
+      "passed": true,
+      "statuses": [
+        403
+      ]
+    },
+    {
+      "name": "linux-arm64:current-pin",
+      "passed": true,
+      "statuses": [
+        200
+      ]
+    },
+    {
+      "name": "linux-arm64:consumer:403",
+      "passed": true,
+      "statuses": [
+        403
+      ]
+    },
+    {
+      "name": "linux-arm64:consumer:200",
+      "passed": true,
+      "statuses": [
+        200
+      ]
+    },
+    {
+      "name": "darwin-arm64:foreign-receiving-account-refused",
+      "passed": true,
+      "statuses": [
+        403
+      ]
+    },
+    {
+      "name": "darwin-arm64:consumer:403",
+      "passed": true,
+      "statuses": [
+        403
+      ]
+    },
+    {
+      "name": "darwin-arm64:current-pin",
+      "passed": true,
+      "statuses": [
+        200
+      ]
+    },
+    {
+      "name": "darwin-arm64:consumer:403",
+      "passed": true,
+      "statuses": [
+        403
+      ]
+    },
+    {
+      "name": "darwin-arm64:consumer:200",
+      "passed": true,
+      "statuses": [
+        200
+      ]
+    },
+    {
+      "name": "handle-issue",
+      "passed": true,
+      "statuses": [
+        200
+      ]
+    },
+    {
+      "name": "wrong-recipient-redeem",
+      "passed": true,
+      "statuses": [
+        403
+      ]
+    },
+    {
+      "name": "single-use-concurrent-redeem",
+      "passed": true,
+      "statuses": [
+        200,
+        403
+      ]
+    },
+    {
+      "name": "rotation-handle-issue",
+      "passed": true,
+      "statuses": [
+        200
+      ]
+    },
+    {
+      "name": "rotate-version",
+      "passed": true,
+      "statuses": [
+        200
+      ]
+    },
+    {
+      "name": "rotated-handle-refused",
+      "passed": true,
+      "statuses": [
+        403
+      ]
+    },
+    {
+      "name": "linux-arm64:consumer:200",
+      "passed": true,
+      "statuses": [
+        200
+      ]
+    },
+    {
+      "name": "darwin-arm64:consumer:200",
+      "passed": true,
+      "statuses": [
+        200
+      ]
+    },
+    {
+      "name": "restart-handle-issue",
+      "passed": true,
+      "statuses": [
+        200
+      ]
+    },
+    {
+      "name": "restart-invalidates-handle",
+      "passed": true,
+      "statuses": [
+        403
+      ]
+    },
+    {
+      "name": "linux-arm64:consumer:200",
+      "passed": true,
+      "statuses": [
+        200
+      ]
+    },
+    {
+      "name": "darwin-arm64:consumer:200",
+      "passed": true,
+      "statuses": [
+        200
+      ]
+    },
+    {
+      "name": "nvidia-secret-create",
+      "passed": true,
+      "statuses": [
+        200
+      ]
+    },
+    {
+      "name": "linux-arm64:nvidia-grant",
+      "passed": true,
+      "statuses": [
+        200
+      ]
+    },
+    {
+      "name": "linux-arm64:nvidia-select",
+      "passed": true,
+      "statuses": [
+        204
+      ]
+    },
+    {
+      "name": "linux-arm64:consumer:200",
+      "passed": true,
+      "statuses": [
+        200
+      ]
+    },
+    {
+      "name": "linux-arm64:restore-openai-selection",
+      "passed": true,
+      "statuses": [
+        204
+      ]
+    },
+    {
+      "name": "darwin-arm64:nvidia-grant",
+      "passed": true,
+      "statuses": [
+        200
+      ]
+    },
+    {
+      "name": "darwin-arm64:nvidia-select",
+      "passed": true,
+      "statuses": [
+        204
+      ]
+    },
+    {
+      "name": "darwin-arm64:consumer:200",
+      "passed": true,
+      "statuses": [
+        200
+      ]
+    },
+    {
+      "name": "darwin-arm64:restore-openai-selection",
+      "passed": true,
+      "statuses": [
+        204
+      ]
+    },
+    {
+      "name": "expiry-handle-issue",
+      "passed": true,
+      "statuses": [
+        200
+      ]
+    },
+    {
+      "name": "expired-handle-refused",
+      "passed": true,
+      "statuses": [
+        403
+      ]
+    },
+    {
+      "name": "disable-secret",
+      "passed": true,
+      "statuses": [
+        200
+      ]
+    },
+    {
+      "name": "linux-arm64:consumer:403",
+      "passed": true,
+      "statuses": [
+        403
+      ]
+    },
+    {
+      "name": "darwin-arm64:consumer:403",
+      "passed": true,
+      "statuses": [
+        403
+      ]
+    },
+    {
+      "name": "reenable-current-version",
+      "passed": true,
+      "statuses": [
+        200
+      ]
+    },
+    {
+      "name": "independent-grant-revocation",
+      "passed": true,
+      "statuses": [
+        204
+      ]
+    },
+    {
+      "name": "linux-arm64:consumer:403",
+      "passed": true,
+      "statuses": [
+        403
+      ]
+    },
+    {
+      "name": "darwin-arm64:consumer:200",
+      "passed": true,
+      "statuses": [
+        200
+      ]
+    },
+    {
+      "name": "enrollment-handle-issue",
+      "passed": true,
+      "statuses": [
+        200
+      ]
+    },
+    {
+      "name": "reenroll-recipient",
+      "passed": true,
+      "statuses": [
+        204
+      ]
+    },
+    {
+      "name": "changed-enrollment-old-handle-refused",
+      "passed": true,
+      "statuses": [
+        403
+      ]
+    },
+    {
+      "name": "darwin-arm64:consumer:403",
+      "passed": true,
+      "statuses": [
+        403
+      ]
+    },
+    {
+      "name": "explicit-regrant",
+      "passed": true,
+      "statuses": [
+        200
+      ]
+    },
+    {
+      "name": "darwin-arm64:consumer:200",
+      "passed": true,
+      "statuses": [
+        200
+      ]
+    },
+    {
+      "name": "replace-local-binding",
+      "passed": true,
+      "statuses": [
+        204
+      ]
+    },
+    {
+      "name": "darwin-arm64:consumer:403",
+      "passed": true,
+      "statuses": [
+        403
+      ]
+    },
+    {
+      "name": "explicit-reselect",
+      "passed": true,
+      "statuses": [
+        204
+      ]
+    },
+    {
+      "name": "darwin-arm64:consumer:200",
+      "passed": true,
+      "statuses": [
+        200
+      ]
+    },
+    {
+      "name": "linux-amd64:redacted-metadata",
+      "passed": true,
+      "statuses": [
+        200
+      ]
+    },
+    {
+      "name": "linux-amd64:no-key-in-metadata",
+      "passed": true,
+      "statuses": []
+    },
+    {
+      "name": "audit-retains-grants-and-denials",
+      "passed": true,
+      "statuses": []
+    },
+    {
+      "name": "linux-arm64:redacted-metadata",
+      "passed": true,
+      "statuses": [
+        200
+      ]
+    },
+    {
+      "name": "linux-arm64:no-key-in-metadata",
+      "passed": true,
+      "statuses": []
+    },
+    {
+      "name": "darwin-arm64:redacted-metadata",
+      "passed": true,
+      "statuses": [
+        200
+      ]
+    },
+    {
+      "name": "darwin-arm64:no-key-in-metadata",
+      "passed": true,
+      "statuses": []
+    },
+    {
+      "name": "native-hub-key-custody",
+      "passed": true,
+      "statuses": []
+    },
+    {
+      "name": "linux-arm64:no-durable-key-cache",
+      "passed": true,
+      "statuses": []
+    },
+    {
+      "name": "darwin-arm64:no-durable-key-cache",
+      "passed": true,
+      "statuses": []
+    },
+    {
+      "name": "darwin-arm64:consumer:503",
+      "passed": true,
+      "statuses": [
+        503
+      ]
+    },
+    {
+      "name": "darwin-arm64:consumer:200",
+      "passed": true,
+      "statuses": [
+        200
+      ]
+    },
+    {
+      "name": "darwin-arm64:consumer:503",
+      "passed": true,
+      "statuses": [
+        503
+      ]
+    },
+    {
+      "name": "darwin-arm64:consumer:200",
+      "passed": true,
+      "statuses": [
+        200
+      ]
+    },
+    {
+      "name": "linux-arm64:consumer:503",
+      "passed": true,
+      "statuses": [
+        503
+      ]
+    },
+    {
+      "name": "darwin-arm64:consumer:503",
+      "passed": true,
+      "statuses": [
+        503
+      ]
+    },
+    {
+      "name": "delete-secret",
+      "passed": true,
+      "statuses": [
+        204
+      ]
+    },
+    {
+      "name": "darwin-arm64:consumer:403",
+      "passed": true,
+      "statuses": [
+        403
+      ]
+    }
+  ],
+  "native_hosts": [
+    {
+      "role": "linux-amd64",
+      "runtime": {
+        "arch": "amd64",
+        "build_source_head": "bcb5202ec6d31086926b6c2e825196aa5d4861d7",
+        "build_source_modified": "false",
+        "os": "linux",
+        "host_os": "linux",
+        "host_arch": "x86_64",
+        "host_id_sha256": "8c74299e1cce9e204e62f50196cda0d761e29e0b19307cc4afa31a7e61e92fdc"
+      },
+      "endpoint_sha256": "df463462c3b2faa7e75bd7db7e4e4cfceace63a0938142d0bfbf0a55344d271b",
+      "executable_sha256": "3959fdfed587d94f692bd853e96d22b8c17a822eae03893262cbde59829649d3"
+    },
+    {
+      "role": "linux-arm64",
+      "runtime": {
+        "arch": "arm64",
+        "build_source_head": "bcb5202ec6d31086926b6c2e825196aa5d4861d7",
+        "build_source_modified": "false",
+        "os": "linux",
+        "host_os": "linux",
+        "host_arch": "aarch64",
+        "host_id_sha256": "1855f8fe0e94e2f8a0b09707b3159acc0be5a9f6bb1b8fc0c2e75b662398e050"
+      },
+      "endpoint_sha256": "bea77f3390b96ca0bbb193acf57d4de8b32d5779ba7e602feaa762a70a95a7e0",
+      "executable_sha256": "94c84e8f7e33ac5aaf9cb024df2847722a9335e09c964c4f991ae738b3470a5b"
+    },
+    {
+      "role": "darwin-arm64",
+      "runtime": {
+        "arch": "arm64",
+        "build_source_head": "bcb5202ec6d31086926b6c2e825196aa5d4861d7",
+        "build_source_modified": "false",
+        "os": "darwin",
+        "host_os": "darwin",
+        "host_arch": "arm64",
+        "host_id_sha256": "635bce98abdb7be2e126652003c4d0fd1a56bfa524eed7276ccf5ae05ba5dd2b"
+      },
+      "endpoint_sha256": "5e1007f2414b47d35c889c0839da8eb0caff28bc262a7959ebcbea426086516d",
+      "executable_sha256": "c480981de148c29fdff460aa5ea3531685c2438870912c62d04d3ef5e8625b85"
+    }
+  ],
+  "scope": "Dedicated synthetic API keys and private production-API fixture instances on three distinct native hosts. No real provider login/profile, MAC/OpenShell policy, or live WebMux service changed. Provider acceptance is the explicit synthetic TLS fixture, not native OAuth portability.",
+  "cleanup": "Each exact owned fixture process was checked by executable+unique config and stopped; failed fixtures/evidence retained privately."
+}
