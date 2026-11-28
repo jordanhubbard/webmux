@@ -599,7 +599,7 @@ func (s *Server) coordinationAgent(w http.ResponseWriter, r *http.Request) {
 		if !decodeJSON(w, r, &operation) {
 			return
 		}
-		if (operation.Action == "reserve" || operation.Action == "renew-reservation" || operation.Action == "release-reservation") && r.Header.Get(coordinationclient.LeaseProtocolHeader) != "1" {
+		if plane.IsReservationAction(operation.Action) && r.Header.Get(coordinationclient.LeaseProtocolHeader) != "1" {
 			writeError(w, 428, "Update the coordination client: lease protocol 1 and current-lease checks are required")
 			return
 		}

@@ -28,6 +28,11 @@ func validateRequest(r Request) bool {
 		return r.Target != nil && validRef(*r.Target) && (r.Kind == "message" || r.Kind == "handoff") && strings.TrimSpace(r.Text) != "" && len(r.Text) <= 8192 && utf8.ValidString(r.Text) && !strings.ContainsFunc(r.Text, func(c rune) bool { return unicode.IsControl(c) && c != '\n' && c != '\t' })
 	case "delivered", "acknowledge", "complete":
 		return validHex(r.Record, 32)
+	case "enqueue-reservation":
+		_, ok := leaseDuration(r.LeaseSeconds)
+		return validText(r.Resource, 256) && ok && (r.WaitSeconds == 0 || r.WaitSeconds >= 15 && r.WaitSeconds <= 86400)
+	case "acquire-reservation", "cancel-reservation", "inspect-reservation":
+		return validText(r.Resource, 256) && validHex(r.Record, 32) && r.Fence == 0 && r.LeaseSeconds == 0 && r.WaitSeconds == 0
 	case "reserve":
 		_, ok := leaseDuration(r.LeaseSeconds)
 		return validText(r.Resource, 256) && ok
@@ -149,7 +154,7 @@ func apply(tx *bolt.Tx, actor Member, r Request, now time.Time) (Result, error) 
 		actor.Task = r.Text
 		return Result{Status: "updated"}, put(bucket(tx, "members"), actor.Ref.Key(), actor)
 	}
-	if r.Action != "release-claim" && r.Action != "release-reservation" && projectID(actor) == "" {
+	if r.Action != "release-claim" && r.Action != "release-reservation" && r.Action != "cancel-reservation" && projectID(actor) == "" {
 		return Result{Status: "project-unavailable"}, nil
 	}
 	switch r.Action {
@@ -177,7 +182,7 @@ func apply(tx *bolt.Tx, actor Member, r Request, now time.Time) (Result, error) 
 		return Result{Status: "admitted", Record: message.ID, State: "admitted"}, err
 	case "delivered", "acknowledge", "complete":
 		return receiptMessage(tx, actor, r, now)
-	case "reserve", "renew-reservation", "release-reservation":
+	case "reserve", "renew-reservation", "release-reservation", "enqueue-reservation", "acquire-reservation", "cancel-reservation", "inspect-reservation":
 		return reserveWorker(tx, actor, r, now)
 	}
 	return Result{}, ErrInvalid
@@ -297,14 +302,26 @@ func reserveWorkerAt(tx *bolt.Tx, node, owner string, actor Member, r Request, n
 	if r.Resource != resource {
 		return Result{Status: "unknown-resource"}, nil
 	}
+	if r.Action == "enqueue-reservation" || r.Action == "acquire-reservation" || r.Action == "cancel-reservation" || r.Action == "inspect-reservation" {
+		return queueWorker(tx, node, owner, actor, r, now)
+	}
 	held, exists, err := get[Reservation](bucket(tx, "reservations"), resource)
 	if err != nil {
 		return Result{}, err
 	}
 	active := exists && now.Before(held.Expires)
-	if r.Action == "reserve" {
+	if r.Action == "reserve" || r.Action == "grant-queued" {
 		if active {
 			return Result{Status: "busy", Fence: held.Fence, Expires: &held.Expires}, nil
+		}
+		if r.Action == "reserve" {
+			waiting, err := waitingWorkers(tx, node, resource, now)
+			if err != nil {
+				return Result{}, err
+			}
+			if len(waiting) > 0 {
+				return Result{Status: "busy"}, nil
+			}
 		}
 		var fence uint64
 		if raw := bucket(tx, "fences").Get([]byte(resource)); len(raw) == 8 {
@@ -318,6 +335,9 @@ func reserveWorkerAt(tx *bolt.Tx, node, owner string, actor Member, r Request, n
 		fence++
 		duration, _ := leaseDuration(r.LeaseSeconds)
 		held = Reservation{Custodian: owner, ID: digest([]byte("reserve\n" + actor.Ref.Key() + "\n" + r.ID)), Resource: resource, Actor: actor.Ref, Project: projectID(actor), Fence: fence, Expires: now.Add(duration)}
+		if r.Action == "grant-queued" {
+			held.ID = r.Record
+		}
 		if err = bucket(tx, "fences").Put([]byte(resource), sequence(fence)); err != nil {
 			return Result{}, err
 		}
@@ -330,6 +350,9 @@ func reserveWorkerAt(tx *bolt.Tx, node, owner string, actor Member, r Request, n
 		return Result{Status: "lease-lost"}, nil
 	}
 	if r.Action == "release-reservation" {
+		if err := finishQueuedWorker(tx, held.ID, "completed"); err != nil {
+			return Result{}, err
+		}
 		return Result{Status: "released", Record: held.ID, Fence: held.Fence}, bucket(tx, "reservations").Delete([]byte(resource))
 	}
 	if held.Project != projectID(actor) {

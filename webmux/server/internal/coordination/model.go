@@ -16,6 +16,7 @@ import (
 
 const Contract = "webmux-session-coordination/v1"
 const DefaultLease = 120
+const WorkerQueueContract = "webmux-worker-queue/v1"
 
 var (
 	ErrUnauthorized = errors.New("session coordination capability is invalid or inactive")
@@ -117,13 +118,23 @@ type Reservation struct {
 	Expires   time.Time `json:"expires"`
 }
 type ResourceView struct {
-	ID        string     `json:"id"`
-	Authority string     `json:"authority_node_id"`
-	Occupied  bool       `json:"occupied"`
-	Fence     uint64     `json:"fence"`
-	Expires   *time.Time `json:"expires,omitempty"`
-	Holder    *Ref       `json:"holder,omitempty"`
+	QueueContract string     `json:"queue_contract,omitempty"`
+	Capacity      int        `json:"capacity,omitempty"`
+	ID            string     `json:"id"`
+	Authority     string     `json:"authority_node_id"`
+	Occupied      bool       `json:"occupied"`
+	Fence         uint64     `json:"fence"`
+	Expires       *time.Time `json:"expires,omitempty"`
+	Holder        *Ref       `json:"holder,omitempty"`
 }
+type QueuePosition struct {
+	Ready    bool      `json:"ready"`
+	Sequence uint64    `json:"sequence"`
+	Position int       `json:"position"`
+	Deadline time.Time `json:"deadline"`
+	State    string    `json:"state"`
+}
+
 type Request struct {
 	ID           string `json:"request_id"`
 	Action       string `json:"action"`
@@ -134,8 +145,10 @@ type Request struct {
 	Record       string `json:"record_id,omitempty"`
 	Fence        uint64 `json:"fence,omitempty"`
 	LeaseSeconds int    `json:"lease_seconds,omitempty"`
+	WaitSeconds  int    `json:"wait_seconds,omitempty"`
 }
 type Result struct {
+	Queue      *QueuePosition     `json:"queue,omitempty"`
 	Shared     *SharedReservation `json:"shared_reservation,omitempty"`
 	Lease      *LeaseCheck        `json:"lease,omitempty"`
 	PeerClaims []PeerClaimCheck   `json:"peer_claim_checks,omitempty"`
