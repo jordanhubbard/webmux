@@ -1,0 +1,70 @@
+{
+  "schema": "webmux.clipboard-wrapping.investigation.v1",
+  "checked_at": "2026-11-28T06:51:15.598697+00:00",
+  "issue": 800,
+  "qualified_source": "7f9a93fde537b78fbbfbc5ceeedb2c3e9746762a",
+  "unchanged_application_base": "5c38c2ce877b11783d439cfe420694a85b9908c8",
+  "production_clipboard_changed": false,
+  "test_sha256": {
+    "tests/e2e/terminal-wrap-copy.spec.ts": "8654b22899961951d5fc512ebb4f57a75a25000844cd98489fae4f947cc41557",
+    "tests/e2e/terminal-wrap-fixture.mts": "8fbf32894af11050a152884be8570c5b7fbf2ee8ab11a3ade70726180c6d6256"
+  },
+  "focused_lineage": [
+    {
+      "label": "before-wrap-copy",
+      "exit_code": 0,
+      "log_sha256": "8c887666fbc68d9264ad1d39cee1e8a97f32ac055c18c412f432c2ef55bc28e0",
+      "meaning": "3 preliminary passes including a viewport case that did not prove actual terminal resize"
+    },
+    {
+      "label": "prewrapped-repro",
+      "exit_code": 1,
+      "log_sha256": "8fd82a8b3546d5f49b2390b2f708e70a689297d70bebba5a244dd238c08acfce",
+      "meaning": "Expected diagnostic failure: requesting logical output from deliberately CRLF-prewrapped source reproduces extra lines"
+    },
+    {
+      "label": "final-wrap-copy",
+      "exit_code": 0,
+      "log_sha256": "aa96c7343c8ae0d64bf87a8af3d9043c85e8cffaaed15b12802d148c757857d7",
+      "meaning": "3 focused passes: soft wrap live/reconnect allcopyentrypoints, app hardbreak and exact sourceOSC52"
+    }
+  ],
+  "current_gates": {
+    "make_test_exit": 0,
+    "make_lint_exit": 0,
+    "frontend_passed": 500,
+    "helpers_passed": 308,
+    "helpers_existing_skips": 3,
+    "e2e_passed": 1421,
+    "e2e_existing_skips": 22,
+    "test_log_sha256": "eefd8f22710604ac93c6a7067b578ebc8889d34250f0830554e49567fc6d021f",
+    "lint_log_sha256": "7aec2751895090b4619c1291090512ef27fda6191240521ec660890a82f04acf"
+  },
+  "native_source_evidence": {
+    "checked_at": "2026-11-28T06:41:54.075420+00:00",
+    "repository": "https://github.com/jordanhubbard/codex",
+    "commit": "00d3e8c2ac9694e5c0fa4891f198b52455a17467",
+    "sources": [
+      {
+        "path": "codex-rs/tui/src/app/resize_reflow.rs",
+        "sha256": "a45ddbe37b74cb558767b04c92e6b8694c65552d2656241dfa9f61da39c6af87",
+        "working_file_matches_commit": true
+      },
+      {
+        "path": "codex-rs/tui/src/insert_history.rs",
+        "sha256": "c48105d1db37a72a556f7c1830f95ac8538bb247b860c979bdb03cc2c8198ace",
+        "working_file_matches_commit": true
+      },
+      {
+        "path": "codex-rs/tui/src/slash_command.rs",
+        "sha256": "b143aba30511d67bc6c784165f48a008433d0a979aa53b4f2f1aef41420b7cf1",
+        "working_file_matches_commit": true
+      }
+    ],
+    "assessment": "Committed source selects terminal wraps under raw mode and pre-wrapping otherwise, inserting CRLF between rendered history rows. This is source evidence consistent with reported behavior, not an installed provider-session runtime trace."
+  },
+  "finding": "Terminal-managed soft wraps preserve logical lines in current WebMux live/reconnected copy paths. Application-emitted hard wraps reproduce extra copied lines. Source-text OSC52 preserves original bytes. Codex committed formatting policy is consistent with the report; the actual affected native session is not traced.",
+  "coverage_limit": "Controlled PTY/real browser tests on Linux x86_64; no real Codex UI conversation used. Preliminary viewport test did not prove terminal resizing and is excluded from final resize claims.",
+  "owner_deployment_limit": "Puck running WebMux bundle reports1.4.5; its source remains unattested. Development-source tests do not qualify that installed instance. No service or native owner config changed.",
+  "issue800_complete": false
+}

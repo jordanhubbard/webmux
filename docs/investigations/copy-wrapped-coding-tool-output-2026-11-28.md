@@ -62,3 +62,15 @@ commands and damage multiline code. The current WebMux tests establish its
 soft-wrap, hard-break and source-text clipboard behavior on the tested browser;
 other providers and the owner's exact native reproduction remain unverified.
 Issue #800 remains open for that provider-specific follow-up.
+
+## Qualified source and deployment boundary
+
+The final [receipt](copy-wrapped-coding-tool-output-2026-11-28.json) binds test
+source `7f9a93fde537b78fbbfbc5ceeedb2c3e9746762a`, test/fixture hashes and the
+retained diagnostic failure. Full local Make test/lint pass: Go/race, strict
+TypeScript, 500 frontend, 308 helpers/three existing skips and 1,421 E2E passes
+with 22 existing skips. This adds three copy regressions to the prior E2E set.
+
+Puck's running WebMux bundle still reports 1.4.5 and its source is unattested.
+These development-source results do not qualify that installed service. No
+installed WebMux service, Codex profile or native account was changed.
