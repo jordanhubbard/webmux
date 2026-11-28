@@ -132,6 +132,15 @@ type Broker struct {
 	activityWake       chan struct{}
 
 	nativeRecoveryJobs map[string]*nativeRecoveryJob
+
+	// uncleanExit is decided once, from the session document left by the
+	// previous process. It is not a preference and it is not cleared by a
+	// later checkpoint; this process's own marker is written separately.
+	uncleanExit       bool
+	cleanExit         bool
+	checkpointStarted bool
+	processStarted    string
+	bootID            string
 }
 
 func New(store *storage.Store, logger *slog.Logger) (*Broker, error) {
@@ -174,11 +183,12 @@ func newBroker(store *storage.Store, logger *slog.Logger, launch launchFunc) (*B
 	if logger == nil {
 		logger = slog.Default()
 	}
-	b := &Broker{store: store, logger: logger, launch: launch, entries: map[string]*entry{}, openLog: openTranscript, agents: agent.New(store, logger), policyStop: make(chan struct{})}
+	b := &Broker{store: store, logger: logger, launch: launch, entries: map[string]*entry{}, openLog: openTranscript, agents: agent.New(store, logger), policyStop: make(chan struct{}), processStarted: currentProcessStarted(), bootID: currentBootID()}
 	var saved document
 	if err := store.ReadSessions(&saved); err != nil && !errors.Is(err, os.ErrNotExist) {
 		return nil, fmt.Errorf("load terminal sessions: %w", err)
 	}
+	b.uncleanExit = uncleanPrevious(saved.Lifecycle, observeProcess(saved.Lifecycle.PID))
 	for _, s := range saved.Sessions {
 		if s.ID == "" || b.entries[s.ID] != nil {
 			return nil, errors.New("invalid or duplicate persisted session ID")
@@ -211,6 +221,10 @@ func (b *Broker) Restore() error {
 		return ErrClosed
 	}
 	b.startPolicyLocked()
+	b.startCheckpointLocked()
+	if b.uncleanExit {
+		b.logger.Warn("previous webmux exit was unclean; interrupted sessions resume from the last checkpoint")
+	}
 	for _, id := range append([]string(nil), b.order...) {
 		if b.closed {
 			return ErrClosed
@@ -1177,6 +1191,7 @@ func utf16Units(value string) int {
 }
 
 func (b *Broker) persistLocked() error {
+	b.noteProviderSessionsLocked()
 	sessions := make([]Session, 0, len(b.order))
 	tiles := []map[string]any{}
 	for _, id := range b.order {
@@ -1186,7 +1201,7 @@ func (b *Broker) persistLocked() error {
 			tiles = append(tiles, map[string]any{"session_id": s.ID, "row": s.Row, "col": s.Col})
 		}
 	}
-	if err := b.store.WriteSessions(document{sessions}); err != nil {
+	if err := b.store.WriteSessions(document{Sessions: sessions, Lifecycle: b.lifecycleLocked()}); err != nil {
 		return err
 	}
 	// Layout is a derived view. A missing layout file must not lose sessions;

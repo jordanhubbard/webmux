@@ -118,6 +118,13 @@ func New(store *storage.Store, options Options) (*Server, error) {
 	return &Server{sessionCoord: sessionCoordination{service: coordination.New(store.Home), bindings: map[string]coordinationProjectObservation{}}, usbLeases: usbforward.LeaseManager{Store: store}, restart: options.Restart, store: store, auth: service, name: options.Name, secure: options.SecureMode, webDir: options.WebDir, webFS: options.WebFS, passwordSlots: make(chan struct{}, 2), logger: logger, sessions: sessions, vnc: vnc, rdp: rdp, targets: netguard.New(os.Getenv("WEBMUX_ALLOW_LOCAL_TARGETS") == "1"), uploads: upload.New(store), ai: ai.New(options.AIEnvironment, options.AIHTTPClient), credentialVault: credentialhub.New(store.Home), peerRoots: options.PeerRoots, clientSockets: make(map[string]*clientConnection), clientFacts: make(map[string]clientSnapshot)}, nil
 }
 
+// MarkCleanShutdown records a deliberate process exit in the session
+// document. A kill, panic, or reboot skips it and the next start resumes
+// interrupted sessions from the last checkpoint.
+func (s *Server) MarkCleanShutdown() error {
+	return s.sessions.MarkCleanShutdown()
+}
+
 func (s *Server) RestoreSessions() error {
 	s.startCoordination()
 	terminalErr := s.sessions.Restore()

@@ -74,13 +74,24 @@ func (b *Broker) syncRecovery(e *entry, r *run) {
 			r.recoveryError = ""
 			b.applyRecoverySnapshotLocked(e, r, response)
 			state, control := e.value.Recovery, r.recoveryControl
-			if recording && response.Recording && state != nil && state.AutoResume && state.Activity != nil && state.Activity.Running && control != nil && control.Mode == "waiting" && r.autoAttempted != control.Instance && state.Activity.CanAutoResumeNative() && (state.Intent == nil || state.Intent.Outcome != "uncertain" && state.Intent.Outcome != "requested") {
+			// Opt-in auto-resume and an unclean death share one native resume.
+			// A waiting shell is the recovery prompt, not a live coding CLI.
+			// An active provider is left untouched. An uncertain or in-flight
+			// intent is not submitted again; a later death can resume once more.
+			optIn := state != nil && state.AutoResume
+			resumable := state != nil && state.Activity != nil && state.Activity.Running && state.Activity.CanAutoResumeNative()
+			waiting := control != nil && control.Mode == "waiting" && r.autoAttempted != control.Instance
+			intentOpen := state != nil && (state.Intent == nil || (state.Intent.Outcome != "uncertain" && state.Intent.Outcome != "requested"))
+			if recording && response.Recording && resumable && waiting && intentOpen && (optIn || b.uncleanExit) {
 				r.autoAttempted = control.Instance
 				if actionID, err := uuid(); err == nil {
 					automatic = &RecoveryRequest{ID: actionID, Revision: state.Revision, HostRevision: r.recoveryRevision, Instance: control.Instance, Kind: "native"}
 				}
 			}
 		}
+	}
+	if automatic != nil && b.uncleanExit {
+		b.logger.Info("resume interrupted session after unclean exit", "session_id", id)
 	}
 	b.mu.Unlock()
 	e.logOperation.Unlock()
