@@ -84,6 +84,34 @@ request returns its receipt. A lost response is retained as an uncertain outcome
 Automatic resume requires active logging and a recorded running native
 conversation; it never shares a transcript or replays a shell command.
 
+A kill, panic, crash, or reboot is not that preference and is not a clean
+shutdown. The same session document records a lifecycle marker: phase
+`running` with the process id, process start time, and boot id while WebMux is
+up, rewritten on each session change and about every 30 seconds. Interrupt,
+terminate, and an intentional restart record phase `clean` before exit. The
+next start treats a leftover `running` marker as an unclean exit when that
+process is gone, its start time was reused, or the boot id changed. A process
+that is still alive is not treated as killed.
+
+Only an unclean exit automatically submits the same native resume the Recover
+dialog uses. It runs only for a waiting shell whose last checkpoint has a
+running conversation with `process-state` evidence, active logging, and no
+in-flight or uncertain recovery intent. A surviving tmux session or native
+provider is reattached and left alone. A provider that is already running is
+not launched again. A clean exit keeps the manual Recover dialog, including
+the opt-in preference above.
+
+The checkpoint is the recovery record the manual path already uses, plus the
+provider identity derived from the session id (`webmux-<id>` on Unix, the
+native provider session on Windows): last command, working directory, shell
+instance, coding-CLI name, and native session id. It cannot restore a
+conversation with no resume handle. That includes a launch selector or hook
+observation without process-state evidence, a CLI WebMux cannot address with
+an exact session id, inline OpenCode settings, a finished command, a shell
+command that would have to be replayed, paused logging, and a managed seat
+whose own manager did not reattach. Retained terminal history stays available
+for a manual choice.
+
 The per-terminal logging choice survives restart. Pausing an integrated terminal
 requires host acknowledgement before capture is reported paused. Minimal control
 readiness stays available while paused, without recording new command/directory

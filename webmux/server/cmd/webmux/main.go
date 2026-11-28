@@ -332,10 +332,12 @@ func run() (resultErr error) {
 	}
 	var serveErr error
 	restarting := false
+	signaled := false
 	select {
 	case <-restartRequests:
 		restarting = true
 	case <-ctx.Done():
+		signaled = true
 	case serveErr = <-failures:
 	}
 	shutdown, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -344,6 +346,13 @@ func run() (resultErr error) {
 		if err := server.Shutdown(shutdown); err != nil {
 			_ = server.Close()
 			serveErr = errors.Join(serveErr, err)
+		}
+	}
+	// Interrupt, terminate, ErrServerClosed, and an intentional restart are
+	// clean exits. A panic skips this marker; a kill or reboot never reaches it.
+	if restarting || signaled || errors.Is(serveErr, http.ErrServerClosed) {
+		if err := api.MarkCleanShutdown(); err != nil {
+			slog.Warn("record clean shutdown", "error", err)
 		}
 	}
 	if restarting {

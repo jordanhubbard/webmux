@@ -161,5 +161,6 @@ type Patch struct {
 }
 
 type document struct {
-	Sessions []Session `yaml:"sessions"`
+	Sessions  []Session `yaml:"sessions"`
+	Lifecycle Lifecycle `yaml:"lifecycle,omitempty"`
 }

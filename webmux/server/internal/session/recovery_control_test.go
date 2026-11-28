@@ -19,7 +19,9 @@ type controlProcess struct {
 	key            string
 	revision       uint64
 	mode           string
+	survived       bool
 	actions        int
+	lastKind       string
 	actionError    string
 	actionOutcome  string
 	failPause      bool
@@ -35,6 +37,10 @@ func (p *controlProcess) RecoveryRPC(_ context.Context, request recovery.RPCRequ
 	}
 	if request.Operation == "action" || request.Operation == "restart" {
 		p.actions++
+		p.lastKind = request.Operation
+		if request.Action != nil && request.Action.Kind != "" {
+			p.lastKind = request.Action.Kind
+		}
 		if p.actionError != "" {
 			return recovery.RPCResponse{Protocol: 1, Error: p.actionError, Outcome: p.actionOutcome}
 		}
@@ -56,8 +62,12 @@ func (p *controlProcess) RecoveryRPC(_ context.Context, request recovery.RPCRequ
 	if request.Recording != nil {
 		response.Recording = *request.Recording
 	}
+	providerMode := "waiting"
+	if p.survived && p.mode != "waiting" {
+		providerMode = "ready"
+	}
 	for _, event := range []recovery.Event{
-		{Kind: "provider", Mode: "waiting", Helper: "/bin/webmux", Platform: "linux"},
+		{Kind: "provider", Mode: providerMode, Survived: p.survived, Helper: "/bin/webmux", Platform: "linux"},
 		{Kind: "command", Instance: "prior-shell", Platform: "linux", Command: "codex", Cwd: "/workspace"},
 		{Kind: "cli", Instance: "prior-shell", Platform: "linux", Cwd: "/workspace", CLI: "codex", Version: "0.167.0", SessionID: "cadc08a9-0d73-4b44-af10-084a60b44f5b", Configuration: p.configuration.Clone(), NativeEvidence: p.nativeEvidence},
 		{Kind: "control", Mode: p.mode, Helper: "/bin/webmux", Platform: "linux", Instance: instance},
