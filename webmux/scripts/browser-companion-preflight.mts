@@ -25,6 +25,27 @@ export function selectBrowserCompanion(
   return { executablePath: managedExecutable(), source: 'Playwright managed Chromium' };
 }
 
+// The runner also serves browser-free custom fixtures and CLI introspection.
+// Only the maintained default application configuration owns this companion.
+export function needsCompanionPreflight(args: string[], directory: string): boolean {
+  let config: string | undefined;
+  for (let index = 0; index < args.length; index++) {
+    const arg = args[index];
+    if (arg === '--') break;
+    if (['--list', '--help', '-h', '--version'].includes(arg)) return false;
+    if (arg === '--config' || arg === '-c') {
+      config = args[++index];
+      if (!config || config.startsWith('-')) return false; // Let Playwright diagnose invalid CLI input.
+    } else if (arg.startsWith('--config=')) {
+      config = arg.slice('--config='.length);
+      if (!config) return false;
+    } else if (arg.startsWith('-c') && arg.length > 2) {
+      config = arg.slice(2);
+    }
+  }
+  return config === undefined || [path.resolve(directory), path.resolve(directory, 'playwright.config.ts')].includes(path.resolve(directory, config));
+}
+
 // This is OS sandbox/CDP readiness, not application/profile qualification. Keep
 // the companion's normal sandbox enabled; the driver readiness check is separate.
 export async function preflightBrowserCompanion(

@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import path from 'node:path';
 import type { Browser, BrowserContext, BrowserType } from 'playwright-core';
-import { selectBrowserCompanion, preflightBrowserCompanion } from './browser-companion-preflight.mts';
+import { selectBrowserCompanion, preflightBrowserCompanion, needsCompanionPreflight } from './browser-companion-preflight.mts';
 
 const managed = () => '/managed/chrome';
 const installed = '/Applications/Chromium.app/Contents/MacOS/Chromium';
@@ -72,3 +73,17 @@ for (const scenario of ['badTitle', 'badVersion'] as const) {
     assert.deepEqual(f.counts(), { contexts: scenario === 'badTitle' ? 1 : 0, closedContexts: scenario === 'badTitle' ? 1 : 0, browserCloses: 1 });
   });
 }
+
+test('default application runs stay guarded while custom fixtures and metadata stay browser-free', () => {
+  const directory = path.resolve('application-workspace');
+  for (const args of [[], ['browser-companion.spec.ts'], ['--config', 'playwright.config.ts'],
+    ['--config=playwright.config.ts'], ['-c', '.'], ['-cplaywright.config.ts'],
+    ['--config', directory], ['--', '--list']]) {
+    assert.equal(needsCompanionPreflight(args, directory), true, JSON.stringify(args));
+  }
+  for (const args of [['--config', path.join(directory, 'custom.mts')], ['-c', 'custom.mts'],
+    ['--config=custom.mts'], ['-ccustom.mts'], ['--list'], ['--help'], ['-h'], ['--version'],
+    ['--config'], ['--config=']]) {
+    assert.equal(needsCompanionPreflight(args, directory), false, JSON.stringify(args));
+  }
+});

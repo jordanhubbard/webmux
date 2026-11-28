@@ -2,7 +2,7 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { spawnSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { selectBrowserCompanion, preflightBrowserCompanion } from './browser-companion-preflight.mts';
+import { selectBrowserCompanion, preflightBrowserCompanion, needsCompanionPreflight } from './browser-companion-preflight.mts';
 import { runWithPrivateTmux } from './private-test-tmux.mts';
 import { isolatedPlaywrightRuns, withPlaywrightOutput } from './playwright-runs.mts';
 
@@ -17,9 +17,9 @@ const childEnv: NodeJS.ProcessEnv = {
   NODE_PATH: [nodeModules, process.env.NODE_PATH].filter(Boolean).join(path.delimiter),
 };
 
-// Refuse an unusable native companion before discovery allocates any fixture.
+// Refuse an unusable default-application companion before fixture allocation.
 // Freeze the selected executable for every child; never silently substitute it.
-if (process.platform === 'linux') {
+if (process.platform === 'linux' && needsCompanionPreflight(args, webmuxDir)) {
   const selection = selectBrowserCompanion(childEnv);
   console.error('Browser companion preflight:', JSON.stringify(await preflightBrowserCompanion(selection)));
   childEnv.WEBMUX_BROWSER_EXECUTABLE = selection.executablePath;
