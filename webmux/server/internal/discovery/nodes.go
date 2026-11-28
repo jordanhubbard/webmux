@@ -32,7 +32,7 @@ type NodeOptions struct {
 	Browse        bool
 	Advertise     bool
 	Interfaces    []string
-	Host          string // Raw mDNS host hint. macOS uses the OS-authoritative Bonjour hostname.
+	Host          string // SRV target. The system mDNS responder owns this hostname and its address records.
 	HTTPPort      int    // Optional legacy HTTP listener advertisement, under the same policy.
 	Port          int
 	TLS           bool
@@ -132,16 +132,9 @@ func StartNodes(parent context.Context, o NodeOptions) (*NodeBrowser, error) {
 		cancel()
 		return nil, err
 	}
-	options := []mdns.ServerOption{mdns.WithCacheRefresh(false)}
-	address, err := nodeListenAddress(o.ListenAddress)
-	if err != nil {
+	if _, err := nodeListenAddress(o.ListenAddress); err != nil {
 		cancel()
 		return nil, err
-	}
-	// Pion otherwise chooses IPv4 first for service records, even when the
-	// application listener accepts only a specific IPv6 address.
-	if o.Advertise && !nativeNodeAnnouncements && address != nil {
-		options = append(options, mdns.WithLocalAddress(address))
 	}
 	var interfaces []net.Interface
 	if len(o.Interfaces) != 0 {
@@ -154,7 +147,6 @@ func StartNodes(parent context.Context, o NodeOptions) (*NodeBrowser, error) {
 			}
 			interfaces = append(interfaces, *iface)
 		}
-		options = append(options, mdns.WithInterfaces(interfaces...))
 	}
 	var services []mdns.ServiceInstance
 	if o.Advertise {
@@ -170,13 +162,26 @@ func StartNodes(parent context.Context, o NodeOptions) (*NodeBrowser, error) {
 			}
 		}
 	}
-	if o.Advertise && !nativeNodeAnnouncements {
-		options = append(options, mdns.WithLocalNames(svc.Host), mdns.WithResponseTTL(60))
-		for _, service := range services {
-			options = append(options, mdns.WithService(service))
+	// macOS hands the service to Bonjour and leaves the hostname alone. Other
+	// platforms publish PTR/SRV/TXT only, so Avahi is not asked to yield the host name.
+	if !nativeNodeAnnouncements {
+		var browse []string
+		if o.Browse {
+			browse = []string{NodeService}
+		}
+		b.advertiser, err = startServiceMDNS(ctx, services, interfaces, browse, 30*time.Second, func(e mdns.ServiceEvent) {
+			b.observe(e, o.ID, time.Now())
+		}, b.fail)
+		if err != nil {
+			cancel()
+			return nil, err
 		}
 	}
-	if o.Browse || !nativeNodeAnnouncements {
+	if o.Browse && nativeNodeAnnouncements {
+		options := []mdns.ServerOption{mdns.WithCacheRefresh(false)}
+		if len(interfaces) > 0 {
+			options = append(options, mdns.WithInterfaces(interfaces...))
+		}
 		v4, v6, err := multicastSockets()
 		if err != nil {
 			cancel()
@@ -203,7 +208,7 @@ func StartNodes(parent context.Context, o NodeOptions) (*NodeBrowser, error) {
 	go func() {
 		defer close(b.done)
 		defer b.closeTransports()
-		if !o.Browse {
+		if !o.Browse || b.conn == nil {
 			<-ctx.Done()
 			return
 		}

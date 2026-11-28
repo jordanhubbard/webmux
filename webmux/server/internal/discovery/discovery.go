@@ -30,31 +30,14 @@ type Endpoint struct {
 
 // Advertise publishes the actual listeners on the local network. Discovery is
 // best effort: a missing multicast network must not prevent the HTTP server
-// from starting.
+// from starting. The system mDNS responder owns the hostname; this publishes
+// PTR, SRV, and TXT records only and never claims the host name.
 func Advertise(host string, httpPort, httpsPort int, hasTLS bool) (io.Closer, error) {
-	host = strings.Split(strings.TrimSuffix(strings.TrimSuffix(host, "."), ".local"), ".")[0]
-	if host == "" || strings.ContainsAny(host, ":/") {
-		return nil, errors.New("invalid mDNS host name")
-	}
-	instance := host
-	if len(instance) > 57 {
-		instance = instance[:57]
-	}
-	conn4, conn6, err := multicastSockets()
+	services, err := listenerServices(host, httpPort, httpsPort, hasTLS)
 	if err != nil {
 		return nil, err
 	}
-	opts := []mdns.ServerOption{mdns.WithLocalNames(host + ".local")}
-	if hasTLS {
-		opts = append(opts, mdns.WithService(mdns.ServiceInstance{Instance: instance + " HTTPS", Service: secureService, Host: host + ".local.", Port: uint16(httpsPort)}))
-	}
-	opts = append(opts, mdns.WithService(mdns.ServiceInstance{Instance: instance + " HTTP", Service: clearService, Host: host + ".local.", Port: uint16(httpPort)}))
-	server, err := mdns.NewServer(packet4(conn4), packet6(conn6), opts...)
-	if err != nil {
-		closeSockets(conn4, conn6)
-		return nil, err
-	}
-	return server, nil
+	return startServiceMDNS(context.Background(), services, nil, nil, 0, nil, nil)
 }
 
 func multicastSockets() (*net.UDPConn, *net.UDPConn, error) {
@@ -169,6 +152,9 @@ func resolveDNSWithLookup(ctx context.Context, host string, allowHTTP bool, look
 }
 
 func resolveMulticast(ctx context.Context, host string, allowHTTP bool) (Endpoint, error) {
+	if !nativeNodeAnnouncements {
+		return resolveMulticastWithoutHostnameClaim(ctx, host, allowHTTP)
+	}
 	listener4, listener6, err := multicastSockets()
 	if err != nil {
 		return Endpoint{}, err
