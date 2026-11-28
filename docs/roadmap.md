@@ -102,6 +102,12 @@ open; this checkpoint does not complete any of the requirements above. A
 now passes protected browser enrollment, port migration, controller restart,
 departure/rejoin, disabled-discovery fallback and changed-node refusal within its
 recorded IPv4 fixture scope. The
+[explicit IPv6 endpoint follow-up](validation/discovery-ipv6-linux-2026-11-28/README.md)
+fixes advertisements for concrete Linux listener bindings and passes the same
+protected application lifecycle and changed-identity refusal for native IPv6
+endpoints on a dual-stack LAN, with default IPv4 regression coverage. IPv6-only
+networks, scoped link-local behavior, other native platforms and the complete
+workflow remain open. The
 [built-in coordination checkpoint](session-coordination.md) adds a durable
 node-local ledger and scoped ordinary-session CLI. Real-agent onboarding,
 managed/SSH interfaces and cross-node coordination still require implementation
