@@ -278,7 +278,7 @@ func run() (resultErr error) {
 			if certificate != nil {
 				tlsPort = listeners[1].Addr().(*net.TCPAddr).Port
 			}
-			api.StartNodeDiscovery(host, httpListener.Addr().(*net.TCPAddr).Port, tlsPort)
+			api.StartNodeDiscovery(host, httpListener.Addr().(*net.TCPAddr).Port, tlsPort, httpListener.Addr().(*net.TCPAddr).IP.String())
 		}
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)

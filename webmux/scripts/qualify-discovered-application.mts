@@ -203,7 +203,9 @@ print(json.dumps({'root':r,'port':port}))`)) as { root: string; port: number };
   expect(login.status).toBe(200);token=(await login.json() as {token:string}).token;
   expect((await fetch(controllerURL+'/api/discovered-nodes')).status).toBe(401);
   let observed: Candidate | undefined;
-  await expect.poll(async()=>{const r=await api('/discovered-nodes');expect(r.status).toBe(200);const view=await r.json() as {candidates:Candidate[]};observed=view.candidates.find(c=>c.claimed_id===nodeID&&c.port===tlsPort&&c.address===localBind&&c.tls);return !!observed;},{timeout:8000,intervals:[100,200,500]}).toBe(true);
+  const initialCandidates: { observedAt: string; candidates: Candidate[] }[] = [];
+  receipt.initialCandidates = initialCandidates;
+  await expect.poll(async()=>{const r=await api('/discovered-nodes');expect(r.status).toBe(200);const view=await r.json() as {candidates:Candidate[]};initialCandidates.push({observedAt:new Date().toISOString(),candidates:view.candidates.filter(c=>c.claimed_id===nodeID)});observed=view.candidates.find(c=>c.claimed_id===nodeID&&c.port===tlsPort&&c.address===localBind&&c.tls);return !!observed;},{timeout:8000,intervals:[100,200,500]}).toBe(true);
   expect((await directory()).servers).toEqual([]);
   passed(`actual Linux ARM64 application discovers ${receiverLabel} HTTPS application without enrolling it`);
   const diagnostic=remote(`import os,sys,json,pathlib,subprocess,hashlib

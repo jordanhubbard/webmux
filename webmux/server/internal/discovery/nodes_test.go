@@ -209,3 +209,23 @@ func TestNodeMulticastRoundTrip(t *testing.T) {
 		}
 	}
 }
+
+func TestNodeListenAddressMatchesActualBinding(t *testing.T) {
+	for _, value := range []string{"", "0.0.0.0", "::", "::ffff:0.0.0.0"} {
+		address, err := nodeListenAddress(value)
+		if err != nil || address != nil {
+			t.Fatalf("wildcard %q: %v, %v", value, address, err)
+		}
+	}
+	for value, want := range map[string]string{"192.0.2.10": "192.0.2.10", "2001:db8::10": "2001:db8::10", "fd00::10": "fd00::10", "::ffff:192.0.2.10": "192.0.2.10"} {
+		address, err := nodeListenAddress(value)
+		if err != nil || address.String() != want {
+			t.Fatalf("explicit %q: %v, %v", value, address, err)
+		}
+	}
+	for _, value := range []string{"builder.local", "garbage", "::1", "127.0.0.1", "224.0.0.251", "ff02::fb", "fe80::1", "fe80::1%eth0"} {
+		if _, err := nodeListenAddress(value); err == nil {
+			t.Fatalf("accepted invalid explicit address %q", value)
+		}
+	}
+}

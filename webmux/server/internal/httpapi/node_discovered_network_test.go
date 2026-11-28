@@ -32,7 +32,7 @@ func startNetworkDiscoveryAdvertiser(s *Server, port int) error {
 	if err != nil {
 		return err
 	}
-	s.StartNodeDiscovery(host, 0, port)
+	s.StartNodeDiscovery(host, 0, port, "")
 	if s.nodes == nil || s.nodeDiscoveryError != "" {
 		return fmt.Errorf("owned native advertisement did not start: %s", s.nodeDiscoveryError)
 	}
@@ -71,7 +71,7 @@ func qualifyDiscoveredEnrollment(t *testing.T, secret string, manifest nodeNetwo
 	if err != nil {
 		t.Fatal(err)
 	}
-	a.StartNodeDiscovery(host, port, 0)
+	a.StartNodeDiscovery(host, port, 0, "")
 	if a.nodes == nil || a.nodeDiscoveryError != "" {
 		t.Fatal("production discovery did not start", a.nodeDiscoveryError)
 	}
