@@ -388,18 +388,26 @@ sys.stdout.write(result.stdout);sys.stderr.write(result.stderr);sys.exit(result.
     duplicateEvidence.departedAt = new Date().toISOString();
     await stop(duplicateProcess); duplicateProcess = undefined;
     const snapshots: unknown[] = []; duplicateEvidence.departureSnapshots = snapshots;
+    const continuityFailures: string[] = []; duplicateEvidence.continuityFailures = continuityFailures;
     // Same departure bound: a cache can refresh the 90-second candidate lifetime.
     await expect.poll(async () => {
-      const response = await api('/discovered-nodes'); expect(response.status).toBe(200);
-      const view = await response.json() as { started:boolean; error:string; candidates:Candidate[] };
-      expect(view.started).toBe(true); expect(view.error).toBe('');
-      const owned = view.candidates.filter(c => c.claimed_id === nodeID || c.claimed_id === duplicateID);
-      expect(owned.some(c => c.claimed_id === nodeID && c.port === tlsPort)).toBe(true);
-      expect((await directory()).servers).toEqual([enrolled]);
-      expect((await api(`/servers/${enrolled.id}/sessions`)).status).toBe(200);
-      snapshots.push({ observedAt:new Date().toISOString(), candidates:owned });
-      return owned.filter(c => c.claimed_id === duplicateID).length;
+      try {
+        const response = await api('/discovered-nodes'); expect(response.status).toBe(200);
+        const view = await response.json() as { started:boolean; error:string; candidates:Candidate[] };
+        expect(view.started).toBe(true); expect(view.error).toBe('');
+        const owned = view.candidates.filter(c => c.claimed_id === nodeID || c.claimed_id === duplicateID);
+        expect(owned.some(c => c.claimed_id === nodeID && c.port === tlsPort)).toBe(true);
+        expect((await directory()).servers).toEqual([enrolled]);
+        expect((await api(`/servers/${enrolled.id}/sessions`)).status).toBe(200);
+        snapshots.push({ observedAt:new Date().toISOString(), candidates:owned });
+        return owned.filter(c => c.claimed_id === duplicateID).length;
+      } catch (error) {
+        continuityFailures.push(error instanceof Error ? error.message : String(error));
+        throw error;
+      }
     }, { timeout:185_000, intervals:[1000] }).toBe(0);
+    // Polling retries thrown assertions; expiry must not conceal an outage.
+    expect(continuityFailures).toEqual([]);
     duplicateEvidence.expiredAt = new Date().toISOString();
     duplicateEvidence.primaryStayedDiscoveredAndAuthorized = true;
     passed('departed duplicate expires independently while the live primary stays discovered, uniquely enrolled and authorized');
