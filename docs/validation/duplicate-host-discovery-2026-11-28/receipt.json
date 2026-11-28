@@ -1,0 +1,203 @@
+{
+  "schema": "webmux.discovery.duplicate-host.acceptance.v1",
+  "checked_at": "2026-11-28T06:18:47.522727+00:00",
+  "qualified_source": "02bb515b71007b9f956b39eae504b801d7eab9a3",
+  "qualifier_sha256": "745935d9ec04f870e3be552c6c0ca7793dae6bbd3e9c709aac67648c83ca1b5c",
+  "scope": "Two protected Linux x86_64 receiver processes on one physical host sharing its hostname, and an independent native Linux ARM64 controller. IPv4/IPv6 on a dual-stack LAN. Not conflicting same-name hosts, forged DNS packets, installed services or complete MAC/agent workflow.",
+  "duplicate_cases": [
+    {
+      "label": "continuity-ipv4",
+      "source": "02bb515b71007b9f956b39eae504b801d7eab9a3",
+      "passed": true,
+      "checks": 7,
+      "ip_family": 4,
+      "binary_sha256": {
+        "receiver": "b6abd24b9ae7fe179f2fa6c094840cc51d2f5e7accf9864ef34a50533e4dba53",
+        "controller": "d70c657b7f592ec8227fc8634a7755f65cd7bb305df2ec0439cd08cfc4bc8915"
+      },
+      "tracked_source_count": 1976,
+      "tracked_sources_sha256": "f5e1c985547bbaf88150351543e7a863cadbfe262d07696d2cdc08aeded46860",
+      "same_hostname": true,
+      "separate_node_ids": 2,
+      "separate_tls_public_keys": true,
+      "tls_public_key_sha256": [
+        "b9875b2306f8bc3d8d9a24dd2491dc69e4aa6ab4aca0358415dcfd64d5811000",
+        "f0815bf146796c713638af8265736ff6659a2494a8fd559beaf4d0f2f91ce755"
+      ],
+      "prefill_does_not_enroll_or_supply_credential": true,
+      "no_automatic_enrollment": true,
+      "unauthenticated_session_statuses": [
+        401,
+        401
+      ],
+      "only_explicit_primary_enrolled": true,
+      "continuity_failures": [],
+      "departure_observations": 88,
+      "primary_present_in_every_observation": true,
+      "duplicate_absent_in_final_observation": true,
+      "expiry_seconds": 89.069,
+      "private_receipt_sha256": "268543486c5adc9fe0a4e8b39183f96cfa7b8c508e0514db565383fd1ce43080",
+      "private_log_sha256": "2312c9a583b56d22e20d158dcae0f2cd22378dc5cee7f9b2cbc6482b26bc6229",
+      "cleanup": [
+        "completed",
+        "completed",
+        "completed",
+        "completed"
+      ]
+    },
+    {
+      "label": "continuity-ipv6",
+      "source": "02bb515b71007b9f956b39eae504b801d7eab9a3",
+      "passed": true,
+      "checks": 7,
+      "ip_family": 6,
+      "binary_sha256": {
+        "receiver": "b6abd24b9ae7fe179f2fa6c094840cc51d2f5e7accf9864ef34a50533e4dba53",
+        "controller": "d70c657b7f592ec8227fc8634a7755f65cd7bb305df2ec0439cd08cfc4bc8915"
+      },
+      "tracked_source_count": 1976,
+      "tracked_sources_sha256": "f5e1c985547bbaf88150351543e7a863cadbfe262d07696d2cdc08aeded46860",
+      "same_hostname": true,
+      "separate_node_ids": 2,
+      "separate_tls_public_keys": true,
+      "tls_public_key_sha256": [
+        "74df6be6f6910ef6e130122068c1de9bdd27ff1d056cca3b35becd587b9abf0f",
+        "2cbc15dc26b17e364cef2125421480659d5be5b3cf14aa32fdc9292a9f603b69"
+      ],
+      "prefill_does_not_enroll_or_supply_credential": true,
+      "no_automatic_enrollment": true,
+      "unauthenticated_session_statuses": [
+        401,
+        401
+      ],
+      "only_explicit_primary_enrolled": true,
+      "continuity_failures": [],
+      "departure_observations": 88,
+      "primary_present_in_every_observation": true,
+      "duplicate_absent_in_final_observation": true,
+      "expiry_seconds": 89.237,
+      "private_receipt_sha256": "3f24a751fb90071cd635f81d801ba401ab7f420ff81391a499c060f3a024cafc",
+      "private_log_sha256": "3c4f2f1c03aabfe4c8a108400679f61faa1187b5c7cfad9eb1ebd814271a2a92",
+      "cleanup": [
+        "completed",
+        "completed",
+        "completed",
+        "completed"
+      ]
+    }
+  ],
+  "existing_regressions": [
+    {
+      "label": "baseline-lifecycle-ipv4",
+      "source": "02bb515b71007b9f956b39eae504b801d7eab9a3",
+      "command_exit": 0,
+      "admitted_expected_outcome": true,
+      "checks": [
+        "actual Linux ARM64 application discovers Linux x86_64 HTTPS application without enrolling it",
+        "native direct TLS connection reaches the selected IPv4 receiver endpoint",
+        "human browser configures the discovered HTTPS endpoint and explicitly verifies node/account identity",
+        "actual receiver restart and changed port migrate in the controller background without an open browser",
+        "actual controller restart retains verified peer identity and migrated endpoint",
+        "departed receiver expires from discovery while its verified configured peer remains retained and unreachable",
+        "same receiver rejoins discovery with its retained identity and no duplicate enrollment",
+        "normal policy restart disables browsing while the verified configured peer remains accessible"
+      ],
+      "specific_changed_identity_refusal": false,
+      "verification_status": 204,
+      "unchanged_sources": true,
+      "cleanup": [
+        "completed",
+        "completed",
+        "completed"
+      ],
+      "private_receipt_sha256": "15976d7f673243beb20961d7cd7c9e5e2af980da2f8db5c0aea51ba65d4069a2",
+      "private_log_sha256": "c63eda4a60e740205838d476c4077e1eb4294a1662218ea8fce99f6f4ddbfb44"
+    },
+    {
+      "label": "baseline-negative-ipv6",
+      "source": "02bb515b71007b9f956b39eae504b801d7eab9a3",
+      "command_exit": 1,
+      "admitted_expected_outcome": true,
+      "checks": [
+        "actual Linux ARM64 application discovers Linux x86_64 HTTPS application without enrolling it",
+        "native direct TLS connection reaches the selected IPv6 receiver endpoint"
+      ],
+      "specific_changed_identity_refusal": true,
+      "verification_status": 502,
+      "unchanged_sources": true,
+      "cleanup": [
+        "completed",
+        "completed",
+        "completed"
+      ],
+      "private_receipt_sha256": "08288cd0b52d9bb3d40fed8eafaa6e6245e8f6e20c35293f4a1b2de4d1ee26e1",
+      "private_log_sha256": "d51f9ec3189a03688a55860f3654546b923211dcf8b696525a4920a81da1636a"
+    }
+  ],
+  "quality": {
+    "source": "02bb515b71007b9f956b39eae504b801d7eab9a3",
+    "commands": [
+      {
+        "command": "make test (disposable test keyring)",
+        "exit_code": 0,
+        "log_sha256": "06b5f50a06f6f70ce098051351b48cc1fc6b092ea90672d5ecbe8c4c9ef82437"
+      },
+      {
+        "command": "make lint",
+        "exit_code": 0,
+        "log_sha256": "29034324e0ca36faf0abf8566ac2079875365e090420a40d388b8f7dfa7854a6"
+      }
+    ],
+    "scope": "Complete unchanged repository Make test/lint; existing opt-in/platform skips keep their requirements. No hosted whole-source/platform claim.",
+    "frontend_passed": 500,
+    "helpers_passed": 308,
+    "helpers_existing_skips": 3,
+    "e2e_passed": 1418,
+    "e2e_existing_skips": 22
+  },
+  "mode_admission": {
+    "source": "02bb515b71007b9f956b39eae504b801d7eab9a3",
+    "controls": [
+      {
+        "incompatible_mode": "--lifecycle",
+        "exit_code": 1,
+        "expected_refusal": true,
+        "output_created": false
+      },
+      {
+        "incompatible_mode": "--changed-node-proof",
+        "exit_code": 1,
+        "expected_refusal": true,
+        "output_created": false
+      },
+      {
+        "incompatible_mode": "--manual-peer-fallback",
+        "exit_code": 1,
+        "expected_refusal": true,
+        "output_created": false
+      }
+    ],
+    "original_remote_python_payloads": 9,
+    "all_original_remote_payload_bytes_unchanged": true,
+    "qualifier_sha256": "745935d9ec04f870e3be552c6c0ca7793dae6bbd3e9c709aac67648c83ca1b5c"
+  },
+  "independent_cleanup": {
+    "checked_at": "2026-11-28T06:13:22.990403+00:00",
+    "method": "Independent exact /proc argv0 equality; final and preliminary owned fixture paths; no termination",
+    "rows": [
+      {
+        "role": "receivers",
+        "owned_image_paths": 6,
+        "remaining_pids": []
+      },
+      {
+        "role": "controllers",
+        "owned_image_paths": 6,
+        "remaining_pids": []
+      }
+    ]
+  },
+  "review_tightening": "Preliminary source4c16010 runs are retained privately. Final source retains every thrown continuity assertion/transport failure; polling cannot erase a primary outage before expiry. Both families were rerun at the final source.",
+  "issue631_complete": false,
+  "installed_service_or_account_changes": false
+}

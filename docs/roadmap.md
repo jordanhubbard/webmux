@@ -113,6 +113,11 @@ passes explicit HTTPS configuration and retained identity through both controlle
 and receiver restarts with native IPv4/IPv6 discovery initialization failures,
 including independent zero-UDP-socket checks. This is an absent-interface failure
 on a working LAN; isolated-network and complete workflow acceptance remain open. The
+[duplicate-host follow-up](validation/duplicate-host-discovery-2026-11-28/README.md)
+qualifies distinct untrusted receiver instances sharing one hostname, explicit
+primary-only enrollment and independent stale-duplicate expiry on native Linux
+IPv4/IPv6. It retains the remaining platform, forged-announcement and complete
+workflow requirements. The
 [built-in coordination checkpoint](session-coordination.md) adds a durable
 node-local ledger and scoped ordinary-session CLI. Real-agent onboarding,
 managed/SSH interfaces and cross-node coordination still require implementation

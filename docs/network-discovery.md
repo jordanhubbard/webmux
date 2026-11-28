@@ -188,6 +188,14 @@ reported error, empty candidate set and zero owned UDP sockets. This is a real
 initialization failure on a working LAN, not multicast filtering or isolated-network
 acceptance. Both follow-ups retain the full #631/#664 scope and platform limits.
 
+The [duplicate-host native qualification](validation/duplicate-host-discovery-2026-11-28/README.md)
+adds two actual receiver instances with one shared hostname and distinct node IDs,
+observed by an independent Linux ARM64 controller. IPv4/IPv6 cases preserve
+untrusted candidate separation, empty credential prefill, explicit primary
+identity enrollment and independent duplicate expiry while the primary remains
+available. Conflicting same-name hosts, forged DNS packets and complete workflow
+acceptance remain separate.
+
 Deterministic tests cover malformed/foreign/self announcements, duplicate TXT
 keys, unrelated service/domain, credential metadata refusal, invalid endpoints,
 unscoped IPv6, address multiplicity, expiry/refresh, concurrent bounded snapshots,

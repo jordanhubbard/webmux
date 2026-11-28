@@ -17,6 +17,7 @@ const { values } = parseArgs({ options: {
   'local-interface': { type: 'string' }, 'remote-interface': { type: 'string' },
   'ip-family': { type: 'string' },
   'manual-peer-fallback': { type: 'boolean', default: false },
+  'duplicate-host': { type: 'boolean', default: false },
   'changed-node-proof': { type: 'boolean', default: false },
   lifecycle: { type: 'boolean', default: false },
 } });
@@ -28,6 +29,10 @@ if (!output || !path.isAbsolute(output) || !peer || !/^[a-zA-Z0-9][a-zA-Z0-9._-]
 }
 const ipFamily = discoveryFixtureFamily(values['ip-family'], localBind, remoteBind);
 const manualPeerFallback = values['manual-peer-fallback'];
+const duplicateHost = values['duplicate-host'];
+if (duplicateHost && (manualPeerFallback || values.lifecycle || values['changed-node-proof'])) {
+  throw new Error('Duplicate-host qualification is a separate scenario; do not combine it with other scenario modes');
+}
 if (manualPeerFallback && (values.lifecycle || values['changed-node-proof'])) {
   throw new Error('Manual-peer fallback is a separate scenario; do not combine it with lifecycle or changed-node proof');
 }
@@ -66,12 +71,15 @@ const receipt: Record<string, unknown> = { passed: false, revision, sourcesBefor
   changedNodeProof: values['changed-node-proof'],
   lifecycle: values.lifecycle,
   manualPeerFallback,
+  duplicateHost,
   ipFamily,
   scope: 'Actual protected cmd/webmux processes and browser enrollment; isolated homes and process-local Linux fixture certificate trust. Not installed-service, OS trust or real-agent/MAC acceptance.' };
 const passed = (name: string) => { checks.push(name); console.log(`PASS ${name}`); };
 const fallbackSnapshots: unknown[] = [];
 const fallbackEvidence: Record<string, unknown> = { snapshots: fallbackSnapshots };
 if (manualPeerFallback) receipt.manualPeerFallbackEvidence = fallbackEvidence;
+const duplicateEvidence: Record<string, unknown> = {};
+if (duplicateHost) receipt.duplicateHostEvidence = duplicateEvidence;
 const unavailableDiscoveryMessage = 'Network discovery unavailable; manually configured peers remain available';
 function child(program: string, args: string[], log: string, env = process.env) {
   const fd = fs.openSync(path.join(output!, log), 'a', 0o600);
@@ -100,7 +108,7 @@ type Candidate = { claimed_id: string; host: string; address: string; port: numb
 const localHome = path.join(output, 'receiver-home');
 const receiverImage = path.join(output, 'receiver-webmux');
 const controllerImage = path.join(output, 'controller-webmux');
-let remoteRoot = '', localProcess: ChildProcess | undefined, remoteProcess: ChildProcess | undefined, tunnel: ChildProcess | undefined;
+let remoteRoot = '', localProcess: ChildProcess | undefined, duplicateProcess: ChildProcess | undefined, remoteProcess: ChildProcess | undefined, tunnel: ChildProcess | undefined;
 let browser: Awaited<ReturnType<typeof chromium.launch>> | undefined;
 let token = '', controllerURL = '';
 const localEnv: NodeJS.ProcessEnv = Object.fromEntries(['PATH','HOME','TMPDIR','LANG','TZ'].flatMap(k => process.env[k] ? [[k, process.env[k]]] : []));
@@ -217,6 +225,9 @@ print(json.dumps({'root':r,'port':port}))`)) as { root: string; port: number };
   const httpPort = await freePort(localBind), tlsPort = await freePort(localBind), movedPort = await freePort(localBind), forward = await freePort('127.0.0.1');
   const password = randomBytes(24).toString('hex'), grant = randomBytes(32).toString('hex');
   const nodeID = randomBytes(16).toString('hex'), controllerID = randomBytes(16).toString('hex');
+  const duplicateID = duplicateHost ? randomBytes(16).toString('hex') : '';
+  expect(new Set([nodeID, controllerID, ...(duplicateHost ? [duplicateID] : [])]).size).toBe(duplicateHost ? 3 : 2);
+  let duplicatePort = 0, duplicateHTTP = 0;
   const auth = yaml.dump({ auth: { mode: 'local', users: [{ username: 'qualifier', password_hash: await argon2.hash(password), admin: true }] } });
   const defaults = Object.fromEntries(fs.readdirSync(path.join(root, 'webmux/config.defaults'), { withFileTypes: true }).filter(e => e.isFile()).map(e => [e.name,fs.readFileSync(path.join(root,'webmux/config.defaults',e.name),'utf8')]));
   const app = (bind: string, http: number, tls: number) => {
@@ -237,6 +248,25 @@ print(json.dumps({'root':r,'port':port}))`)) as { root: string; port: number };
     'node-discovery.yaml':yaml.dump({version:1,id:controllerID,browse:true,advertise:false,interfaces:manualPeerFallback?[unavailableInterface]:values['remote-interface']?[values['remote-interface']]:[]}),
     'servers.yaml':yaml.dump({version:1,servers:[],grants:[]})},env:{} };
   const launchRemote = () => { const p=child('ssh',[...sshArgs,peer,'python3 -c '+quote(launcher)],'controller-ssh.log');p.stdin!.end(JSON.stringify(payload));return p; };
+  if (duplicateHost) {
+    const duplicateHome = path.join(output, 'duplicate-home');
+    duplicateHTTP = await freePort(localBind); duplicatePort = await freePort(localBind);
+    fs.mkdirSync(path.join(duplicateHome, 'config/tls'), { recursive: true, mode: 0o700 });
+    // Independent TLS key and node ID. Only the hostname/display hint is shared.
+    run('openssl', ['req','-x509','-newkey','rsa:2048','-nodes','-days','1','-config',certConfig,
+      '-keyout',path.join(duplicateHome,'config/tls/key.pem'),'-out',path.join(duplicateHome,'config/tls/cert.pem')]);
+    const files = { ...receiverFiles, 'app.yaml': app(localBind,duplicateHTTP,duplicatePort),
+      'node-discovery.yaml':yaml.dump({version:1,id:duplicateID,browse:false,advertise:true,interfaces:values['local-interface']?[values['local-interface']]:[]}),
+      'servers.yaml':yaml.dump({version:1,servers:[],grants:[]}) };
+    for (const [name,text] of Object.entries(files)) fs.writeFileSync(path.join(duplicateHome,'config',name),text,{mode:0o600});
+    const duplicateEnv: NodeJS.ProcessEnv = { ...localEnv, WEBMUX_HOME: duplicateHome };
+    delete duplicateEnv.NATIVE_APP_GRANT;
+    duplicateProcess = child(receiverImage, [], 'duplicate-receiver.log', duplicateEnv);
+    duplicateEvidence.claimedIDs = [nodeID, duplicateID];
+    duplicateEvidence.distinctTLSCertificates = sha(fs.readFileSync(path.join(localHome,'config/tls/cert.pem')))
+      !== sha(fs.readFileSync(path.join(duplicateHome,'config/tls/cert.pem')));
+    expect(duplicateEvidence.distinctTLSCertificates).toBe(true);
+  }
   localProcess=child(receiverImage,[],'receiver.log',localEnv);
   remoteProcess=launchRemote();
   controllerURL=`http://127.0.0.1:${forward}`;
@@ -281,6 +311,35 @@ sys.stdout.write(result.stdout);sys.stderr.write(result.stderr);sys.exit(result.
   await page.getByRole('group',{name:'WebMux cluster'}).getByRole('button',{name:'Manage servers',exact:true}).click();
   const manager=page.getByRole('dialog',{name:'Manage servers'});
   const manualURL = 'https://' + fixtureHostPort(localBind, tlsPort);
+  if (duplicateHost) {
+    let pair: Candidate[] = [];
+    await expect.poll(async () => {
+      const response = await api('/discovered-nodes'); expect(response.status).toBe(200);
+      const view = await response.json() as { candidates: Candidate[] };
+      pair = view.candidates.filter(c => c.address === localBind && c.tls
+        && ((c.claimed_id === nodeID && c.port === tlsPort) || (c.claimed_id === duplicateID && c.port === duplicatePort)));
+      return pair.length;
+    }, { timeout: 8000, intervals: [100,200,500] }).toBe(2);
+    expect(pair[0].host).toBe(pair[1].host);
+    expect(new Set(pair.map(c => c.claimed_id)).size).toBe(2);
+    expect((await directory()).servers).toEqual([]);
+    duplicateEvidence.initialPair = pair;
+    duplicateEvidence.noAutomaticEnrollment = true;
+    for (const port of [httpPort, duplicateHTTP]) {
+      const response = await fetch('http://' + fixtureHostPort(localBind,port) + '/api/sessions', { signal: AbortSignal.timeout(5000) });
+      expect(response.status).toBe(401);
+    }
+    duplicateEvidence.unauthenticatedSessionStatuses = [401,401];
+    const duplicateCandidate = manager.locator('section').filter({hasText:duplicateID}).filter({hasText:`${localBind}:${duplicatePort}`});
+    await expect(duplicateCandidate).toHaveCount(1);
+    await duplicateCandidate.getByRole('button',{name:`Configure connection to ${pair[0].host}`,exact:true}).click();
+    await expect(manager.getByLabel('Server URL',{exact:true})).toHaveValue(`https://${pair[0].host}:${duplicatePort}`);
+    await expect(manager.getByLabel('Credential',{exact:true})).toHaveValue('');
+    expect((await directory()).servers).toEqual([]);
+    await manager.getByRole('button',{name:'Cancel',exact:true}).click();
+    duplicateEvidence.configurePrefillDoesNotEnrollOrSupplyCredential = true;
+    passed('two real receivers sharing one hostname stay distinct and untrusted; discovery prefill supplies no credential or enrollment');
+  }
   if (manualPeerFallback) {
     await expect(manager.getByRole('status').filter({ hasText: unavailableDiscoveryMessage })).toBeVisible();
     await manager.getByRole('button', { name: 'Add server', exact: true }).click();
@@ -323,6 +382,36 @@ sys.stdout.write(result.stdout);sys.stderr.write(result.stderr);sys.exit(result.
   expect((await api(`/servers/${enrolled.id}/sessions`)).status).toBe(200);
   passed(manualPeerFallback ? 'human browser manually configures the HTTPS endpoint with unavailable discovery and verifies node/account identity' : 'human browser configures the discovered HTTPS endpoint and explicitly verifies node/account identity');
   await page.screenshot({path:path.join(output,'enrolled.png'),fullPage:true});await browser.close();browser=undefined;
+  if (duplicateHost) {
+    expect((await directory()).servers).toEqual([enrolled]);
+    duplicateEvidence.onlyExplicitPrimaryEnrolled = true;
+    duplicateEvidence.departedAt = new Date().toISOString();
+    await stop(duplicateProcess); duplicateProcess = undefined;
+    const snapshots: unknown[] = []; duplicateEvidence.departureSnapshots = snapshots;
+    const continuityFailures: string[] = []; duplicateEvidence.continuityFailures = continuityFailures;
+    // Same departure bound: a cache can refresh the 90-second candidate lifetime.
+    await expect.poll(async () => {
+      try {
+        const response = await api('/discovered-nodes'); expect(response.status).toBe(200);
+        const view = await response.json() as { started:boolean; error:string; candidates:Candidate[] };
+        expect(view.started).toBe(true); expect(view.error).toBe('');
+        const owned = view.candidates.filter(c => c.claimed_id === nodeID || c.claimed_id === duplicateID);
+        expect(owned.some(c => c.claimed_id === nodeID && c.port === tlsPort)).toBe(true);
+        expect((await directory()).servers).toEqual([enrolled]);
+        expect((await api(`/servers/${enrolled.id}/sessions`)).status).toBe(200);
+        snapshots.push({ observedAt:new Date().toISOString(), candidates:owned });
+        return owned.filter(c => c.claimed_id === duplicateID).length;
+      } catch (error) {
+        continuityFailures.push(error instanceof Error ? error.message : String(error));
+        throw error;
+      }
+    }, { timeout:185_000, intervals:[1000] }).toBe(0);
+    // Polling retries thrown assertions; expiry must not conceal an outage.
+    expect(continuityFailures).toEqual([]);
+    duplicateEvidence.expiredAt = new Date().toISOString();
+    duplicateEvidence.primaryStayedDiscoveredAndAuthorized = true;
+    passed('departed duplicate expires independently while the live primary stays discovered, uniquely enrolled and authorized');
+  }
   if (!manualPeerFallback) {
     await stop(localProcess);localProcess=undefined;
     fs.writeFileSync(path.join(localHome,'config/app.yaml'),app(localBind,httpPort,movedPort));
@@ -438,7 +527,7 @@ print(json.dumps(owned))`, { root: remoteRoot }));
   if(browser)try{await browser.contexts()[0]?.pages()[0]?.screenshot({path:path.join(output,'failure.png'),fullPage:true});}catch{receipt.failureScreenshotUnavailable=true;}
   throw error;
 } finally {
-  const cleanup=await Promise.allSettled([browser?.close(),stop(localProcess),stopRemote()]);
+  const cleanup=await Promise.allSettled([browser?.close(),stop(localProcess),stopRemote(),...(duplicateHost ? [stop(duplicateProcess)] : [])]);
   receipt.cleanup=cleanup.map(r=>r.status==='fulfilled'?'completed':String(r.reason));
   await stop(tunnel);
   if(remoteRoot)try{fs.writeFileSync(path.join(output,'controller.log'),remote(`import pathlib,sys,json;print((pathlib.Path(json.load(sys.stdin)['root'])/'server.log').read_text())`,{root:remoteRoot}));}catch{receipt.remoteLogUnavailable=true;}
