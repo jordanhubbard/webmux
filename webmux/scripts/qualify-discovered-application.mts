@@ -16,6 +16,7 @@ const { values } = parseArgs({ options: {
   'local-bind': { type: 'string' }, 'remote-bind': { type: 'string' },
   'local-interface': { type: 'string' }, 'remote-interface': { type: 'string' },
   'ip-family': { type: 'string' },
+  'manual-peer-fallback': { type: 'boolean', default: false },
   'changed-node-proof': { type: 'boolean', default: false },
   lifecycle: { type: 'boolean', default: false },
 } });
@@ -26,6 +27,10 @@ if (!output || !path.isAbsolute(output) || !peer || !/^[a-zA-Z0-9][a-zA-Z0-9._-]
   throw new Error('Require --output FRESH_ABSOLUTE_DIRECTORY --peer AUTHORIZED_LINUX_ARM64_SSH_HOST --local-bind RECEIVER_LAN_IP --remote-bind LINUX_ARM64_LAN_IP');
 }
 const ipFamily = discoveryFixtureFamily(values['ip-family'], localBind, remoteBind);
+const manualPeerFallback = values['manual-peer-fallback'];
+if (manualPeerFallback && (values.lifecycle || values['changed-node-proof'])) {
+  throw new Error('Manual-peer fallback is a separate scenario; do not combine it with lifecycle or changed-node proof');
+}
 if (!((process.platform === 'darwin' && process.arch === 'arm64') || (process.platform === 'linux' && process.arch === 'x64'))) {
   throw new Error('Native macOS ARM64 or Linux x86_64 primary required');
 }
@@ -45,6 +50,7 @@ function run(program: string, args: string[], input?: string, cwd = root, timeou
   if (r.status !== 0) throw new Error(`${program} exited ${r.status}: ${r.stderr.slice(-2000)}`);
   return r.stdout.trim();
 }
+// Python payload indentation is independent of JavaScript block nesting.
 const remote = (code: string, input?: unknown) => run('ssh', [...sshArgs, peer!, 'python3 -c '+quote(code)], input === undefined ? undefined : JSON.stringify(input), root, 20_000);
 function inventory() {
   return Object.fromEntries(run('git', ['ls-files', '-z']).split('\0').filter(Boolean).map(name => {
@@ -59,9 +65,14 @@ const checks: string[] = [];
 const receipt: Record<string, unknown> = { passed: false, revision, sourcesBefore, checks,
   changedNodeProof: values['changed-node-proof'],
   lifecycle: values.lifecycle,
+  manualPeerFallback,
   ipFamily,
   scope: 'Actual protected cmd/webmux processes and browser enrollment; isolated homes and process-local Linux fixture certificate trust. Not installed-service, OS trust or real-agent/MAC acceptance.' };
 const passed = (name: string) => { checks.push(name); console.log(`PASS ${name}`); };
+const fallbackSnapshots: unknown[] = [];
+const fallbackEvidence: Record<string, unknown> = { snapshots: fallbackSnapshots };
+if (manualPeerFallback) receipt.manualPeerFallbackEvidence = fallbackEvidence;
+const unavailableDiscoveryMessage = 'Network discovery unavailable; manually configured peers remain available';
 function child(program: string, args: string[], log: string, env = process.env) {
   const fd = fs.openSync(path.join(output!, log), 'a', 0o600);
   try {
@@ -144,10 +155,42 @@ async function api(endpoint: string, method = 'GET', body?: unknown) {
 async function directory() {
   const r = await api('/server-directory'); expect(r.status).toBe(200); return await r.json() as Directory;
 }
+async function unavailableDiscovery(phase: string) {
+  const response = await api('/discovered-nodes'); expect(response.status).toBe(200);
+  const view = await response.json() as { policy: { browse: boolean; advertise: boolean }; started: boolean; error: string; candidates: Candidate[] };
+  expect(view.policy).toMatchObject({ browse: true, advertise: false });
+  expect(view.started).toBe(false);
+  expect(view.error).toBe(unavailableDiscoveryMessage);
+  expect(view.candidates).toEqual([]);
+  const udpSockets = JSON.parse(remote(`import json,pathlib,sys
+r=pathlib.Path(json.load(sys.stdin)['root']);pid=int((r/'pid').read_text());proc=pathlib.Path('/proc')/str(pid)
+assert (proc/'exe').resolve(strict=True)==r/'webmux'
+inodes=set()
+for fd in (proc/'fd').iterdir():
+ try:target=fd.readlink().as_posix()
+ except FileNotFoundError:continue
+ if target.startswith('socket:['):inodes.add(target[8:-1])
+owned=[]
+for family in ('udp','udp6'):
+ for row in (proc/'net'/family).read_text().splitlines()[1:]:
+  fields=row.split()
+  if fields[9] in inodes:owned.append({'family':family,'port':int(fields[1].split(':')[1],16)})
+print(json.dumps(owned))`, { root: remoteRoot }));
+  expect(udpSockets).toEqual([]);
+  fallbackSnapshots.push({ phase, view, udpSockets });
+  return true;
+}
 try {
   const native = JSON.parse(remote(`import os,json;print(json.dumps({'kernel':os.uname().sysname,'machine':os.uname().machine}))`));
   expect(native).toEqual({ kernel: 'Linux', machine: 'aarch64' });
   receipt.remoteRuntime = native;
+  const unavailableInterface = manualPeerFallback ? 'wm-no-' + randomBytes(3).toString('hex') : '';
+  if (manualPeerFallback) {
+    const absent = JSON.parse(remote(`import json,socket,sys
+p=json.load(sys.stdin);print(json.dumps(not any(name==p['name'] for _,name in socket.if_nameindex())))`, { name: unavailableInterface }));
+    expect(absent).toBe(true);
+    fallbackEvidence.generatedInterfaceVerifiedAbsent = true;
+  }
   run('npm', ['run', 'build', '--workspace=frontend'], undefined, path.join(root, 'webmux'));
   receipt.localRuntime = { kernel: os.type(), machine: os.machine(), arch: process.arch };
   receipt.binaryTargets = { receiver: receiverTarget, controller: controllerTarget };
@@ -191,7 +234,7 @@ print(json.dumps({'root':r,'port':port}))`)) as { root: string; port: number };
   for (const [name,text] of Object.entries(receiverFiles)) fs.writeFileSync(path.join(localHome,'config',name),text,{mode:0o600});
   Object.assign(localEnv,{WEBMUX_HOME:localHome,WEBMUX_ROOT:'',NATIVE_APP_GRANT:grant});
   const payload = { root:remoteRoot,sha256:sha(fs.readFileSync(controllerImage)),files:{...defaults,'auth.yaml':auth,'app.yaml':app(remoteBind,prepared.port,8443),'fixture-ca.pem':fs.readFileSync(path.join(localHome,'config/tls/cert.pem'),'utf8'),
-    'node-discovery.yaml':yaml.dump({version:1,id:controllerID,browse:true,advertise:false,interfaces:values['remote-interface']?[values['remote-interface']]:[]}),
+    'node-discovery.yaml':yaml.dump({version:1,id:controllerID,browse:true,advertise:false,interfaces:manualPeerFallback?[unavailableInterface]:values['remote-interface']?[values['remote-interface']]:[]}),
     'servers.yaml':yaml.dump({version:1,servers:[],grants:[]})},env:{} };
   const launchRemote = () => { const p=child('ssh',[...sshArgs,peer,'python3 -c '+quote(launcher)],'controller-ssh.log');p.stdin!.end(JSON.stringify(payload));return p; };
   localProcess=child(receiverImage,[],'receiver.log',localEnv);
@@ -205,14 +248,26 @@ print(json.dumps({'root':r,'port':port}))`)) as { root: string; port: number };
   let observed: Candidate | undefined;
   const initialCandidates: { observedAt: string; candidates: Candidate[] }[] = [];
   receipt.initialCandidates = initialCandidates;
-  await expect.poll(async()=>{const r=await api('/discovered-nodes');expect(r.status).toBe(200);const view=await r.json() as {candidates:Candidate[]};initialCandidates.push({observedAt:new Date().toISOString(),candidates:view.candidates.filter(c=>c.claimed_id===nodeID)});observed=view.candidates.find(c=>c.claimed_id===nodeID&&c.port===tlsPort&&c.address===localBind&&c.tls);return !!observed;},{timeout:8000,intervals:[100,200,500]}).toBe(true);
-  expect((await directory()).servers).toEqual([]);
-  passed(`actual Linux ARM64 application discovers ${receiverLabel} HTTPS application without enrolling it`);
+  if (manualPeerFallback) {
+    await expect.poll(async () => {
+      const response = await api('/discovered-nodes'); expect(response.status).toBe(200);
+      const view = await response.json() as { policy: { browse: boolean; advertise: boolean }; started: boolean; error: string; candidates: Candidate[] };
+      return view.policy.browse && !view.policy.advertise && !view.started
+        && view.error === unavailableDiscoveryMessage && view.candidates.length === 0;
+    }, { timeout: 8000, intervals: [100, 200, 500] }).toBe(true);
+    await unavailableDiscovery('initialization-failure');
+    expect((await directory()).servers).toEqual([]);
+    passed('requested discovery fails explicitly without candidates or owned UDP sockets; manual configuration stays available');
+  } else {
+    await expect.poll(async()=>{const r=await api('/discovered-nodes');expect(r.status).toBe(200);const view=await r.json() as {candidates:Candidate[]};initialCandidates.push({observedAt:new Date().toISOString(),candidates:view.candidates.filter(c=>c.claimed_id===nodeID)});observed=view.candidates.find(c=>c.claimed_id===nodeID&&c.port===tlsPort&&c.address===localBind&&c.tls);return !!observed;},{timeout:8000,intervals:[100,200,500]}).toBe(true);
+    expect((await directory()).servers).toEqual([]);
+    passed(`actual Linux ARM64 application discovers ${receiverLabel} HTTPS application without enrolling it`);
+  }
   const diagnostic=remote(`import os,sys,json,pathlib,subprocess,hashlib
 p=json.load(sys.stdin);r=pathlib.Path(p['root']);b=r/'tls-diagnostic';assert hashlib.sha256(b.read_bytes()).hexdigest()==p['sha256']
 env=dict(os.environ,SSL_CERT_FILE=str(r/'home'/'config'/'fixture-ca.pem'))
 result=subprocess.run([str(b),p['host'],p['address'],str(p['port'])],env=env,capture_output=True,text=True,timeout=12)
-sys.stdout.write(result.stdout);sys.stderr.write(result.stderr);sys.exit(result.returncode)`,{root:remoteRoot,sha256:diagnosticHash,host:observed!.host,address:localBind,port:tlsPort});
+sys.stdout.write(result.stdout);sys.stderr.write(result.stderr);sys.exit(result.returncode)`,{root:remoteRoot,sha256:diagnosticHash,host:manualPeerFallback?hostname:observed!.host,address:localBind,port:tlsPort});
   fs.writeFileSync(path.join(output,'transport-diagnostic.json'),diagnostic+'\n');receipt.transportDiagnostic=JSON.parse(diagnostic);
   const transport = receipt.transportDiagnostic as { direct_address_tls: string; direct_remote_address: string };
   expect(transport.direct_address_tls).toBe('ok');
@@ -225,17 +280,27 @@ sys.stdout.write(result.stdout);sys.stderr.write(result.stderr);sys.exit(result.
   const page=await context.newPage();await page.goto(controllerURL);
   await page.getByRole('group',{name:'WebMux cluster'}).getByRole('button',{name:'Manage servers',exact:true}).click();
   const manager=page.getByRole('dialog',{name:'Manage servers'});
-  const candidate=manager.locator('section').filter({hasText:nodeID}).filter({hasText:`${localBind}:${tlsPort}`});
-  await expect(candidate).toHaveCount(1);
-  await candidate.getByRole('button',{name:`Configure connection to ${observed!.host}`,exact:true}).click();
-  await expect(manager.getByLabel('Server URL',{exact:true})).toHaveValue(`https://${observed!.host}:${tlsPort}`);
+  const manualURL = 'https://' + fixtureHostPort(localBind, tlsPort);
+  if (manualPeerFallback) {
+    await expect(manager.getByRole('status').filter({ hasText: unavailableDiscoveryMessage })).toBeVisible();
+    await manager.getByRole('button', { name: 'Add server', exact: true }).click();
+    await manager.getByLabel('Server URL', { exact: true }).fill(manualURL);
+    await expect(manager.getByLabel('Server URL', { exact: true })).toHaveValue(manualURL);
+  } else {
+    const candidate=manager.locator('section').filter({hasText:nodeID}).filter({hasText:`${localBind}:${tlsPort}`});
+    await expect(candidate).toHaveCount(1);
+    await candidate.getByRole('button',{name:`Configure connection to ${observed!.host}`,exact:true}).click();
+    await expect(manager.getByLabel('Server URL',{exact:true})).toHaveValue(`https://${observed!.host}:${tlsPort}`);
+  }
   expect((await directory()).servers).toEqual([]);
-  await manager.getByLabel('Name (optional)',{exact:true}).fill('Native discovered peer');
+  const peerName = manualPeerFallback ? 'Native manual peer' : 'Native discovered peer';
+  await manager.getByLabel('Name (optional)',{exact:true}).fill(peerName);
   await manager.getByLabel('Credential',{exact:true}).fill(grant);
   await manager.getByRole('button',{name:'Save server',exact:true}).click();
   await expect(manager.getByRole('status',{name:'Server directory status'})).toContainText('Saved');
   const saved=await directory();expect(saved.servers).toHaveLength(1);
   const peerEntry=saved.servers[0];expect(peerEntry.identity?.node_id).toBeFalsy();
+  if (manualPeerFallback) expect(peerEntry.url).toBe(manualURL);
   if(values['changed-node-proof']) {
     const changed={...yaml.load(receiverFiles['node-discovery.yaml']) as object,id:randomBytes(16).toString('hex')};
     // The running advertiser still announces its startup identity. The actual
@@ -243,7 +308,7 @@ sys.stdout.write(result.stdout);sys.stderr.write(result.stderr);sys.exit(result.
     fs.writeFileSync(path.join(localHome,'config/node-discovery.yaml'),yaml.dump(changed));
   }
   const verification=page.waitForResponse(r=>new URL(r.url()).pathname===`/api/servers/${peerEntry.id}/verify-identity`,{timeout:10_000});
-  await manager.getByRole('button',{name:'Verify identity of Native discovered peer',exact:true}).click();
+  await manager.getByRole('button',{name:'Verify identity of '+peerName,exact:true}).click();
   const verificationStatus=(await verification).status();receipt.verificationStatus=verificationStatus;
   if(values['changed-node-proof']) {
     expect(verificationStatus).toBe(502);
@@ -256,76 +321,77 @@ sys.stdout.write(result.stdout);sys.stderr.write(result.stderr);sys.exit(result.
   const enrolled=(await directory()).servers[0];expect(enrolled.identity).toMatchObject({node_id:nodeID,owner:'qualifier'});
   receipt.enrolledIdentity=enrolled.identity;
   expect((await api(`/servers/${enrolled.id}/sessions`)).status).toBe(200);
-  passed('human browser configures the discovered HTTPS endpoint and explicitly verifies node/account identity');
+  passed(manualPeerFallback ? 'human browser manually configures the HTTPS endpoint with unavailable discovery and verifies node/account identity' : 'human browser configures the discovered HTTPS endpoint and explicitly verifies node/account identity');
   await page.screenshot({path:path.join(output,'enrolled.png'),fullPage:true});await browser.close();browser=undefined;
-  await stop(localProcess);localProcess=undefined;
-  fs.writeFileSync(path.join(localHome,'config/app.yaml'),app(localBind,httpPort,movedPort));
-  localProcess=child(receiverImage,[],'receiver.log',localEnv);
-  await expect.poll(async()=>{const entry=(await directory()).servers.find(s=>s.id===enrolled.id);return entry?.url.endsWith(':'+movedPort);},{timeout:20_000,intervals:[200,500,1000]}).toBe(true);
-  const migrated=(await directory()).servers[0];expect(migrated.identity).toEqual(enrolled.identity);
-  receipt.migratedIdentity=migrated.identity;
-  expect((await api(`/servers/${enrolled.id}/sessions`)).status).toBe(200);
-  passed('actual receiver restart and changed port migrate in the controller background without an open browser');
-  await stopRemote();remoteProcess=launchRemote();
-  await expect.poll(async()=>{try{return(await api(`/servers/${enrolled.id}/sessions`)).status;}catch{return 0;}},{timeout:20_000}).toBe(200);
-  expect((await directory()).servers[0]).toMatchObject({id:enrolled.id,url:migrated.url,identity:enrolled.identity});
-  receipt.controllerRestartRetainedIdentity=true;
-  passed('actual controller restart retains verified peer identity and migrated endpoint');
-  if (values.lifecycle) {
-    const lifecycle: Record<string, unknown> = {};
-    receipt.lifecycleEvidence = lifecycle;
-    const snapshots: unknown[] = [];
-    lifecycle.departureSnapshots = snapshots;
-    const discovery = async () => {
-      const r = await api('/discovered-nodes'); expect(r.status).toBe(200);
-      return await r.json() as { policy: { browse: boolean; advertise: boolean }; started: boolean; error: string; candidates: Candidate[] };
-    };
-    // Require a live observation after controller restart before testing absence.
-    await expect.poll(async () => (await discovery()).candidates.some(c => c.claimed_id === nodeID && c.port === movedPort),
-      { timeout: 38_000, intervals: [500, 1000] }).toBe(true);
-    lifecycle.departedAt = new Date().toISOString();
-    await stop(localProcess); localProcess = undefined;
-    // Two candidate lifetimes plus scheduling allowance: a cached DNS-SD answer
-    // may refresh the 90-second application lifetime after the receiver stops.
-    await expect.poll(async () => {
-      const view = await discovery();
-      expect(view.started).toBe(true);
-      expect(view.policy.browse).toBe(true);
-      expect(view.error).toBe('');
-      const matching = view.candidates.filter(c => c.claimed_id === nodeID);
-      snapshots.push({ observedAt: new Date().toISOString(), candidates: matching });
-      return matching.length;
-    }, { timeout: 185_000, intervals: [1000] }).toBe(0);
-    lifecycle.expiredAt = new Date().toISOString();
-    expect((await directory()).servers).toEqual([migrated]);
-    expect((await api(`/servers/${enrolled.id}/sessions`)).status).toBe(502);
-    passed('departed receiver expires from discovery while its verified configured peer remains retained and unreachable');
-    localProcess = child(receiverImage, [], 'receiver.log', localEnv);
-    await expect.poll(async () => (await discovery()).candidates.some(c => c.claimed_id === nodeID && c.port === movedPort),
-      { timeout: 38_000, intervals: [500, 1000] }).toBe(true);
-    await expect.poll(async () => (await api(`/servers/${enrolled.id}/sessions`)).status,
-      { timeout: 8000, intervals: [500, 1000] }).toBe(200);
-    expect((await directory()).servers).toEqual([migrated]);
-    lifecycle.rejoinedAt = new Date().toISOString();
-    passed('same receiver rejoins discovery with its retained identity and no duplicate enrollment');
-    await stopRemote();
-    const disabledPolicy = yaml.dump({ ...yaml.load(payload.files['node-discovery.yaml']) as object, browse: false });
-    remote(`import json,pathlib,sys
+  if (!manualPeerFallback) {
+    await stop(localProcess);localProcess=undefined;
+    fs.writeFileSync(path.join(localHome,'config/app.yaml'),app(localBind,httpPort,movedPort));
+    localProcess=child(receiverImage,[],'receiver.log',localEnv);
+    await expect.poll(async()=>{const entry=(await directory()).servers.find(s=>s.id===enrolled.id);return entry?.url.endsWith(':'+movedPort);},{timeout:20_000,intervals:[200,500,1000]}).toBe(true);
+    const migrated=(await directory()).servers[0];expect(migrated.identity).toEqual(enrolled.identity);
+    receipt.migratedIdentity=migrated.identity;
+    expect((await api(`/servers/${enrolled.id}/sessions`)).status).toBe(200);
+    passed('actual receiver restart and changed port migrate in the controller background without an open browser');
+    await stopRemote();remoteProcess=launchRemote();
+    await expect.poll(async()=>{try{return(await api(`/servers/${enrolled.id}/sessions`)).status;}catch{return 0;}},{timeout:20_000}).toBe(200);
+    expect((await directory()).servers[0]).toMatchObject({id:enrolled.id,url:migrated.url,identity:enrolled.identity});
+    receipt.controllerRestartRetainedIdentity=true;
+    passed('actual controller restart retains verified peer identity and migrated endpoint');
+    if (values.lifecycle) {
+      const lifecycle: Record<string, unknown> = {};
+      receipt.lifecycleEvidence = lifecycle;
+      const snapshots: unknown[] = [];
+      lifecycle.departureSnapshots = snapshots;
+      const discovery = async () => {
+        const r = await api('/discovered-nodes'); expect(r.status).toBe(200);
+        return await r.json() as { policy: { browse: boolean; advertise: boolean }; started: boolean; error: string; candidates: Candidate[] };
+      };
+      // Require a live observation after controller restart before testing absence.
+      await expect.poll(async () => (await discovery()).candidates.some(c => c.claimed_id === nodeID && c.port === movedPort),
+        { timeout: 38_000, intervals: [500, 1000] }).toBe(true);
+      lifecycle.departedAt = new Date().toISOString();
+      await stop(localProcess); localProcess = undefined;
+      // Two candidate lifetimes plus scheduling allowance: a cached DNS-SD answer
+      // may refresh the 90-second application lifetime after the receiver stops.
+      await expect.poll(async () => {
+        const view = await discovery();
+        expect(view.started).toBe(true);
+        expect(view.policy.browse).toBe(true);
+        expect(view.error).toBe('');
+        const matching = view.candidates.filter(c => c.claimed_id === nodeID);
+        snapshots.push({ observedAt: new Date().toISOString(), candidates: matching });
+        return matching.length;
+      }, { timeout: 185_000, intervals: [1000] }).toBe(0);
+      lifecycle.expiredAt = new Date().toISOString();
+      expect((await directory()).servers).toEqual([migrated]);
+      expect((await api(`/servers/${enrolled.id}/sessions`)).status).toBe(502);
+      passed('departed receiver expires from discovery while its verified configured peer remains retained and unreachable');
+      localProcess = child(receiverImage, [], 'receiver.log', localEnv);
+      await expect.poll(async () => (await discovery()).candidates.some(c => c.claimed_id === nodeID && c.port === movedPort),
+        { timeout: 38_000, intervals: [500, 1000] }).toBe(true);
+      await expect.poll(async () => (await api(`/servers/${enrolled.id}/sessions`)).status,
+        { timeout: 8000, intervals: [500, 1000] }).toBe(200);
+      expect((await directory()).servers).toEqual([migrated]);
+      lifecycle.rejoinedAt = new Date().toISOString();
+      passed('same receiver rejoins discovery with its retained identity and no duplicate enrollment');
+      await stopRemote();
+      const disabledPolicy = yaml.dump({ ...yaml.load(payload.files['node-discovery.yaml']) as object, browse: false });
+      remote(`import json,pathlib,sys
 p=json.load(sys.stdin);r=pathlib.Path(p['root']);f=r/'home'/'config'/'node-discovery.yaml'
 assert r.name.startswith('discovered-app-') and f.is_file() and not f.is_symlink()
 f.write_text(p['policy']);f.chmod(0o600)`, { root: remoteRoot, policy: disabledPolicy });
-    payload.files['node-discovery.yaml'] = disabledPolicy;
-    remoteProcess = launchRemote();
-    await expect.poll(async () => { try { return (await api('/health')).status; } catch { return 0; } },
-      { timeout: 20_000 }).toBe(200);
-    const disabled = await discovery();
-    expect(disabled.policy.browse).toBe(false);
-    expect(disabled.policy.advertise).toBe(false);
-    expect(disabled.error).toBe('');
-    expect(disabled.candidates).toEqual([]);
-    // `started` means the discovery object initialized, including disabled
-    // objects. Independently inspect this owned Linux process's actual sockets.
-    const udpSockets = JSON.parse(remote(`import json,pathlib,sys
+      payload.files['node-discovery.yaml'] = disabledPolicy;
+      remoteProcess = launchRemote();
+      await expect.poll(async () => { try { return (await api('/health')).status; } catch { return 0; } },
+        { timeout: 20_000 }).toBe(200);
+      const disabled = await discovery();
+      expect(disabled.policy.browse).toBe(false);
+      expect(disabled.policy.advertise).toBe(false);
+      expect(disabled.error).toBe('');
+      expect(disabled.candidates).toEqual([]);
+      // `started` means the discovery object initialized, including disabled
+      // objects. Independently inspect this owned Linux process's actual sockets.
+      const udpSockets = JSON.parse(remote(`import json,pathlib,sys
 r=pathlib.Path(json.load(sys.stdin)['root']);pid=int((r/'pid').read_text());proc=pathlib.Path('/proc')/str(pid)
 assert (proc/'exe').resolve(strict=True)==r/'webmux'
 inodes=set()
@@ -339,13 +405,32 @@ for family in ('udp','udp6'):
   fields=row.split()
   if fields[9] in inodes:owned.append({'family':family,'port':int(fields[1].split(':')[1],16)})
 print(json.dumps(owned))`, { root: remoteRoot }));
-    lifecycle.disabledControllerUDPSockets = udpSockets;
-    expect(udpSockets).toEqual([]);
-    expect((await directory()).servers).toEqual([migrated]);
-    expect((await api(`/servers/${enrolled.id}/sessions`)).status).toBe(200);
-    lifecycle.disabledDiscovery = disabled;
-    lifecycle.retainedPeer = (await directory()).servers[0];
-    passed('normal policy restart disables browsing while the verified configured peer remains accessible');
+      lifecycle.disabledControllerUDPSockets = udpSockets;
+      expect(udpSockets).toEqual([]);
+      expect((await directory()).servers).toEqual([migrated]);
+      expect((await api(`/servers/${enrolled.id}/sessions`)).status).toBe(200);
+      lifecycle.disabledDiscovery = disabled;
+      lifecycle.retainedPeer = (await directory()).servers[0];
+      passed('normal policy restart disables browsing while the verified configured peer remains accessible');
+    }
+  } else {
+    await stopRemote(); remoteProcess = launchRemote();
+    await expect.poll(async () => { try { return (await api(`/servers/${enrolled.id}/sessions`)).status; } catch { return 0; } },
+      { timeout: 20_000 }).toBe(200);
+    expect((await directory()).servers).toEqual([enrolled]);
+    await unavailableDiscovery('controller-restart');
+    fallbackEvidence.controllerRestartRetainedIdentity = true;
+    passed('controller restart retains the manually configured peer while discovery remains unavailable');
+    await stop(localProcess); localProcess = undefined;
+    expect((await api(`/servers/${enrolled.id}/sessions`)).status).toBe(502);
+    expect((await directory()).servers).toEqual([enrolled]);
+    localProcess = child(receiverImage, [], 'receiver.log', localEnv);
+    await expect.poll(async () => (await api(`/servers/${enrolled.id}/sessions`)).status,
+      { timeout: 8000, intervals: [500, 1000] }).toBe(200);
+    expect((await directory()).servers).toEqual([enrolled]);
+    await unavailableDiscovery('receiver-restart');
+    fallbackEvidence.receiverRestartRetainedIdentity = true;
+    passed('manual HTTPS peer rejoins with its original identity and one configured entry without discovery');
   }
   receipt.passed=true;
 } catch(error) {

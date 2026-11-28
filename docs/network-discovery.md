@@ -176,6 +176,18 @@ The receipt records actual platforms, role-specific image hashes and unchanged
 sources. It extends native coverage within those IPv4 fixture boundaries;
 remaining platform/network variants and the complete agent workflow stay open.
 
+The [explicit IPv6 endpoint qualification](validation/discovery-ipv6-linux-2026-11-28/README.md)
+adds concrete Linux listener-address propagation and the same protected lifecycle
+and changed-node refusal on native IPv6 endpoints, with default IPv4 regression
+coverage. This is a dual-stack LAN result, not IPv6-only multicast qualification.
+The [manual-peer fallback qualification](validation/manual-discovery-fallback-2026-11-28/README.md)
+passes explicit browser-driven HTTPS configuration and identity retention through
+controller and receiver restarts while requested discovery cannot initialize.
+Native IPv4 and IPv6 cases independently verify the absent controller interface,
+reported error, empty candidate set and zero owned UDP sockets. This is a real
+initialization failure on a working LAN, not multicast filtering or isolated-network
+acceptance. Both follow-ups retain the full #631/#664 scope and platform limits.
+
 Deterministic tests cover malformed/foreign/self announcements, duplicate TXT
 keys, unrelated service/domain, credential metadata refusal, invalid endpoints,
 unscoped IPv6, address multiplicity, expiry/refresh, concurrent bounded snapshots,
@@ -238,4 +250,5 @@ supported Windows/Linux/macOS boundaries, policy/interface changes, isolated
 multicast, departure and address changes, duplicate/spoofed announcements and
 background reconciliation with actual discovery events. Automatic session
 participation and agent-aware delivery are separate unfinished requirements
-under #630.
+under [#664](https://github.com/jordanhubbard/webmux/issues/664), which retains the
+historical requirements from closed #630.

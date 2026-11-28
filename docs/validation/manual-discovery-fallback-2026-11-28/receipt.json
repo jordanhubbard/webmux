@@ -1,0 +1,661 @@
+{
+  "qualified_source": "5b8d882bc5392aaae14093bb748ff54995a5aa44",
+  "native_matrix_exit": 0,
+  "final_native_cases": [
+    {
+      "passed": true,
+      "revision": "5b8d882bc5392aaae14093bb748ff54995a5aa44",
+      "checks": [
+        "requested discovery fails explicitly without candidates or owned UDP sockets; manual configuration stays available",
+        "native direct TLS connection reaches the selected IPv4 receiver endpoint",
+        "human browser manually configures the HTTPS endpoint with unavailable discovery and verifies node/account identity",
+        "controller restart retains the manually configured peer while discovery remains unavailable",
+        "manual HTTPS peer rejoins with its original identity and one configured entry without discovery"
+      ],
+      "changedNodeProof": false,
+      "lifecycle": false,
+      "manualPeerFallback": true,
+      "ipFamily": 4,
+      "scope": "Actual protected cmd/webmux processes and browser enrollment; isolated homes and process-local Linux fixture certificate trust. Not installed-service, OS trust or real-agent/MAC acceptance.",
+      "remoteRuntime": {
+        "kernel": "Linux",
+        "machine": "aarch64"
+      },
+      "localRuntime": {
+        "kernel": "Linux",
+        "machine": "x86_64",
+        "arch": "x64"
+      },
+      "binaryTargets": {
+        "receiver": {
+          "role": "receiver",
+          "goos": "linux",
+          "goarch": "amd64"
+        },
+        "controller": {
+          "role": "controller",
+          "goos": "linux",
+          "goarch": "arm64"
+        }
+      },
+      "binarySHA256": {
+        "receiver": "786d8f43d5b0e8c65a8e50d5315a491be4feb8a860f5dcdec4e2cfe0b2b59608",
+        "controller": "2ec11b7817f52dbd16d6deef2214084d668c1783f82f51934daad2fcb299ac61"
+      },
+      "diagnosticSHA256": "9f9bce28bb6aaa43b0a63cacf24bb6c670dccecd440894b59a43cbb621294c8a",
+      "directTLSFamilyConfirmed": 4,
+      "verificationStatus": 204,
+      "cleanup": [
+        "completed",
+        "completed",
+        "completed"
+      ],
+      "sourcesUnchanged": true,
+      "label": "integrated-manual-ipv4",
+      "exit_code": 0,
+      "admitted_expected_outcome": true,
+      "private_receipt_sha256": "06aad07fd27150e766c3c07cdc715be7d2d862e7f5c361794fd74f93c1f4f63a",
+      "private_log_sha256": "ad3a9f4e2625b6831bd9616ac200ba9dc03a089ffe2afafce1fed553ae0f3746",
+      "tracked_source_count": 1969,
+      "tracked_sources_canonical_sha256": "8a8f77ab67587a5864fef46043afd88597fd77d43415b76a0b3ea3ee8ae0701a",
+      "manualPeerFallbackEvidence": {
+        "generatedInterfaceVerifiedAbsent": true,
+        "controllerRestartRetainedIdentity": true,
+        "receiverRestartRetainedIdentity": true,
+        "snapshots": [
+          {
+            "phase": "initialization-failure",
+            "candidates": [],
+            "error": "Network discovery unavailable; manually configured peers remain available",
+            "browse": true,
+            "advertise": false,
+            "started": false,
+            "owned_udp_sockets": []
+          },
+          {
+            "phase": "controller-restart",
+            "candidates": [],
+            "error": "Network discovery unavailable; manually configured peers remain available",
+            "browse": true,
+            "advertise": false,
+            "started": false,
+            "owned_udp_sockets": []
+          },
+          {
+            "phase": "receiver-restart",
+            "candidates": [],
+            "error": "Network discovery unavailable; manually configured peers remain available",
+            "browse": true,
+            "advertise": false,
+            "started": false,
+            "owned_udp_sockets": []
+          }
+        ]
+      }
+    },
+    {
+      "passed": true,
+      "revision": "5b8d882bc5392aaae14093bb748ff54995a5aa44",
+      "checks": [
+        "requested discovery fails explicitly without candidates or owned UDP sockets; manual configuration stays available",
+        "native direct TLS connection reaches the selected IPv6 receiver endpoint",
+        "human browser manually configures the HTTPS endpoint with unavailable discovery and verifies node/account identity",
+        "controller restart retains the manually configured peer while discovery remains unavailable",
+        "manual HTTPS peer rejoins with its original identity and one configured entry without discovery"
+      ],
+      "changedNodeProof": false,
+      "lifecycle": false,
+      "manualPeerFallback": true,
+      "ipFamily": 6,
+      "scope": "Actual protected cmd/webmux processes and browser enrollment; isolated homes and process-local Linux fixture certificate trust. Not installed-service, OS trust or real-agent/MAC acceptance.",
+      "remoteRuntime": {
+        "kernel": "Linux",
+        "machine": "aarch64"
+      },
+      "localRuntime": {
+        "kernel": "Linux",
+        "machine": "x86_64",
+        "arch": "x64"
+      },
+      "binaryTargets": {
+        "receiver": {
+          "role": "receiver",
+          "goos": "linux",
+          "goarch": "amd64"
+        },
+        "controller": {
+          "role": "controller",
+          "goos": "linux",
+          "goarch": "arm64"
+        }
+      },
+      "binarySHA256": {
+        "receiver": "786d8f43d5b0e8c65a8e50d5315a491be4feb8a860f5dcdec4e2cfe0b2b59608",
+        "controller": "2ec11b7817f52dbd16d6deef2214084d668c1783f82f51934daad2fcb299ac61"
+      },
+      "diagnosticSHA256": "9f9bce28bb6aaa43b0a63cacf24bb6c670dccecd440894b59a43cbb621294c8a",
+      "directTLSFamilyConfirmed": 6,
+      "verificationStatus": 204,
+      "cleanup": [
+        "completed",
+        "completed",
+        "completed"
+      ],
+      "sourcesUnchanged": true,
+      "label": "integrated-manual-ipv6",
+      "exit_code": 0,
+      "admitted_expected_outcome": true,
+      "private_receipt_sha256": "ba8dd1a9dfd85c339de4ffc5033168323ffdb160e23c0d3714fdb2150b209674",
+      "private_log_sha256": "c704ea0acbe4e4fd1e8561049637ae2b60ac26deaf993c343824e97e7c61a16e",
+      "tracked_source_count": 1969,
+      "tracked_sources_canonical_sha256": "8a8f77ab67587a5864fef46043afd88597fd77d43415b76a0b3ea3ee8ae0701a",
+      "manualPeerFallbackEvidence": {
+        "generatedInterfaceVerifiedAbsent": true,
+        "controllerRestartRetainedIdentity": true,
+        "receiverRestartRetainedIdentity": true,
+        "snapshots": [
+          {
+            "phase": "initialization-failure",
+            "candidates": [],
+            "error": "Network discovery unavailable; manually configured peers remain available",
+            "browse": true,
+            "advertise": false,
+            "started": false,
+            "owned_udp_sockets": []
+          },
+          {
+            "phase": "controller-restart",
+            "candidates": [],
+            "error": "Network discovery unavailable; manually configured peers remain available",
+            "browse": true,
+            "advertise": false,
+            "started": false,
+            "owned_udp_sockets": []
+          },
+          {
+            "phase": "receiver-restart",
+            "candidates": [],
+            "error": "Network discovery unavailable; manually configured peers remain available",
+            "browse": true,
+            "advertise": false,
+            "started": false,
+            "owned_udp_sockets": []
+          }
+        ]
+      }
+    },
+    {
+      "passed": true,
+      "revision": "5b8d882bc5392aaae14093bb748ff54995a5aa44",
+      "checks": [
+        "actual Linux ARM64 application discovers Linux x86_64 HTTPS application without enrolling it",
+        "native direct TLS connection reaches the selected IPv4 receiver endpoint",
+        "human browser configures the discovered HTTPS endpoint and explicitly verifies node/account identity",
+        "actual receiver restart and changed port migrate in the controller background without an open browser",
+        "actual controller restart retains verified peer identity and migrated endpoint",
+        "departed receiver expires from discovery while its verified configured peer remains retained and unreachable",
+        "same receiver rejoins discovery with its retained identity and no duplicate enrollment",
+        "normal policy restart disables browsing while the verified configured peer remains accessible"
+      ],
+      "changedNodeProof": false,
+      "lifecycle": true,
+      "manualPeerFallback": false,
+      "ipFamily": 4,
+      "scope": "Actual protected cmd/webmux processes and browser enrollment; isolated homes and process-local Linux fixture certificate trust. Not installed-service, OS trust or real-agent/MAC acceptance.",
+      "remoteRuntime": {
+        "kernel": "Linux",
+        "machine": "aarch64"
+      },
+      "localRuntime": {
+        "kernel": "Linux",
+        "machine": "x86_64",
+        "arch": "x64"
+      },
+      "binaryTargets": {
+        "receiver": {
+          "role": "receiver",
+          "goos": "linux",
+          "goarch": "amd64"
+        },
+        "controller": {
+          "role": "controller",
+          "goos": "linux",
+          "goarch": "arm64"
+        }
+      },
+      "binarySHA256": {
+        "receiver": "786d8f43d5b0e8c65a8e50d5315a491be4feb8a860f5dcdec4e2cfe0b2b59608",
+        "controller": "2ec11b7817f52dbd16d6deef2214084d668c1783f82f51934daad2fcb299ac61"
+      },
+      "diagnosticSHA256": "9f9bce28bb6aaa43b0a63cacf24bb6c670dccecd440894b59a43cbb621294c8a",
+      "directTLSFamilyConfirmed": 4,
+      "verificationStatus": 204,
+      "cleanup": [
+        "completed",
+        "completed",
+        "completed"
+      ],
+      "sourcesUnchanged": true,
+      "label": "integrated-default-lifecycle",
+      "exit_code": 0,
+      "admitted_expected_outcome": true,
+      "private_receipt_sha256": "7ec4606b349a8d926da7484154dba18d0be95d0f79b251d45f73af2b44f6925a",
+      "private_log_sha256": "c63eda4a60e740205838d476c4077e1eb4294a1662218ea8fce99f6f4ddbfb44",
+      "tracked_source_count": 1969,
+      "tracked_sources_canonical_sha256": "8a8f77ab67587a5864fef46043afd88597fd77d43415b76a0b3ea3ee8ae0701a",
+      "lifecycleEvidence": {
+        "departedAt": "2026-11-28T04:27:12.014Z",
+        "expiredAt": "2026-11-28T04:28:42.352Z",
+        "rejoinedAt": "2026-11-28T04:28:43.879Z",
+        "disabledControllerUDPSockets": [],
+        "expiry_elapsed_seconds": 90.338,
+        "departure_snapshot_count": 91
+      }
+    },
+    {
+      "passed": true,
+      "revision": "5b8d882bc5392aaae14093bb748ff54995a5aa44",
+      "checks": [
+        "actual Linux ARM64 application discovers Linux x86_64 HTTPS application without enrolling it",
+        "native direct TLS connection reaches the selected IPv6 receiver endpoint",
+        "human browser configures the discovered HTTPS endpoint and explicitly verifies node/account identity",
+        "actual receiver restart and changed port migrate in the controller background without an open browser",
+        "actual controller restart retains verified peer identity and migrated endpoint",
+        "departed receiver expires from discovery while its verified configured peer remains retained and unreachable",
+        "same receiver rejoins discovery with its retained identity and no duplicate enrollment",
+        "normal policy restart disables browsing while the verified configured peer remains accessible"
+      ],
+      "changedNodeProof": false,
+      "lifecycle": true,
+      "manualPeerFallback": false,
+      "ipFamily": 6,
+      "scope": "Actual protected cmd/webmux processes and browser enrollment; isolated homes and process-local Linux fixture certificate trust. Not installed-service, OS trust or real-agent/MAC acceptance.",
+      "remoteRuntime": {
+        "kernel": "Linux",
+        "machine": "aarch64"
+      },
+      "localRuntime": {
+        "kernel": "Linux",
+        "machine": "x86_64",
+        "arch": "x64"
+      },
+      "binaryTargets": {
+        "receiver": {
+          "role": "receiver",
+          "goos": "linux",
+          "goarch": "amd64"
+        },
+        "controller": {
+          "role": "controller",
+          "goos": "linux",
+          "goarch": "arm64"
+        }
+      },
+      "binarySHA256": {
+        "receiver": "786d8f43d5b0e8c65a8e50d5315a491be4feb8a860f5dcdec4e2cfe0b2b59608",
+        "controller": "2ec11b7817f52dbd16d6deef2214084d668c1783f82f51934daad2fcb299ac61"
+      },
+      "diagnosticSHA256": "9f9bce28bb6aaa43b0a63cacf24bb6c670dccecd440894b59a43cbb621294c8a",
+      "directTLSFamilyConfirmed": 6,
+      "verificationStatus": 204,
+      "cleanup": [
+        "completed",
+        "completed",
+        "completed"
+      ],
+      "sourcesUnchanged": true,
+      "label": "integrated-ipv6-lifecycle",
+      "exit_code": 0,
+      "admitted_expected_outcome": true,
+      "private_receipt_sha256": "dcd537f8109e02bc5c5bd3f5874cc835d906799cf74d0f5901cdd8e5940f88e9",
+      "private_log_sha256": "f197d7e39f037923ef0ad7597ecb4898661a5339de80282a1656e6e894b60467",
+      "tracked_source_count": 1969,
+      "tracked_sources_canonical_sha256": "8a8f77ab67587a5864fef46043afd88597fd77d43415b76a0b3ea3ee8ae0701a",
+      "lifecycleEvidence": {
+        "departedAt": "2026-11-28T04:29:03.389Z",
+        "expiredAt": "2026-11-28T04:30:33.973Z",
+        "rejoinedAt": "2026-11-28T04:30:34.512Z",
+        "disabledControllerUDPSockets": [],
+        "expiry_elapsed_seconds": 90.584,
+        "departure_snapshot_count": 91
+      }
+    },
+    {
+      "passed": false,
+      "revision": "5b8d882bc5392aaae14093bb748ff54995a5aa44",
+      "checks": [
+        "actual Linux ARM64 application discovers Linux x86_64 HTTPS application without enrolling it",
+        "native direct TLS connection reaches the selected IPv4 receiver endpoint"
+      ],
+      "changedNodeProof": true,
+      "lifecycle": false,
+      "manualPeerFallback": false,
+      "ipFamily": 4,
+      "scope": "Actual protected cmd/webmux processes and browser enrollment; isolated homes and process-local Linux fixture certificate trust. Not installed-service, OS trust or real-agent/MAC acceptance.",
+      "remoteRuntime": {
+        "kernel": "Linux",
+        "machine": "aarch64"
+      },
+      "localRuntime": {
+        "kernel": "Linux",
+        "machine": "x86_64",
+        "arch": "x64"
+      },
+      "binaryTargets": {
+        "receiver": {
+          "role": "receiver",
+          "goos": "linux",
+          "goarch": "amd64"
+        },
+        "controller": {
+          "role": "controller",
+          "goos": "linux",
+          "goarch": "arm64"
+        }
+      },
+      "binarySHA256": {
+        "receiver": "786d8f43d5b0e8c65a8e50d5315a491be4feb8a860f5dcdec4e2cfe0b2b59608",
+        "controller": "2ec11b7817f52dbd16d6deef2214084d668c1783f82f51934daad2fcb299ac61"
+      },
+      "diagnosticSHA256": "9f9bce28bb6aaa43b0a63cacf24bb6c670dccecd440894b59a43cbb621294c8a",
+      "directTLSFamilyConfirmed": 4,
+      "verificationStatus": 502,
+      "cleanup": [
+        "completed",
+        "completed",
+        "completed"
+      ],
+      "sourcesUnchanged": true,
+      "label": "integrated-changed-node-ipv4",
+      "exit_code": 1,
+      "admitted_expected_outcome": true,
+      "private_receipt_sha256": "63c18a28a3a326f36f0f297e1d84155d53c93cd52b4cc4b48047f19ab40cd415",
+      "private_log_sha256": "a9bc259789b522206e2b10f3ebe0e31b76415b1c16b09d38ee79321b9fdad65a",
+      "tracked_source_count": 1969,
+      "tracked_sources_canonical_sha256": "8a8f77ab67587a5864fef46043afd88597fd77d43415b76a0b3ea3ee8ae0701a",
+      "changedNodeRefusedWithoutPin": true
+    },
+    {
+      "passed": false,
+      "revision": "5b8d882bc5392aaae14093bb748ff54995a5aa44",
+      "checks": [
+        "actual Linux ARM64 application discovers Linux x86_64 HTTPS application without enrolling it",
+        "native direct TLS connection reaches the selected IPv6 receiver endpoint"
+      ],
+      "changedNodeProof": true,
+      "lifecycle": false,
+      "manualPeerFallback": false,
+      "ipFamily": 6,
+      "scope": "Actual protected cmd/webmux processes and browser enrollment; isolated homes and process-local Linux fixture certificate trust. Not installed-service, OS trust or real-agent/MAC acceptance.",
+      "remoteRuntime": {
+        "kernel": "Linux",
+        "machine": "aarch64"
+      },
+      "localRuntime": {
+        "kernel": "Linux",
+        "machine": "x86_64",
+        "arch": "x64"
+      },
+      "binaryTargets": {
+        "receiver": {
+          "role": "receiver",
+          "goos": "linux",
+          "goarch": "amd64"
+        },
+        "controller": {
+          "role": "controller",
+          "goos": "linux",
+          "goarch": "arm64"
+        }
+      },
+      "binarySHA256": {
+        "receiver": "786d8f43d5b0e8c65a8e50d5315a491be4feb8a860f5dcdec4e2cfe0b2b59608",
+        "controller": "2ec11b7817f52dbd16d6deef2214084d668c1783f82f51934daad2fcb299ac61"
+      },
+      "diagnosticSHA256": "9f9bce28bb6aaa43b0a63cacf24bb6c670dccecd440894b59a43cbb621294c8a",
+      "directTLSFamilyConfirmed": 6,
+      "verificationStatus": 502,
+      "cleanup": [
+        "completed",
+        "completed",
+        "completed"
+      ],
+      "sourcesUnchanged": true,
+      "label": "integrated-changed-node-ipv6",
+      "exit_code": 1,
+      "admitted_expected_outcome": true,
+      "private_receipt_sha256": "2f119f59d3741f846608a456ffcbe93fa6711e5b866742386f0a81b097c0dad5",
+      "private_log_sha256": "9d91cd2e17a024febffb54c0f0fdcd7cd64a5128b663ee632c3bb2cbfdc0684d",
+      "tracked_source_count": 1969,
+      "tracked_sources_canonical_sha256": "8a8f77ab67587a5864fef46043afd88597fd77d43415b76a0b3ea3ee8ae0701a",
+      "changedNodeRefusedWithoutPin": true
+    }
+  ],
+  "earlier_preintegration_manual_cases": [
+    {
+      "passed": true,
+      "revision": "8edac2e08c7aed8f6928802f665f7e7e2dd1ed9c",
+      "checks": [
+        "requested discovery fails explicitly without candidates or owned UDP sockets; manual configuration stays available",
+        "native direct TLS connection reaches the selected IPv4 receiver endpoint",
+        "human browser manually configures the HTTPS endpoint with unavailable discovery and verifies node/account identity",
+        "controller restart retains the manually configured peer while discovery remains unavailable",
+        "manual HTTPS peer rejoins with its original identity and one configured entry without discovery"
+      ],
+      "changedNodeProof": false,
+      "lifecycle": false,
+      "manualPeerFallback": true,
+      "ipFamily": 4,
+      "scope": "Actual protected cmd/webmux processes and browser enrollment; isolated homes and process-local Linux fixture certificate trust. Not installed-service, OS trust or real-agent/MAC acceptance.",
+      "remoteRuntime": {
+        "kernel": "Linux",
+        "machine": "aarch64"
+      },
+      "localRuntime": {
+        "kernel": "Linux",
+        "machine": "x86_64",
+        "arch": "x64"
+      },
+      "binaryTargets": {
+        "receiver": {
+          "role": "receiver",
+          "goos": "linux",
+          "goarch": "amd64"
+        },
+        "controller": {
+          "role": "controller",
+          "goos": "linux",
+          "goarch": "arm64"
+        }
+      },
+      "binarySHA256": {
+        "receiver": "b3bcfb90d484b8777bcfca7396087414fb9980c00910c2a3fa186dc32541eb95",
+        "controller": "966740f75fd701cb0596a2c5740090c0b41f6ad5125c76433af4168b5e490382"
+      },
+      "diagnosticSHA256": "9f9bce28bb6aaa43b0a63cacf24bb6c670dccecd440894b59a43cbb621294c8a",
+      "directTLSFamilyConfirmed": 4,
+      "verificationStatus": 204,
+      "cleanup": [
+        "completed",
+        "completed",
+        "completed"
+      ],
+      "sourcesUnchanged": true,
+      "label": "manual-ipv4",
+      "exit_code": 0,
+      "admitted_expected_outcome": true,
+      "private_receipt_sha256": "7eef139a5ea65def3b5a595c7b030d58a6cc7cbd0a2728121499ed4c33e12648",
+      "private_log_sha256": "ad3a9f4e2625b6831bd9616ac200ba9dc03a089ffe2afafce1fed553ae0f3746",
+      "tracked_source_count": 1964,
+      "tracked_sources_canonical_sha256": "9054b5b947ee488e3e53e5697f76dc6054a4ff27c6be8f20aa1fdda4582f9041",
+      "manualPeerFallbackEvidence": {
+        "generatedInterfaceVerifiedAbsent": true,
+        "controllerRestartRetainedIdentity": true,
+        "receiverRestartRetainedIdentity": true,
+        "snapshots": [
+          {
+            "phase": "initialization-failure",
+            "candidates": [],
+            "error": "Network discovery unavailable; manually configured peers remain available",
+            "browse": true,
+            "advertise": false,
+            "started": false,
+            "owned_udp_sockets": []
+          },
+          {
+            "phase": "controller-restart",
+            "candidates": [],
+            "error": "Network discovery unavailable; manually configured peers remain available",
+            "browse": true,
+            "advertise": false,
+            "started": false,
+            "owned_udp_sockets": []
+          },
+          {
+            "phase": "receiver-restart",
+            "candidates": [],
+            "error": "Network discovery unavailable; manually configured peers remain available",
+            "browse": true,
+            "advertise": false,
+            "started": false,
+            "owned_udp_sockets": []
+          }
+        ]
+      }
+    },
+    {
+      "passed": true,
+      "revision": "8edac2e08c7aed8f6928802f665f7e7e2dd1ed9c",
+      "checks": [
+        "requested discovery fails explicitly without candidates or owned UDP sockets; manual configuration stays available",
+        "native direct TLS connection reaches the selected IPv6 receiver endpoint",
+        "human browser manually configures the HTTPS endpoint with unavailable discovery and verifies node/account identity",
+        "controller restart retains the manually configured peer while discovery remains unavailable",
+        "manual HTTPS peer rejoins with its original identity and one configured entry without discovery"
+      ],
+      "changedNodeProof": false,
+      "lifecycle": false,
+      "manualPeerFallback": true,
+      "ipFamily": 6,
+      "scope": "Actual protected cmd/webmux processes and browser enrollment; isolated homes and process-local Linux fixture certificate trust. Not installed-service, OS trust or real-agent/MAC acceptance.",
+      "remoteRuntime": {
+        "kernel": "Linux",
+        "machine": "aarch64"
+      },
+      "localRuntime": {
+        "kernel": "Linux",
+        "machine": "x86_64",
+        "arch": "x64"
+      },
+      "binaryTargets": {
+        "receiver": {
+          "role": "receiver",
+          "goos": "linux",
+          "goarch": "amd64"
+        },
+        "controller": {
+          "role": "controller",
+          "goos": "linux",
+          "goarch": "arm64"
+        }
+      },
+      "binarySHA256": {
+        "receiver": "b3bcfb90d484b8777bcfca7396087414fb9980c00910c2a3fa186dc32541eb95",
+        "controller": "966740f75fd701cb0596a2c5740090c0b41f6ad5125c76433af4168b5e490382"
+      },
+      "diagnosticSHA256": "9f9bce28bb6aaa43b0a63cacf24bb6c670dccecd440894b59a43cbb621294c8a",
+      "directTLSFamilyConfirmed": 6,
+      "verificationStatus": 204,
+      "cleanup": [
+        "completed",
+        "completed",
+        "completed"
+      ],
+      "sourcesUnchanged": true,
+      "label": "manual-ipv6",
+      "exit_code": 0,
+      "admitted_expected_outcome": true,
+      "private_receipt_sha256": "16dcd78409dd2fa064aafdd4d7b967d14bae68691bb5db7d4d850bc2d0d42995",
+      "private_log_sha256": "c704ea0acbe4e4fd1e8561049637ae2b60ac26deaf993c343824e97e7c61a16e",
+      "tracked_source_count": 1964,
+      "tracked_sources_canonical_sha256": "9054b5b947ee488e3e53e5697f76dc6054a4ff27c6be8f20aa1fdda4582f9041",
+      "manualPeerFallbackEvidence": {
+        "generatedInterfaceVerifiedAbsent": true,
+        "controllerRestartRetainedIdentity": true,
+        "receiverRestartRetainedIdentity": true,
+        "snapshots": [
+          {
+            "phase": "initialization-failure",
+            "candidates": [],
+            "error": "Network discovery unavailable; manually configured peers remain available",
+            "browse": true,
+            "advertise": false,
+            "started": false,
+            "owned_udp_sockets": []
+          },
+          {
+            "phase": "controller-restart",
+            "candidates": [],
+            "error": "Network discovery unavailable; manually configured peers remain available",
+            "browse": true,
+            "advertise": false,
+            "started": false,
+            "owned_udp_sockets": []
+          },
+          {
+            "phase": "receiver-restart",
+            "candidates": [],
+            "error": "Network discovery unavailable; manually configured peers remain available",
+            "browse": true,
+            "advertise": false,
+            "started": false,
+            "owned_udp_sockets": []
+          }
+        ]
+      }
+    }
+  ],
+  "independent_cleanup": {
+    "checked_at": "2026-11-28T04:36:41.461769+00:00",
+    "method": "Independent /proc argv0 equality against each exact owned fixture executable path; no process termination",
+    "rows": [
+      {
+        "role": "receiver",
+        "exact_executable_paths_checked": 8,
+        "owned_pids_remaining": [],
+        "probe_exit_code": 0
+      },
+      {
+        "role": "controller",
+        "exact_executable_paths_checked": 8,
+        "owned_pids_remaining": [],
+        "probe_exit_code": 0
+      }
+    ]
+  },
+  "mode_admission_controls": [
+    {
+      "mode": "--lifecycle",
+      "exit_code": 1,
+      "expected_admission_refusal": true,
+      "output_created": false,
+      "ssh_started": false,
+      "source_sha256": "4579dc9b4605f79ac98dee7271acc79dd253cb51deac7375d26cd9ef3e3d1892"
+    },
+    {
+      "mode": "--changed-node-proof",
+      "exit_code": 1,
+      "expected_admission_refusal": true,
+      "output_created": false,
+      "ssh_started": false,
+      "source_sha256": "4579dc9b4605f79ac98dee7271acc79dd253cb51deac7375d26cd9ef3e3d1892"
+    }
+  ],
+  "embedded_python_controls": {
+    "baseline_python_payloads": 8,
+    "current_python_payloads": 10,
+    "all_payloads_parse": true,
+    "every_original_raw_payload_byte_identical": true,
+    "source_sha256": "4579dc9b4605f79ac98dee7271acc79dd253cb51deac7375d26cd9ef3e3d1892"
+  }
+}
