@@ -159,6 +159,15 @@ func (s *Server) refreshCoordinationBindings(ctx context.Context, snapshots []se
 			continue
 		}
 		directory := coordinationDirectory(snapshot)
+		if directory == "" && coordinationLocal(snapshot) && snapshot.CoordinationLive {
+			probe, cancel := context.WithTimeout(ctx, 2*time.Second)
+			observed, err := s.sessions.ObserveCoordinationDirectory(probe, snapshot)
+			cancel()
+			if err == nil {
+				snapshot, snapshots[i] = observed, observed
+				directory = coordinationDirectory(snapshot)
+			}
+		}
 		if directory == "" {
 			continue
 		}
