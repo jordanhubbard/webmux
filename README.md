@@ -129,6 +129,11 @@ Mac Ctrl+V also supports CLI-style image paste through the browser clipboard API
 Native browser paste events work without granting background clipboard access;
 toolbar clipboard access requires HTTPS or localhost and browser permission.
 
+For commands displayed by Codex, use its **`/copy`** menu to copy the response
+or code block, or **`/raw on`** for copy-friendly terminal selection. A coding
+app can insert hard line breaks while formatting its output; these are different
+from terminal soft wrapping. See the [copy/wrapping investigation](docs/investigations/copy-wrapped-coding-tool-output-2026-11-28.md).
+
 Terminal applications can copy and read UTF-8 text through OSC 52, using the
 pasteboard of the browser displaying that session. Copies happen immediately,
 without a confirmation badge. Clipboard queries are answered only by the focused
