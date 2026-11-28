@@ -6,14 +6,19 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
+	"path/filepath"
+	"reflect"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/jordanhubbard/webmux/server/internal/ai"
 	"github.com/jordanhubbard/webmux/server/internal/auth"
@@ -40,7 +45,11 @@ type credentialFixture struct {
 
 func newCredentialFixture(t *testing.T, sharing bool) credentialFixture {
 	t.Helper()
-	a, b, h, _, linkToken := nodePair(t, nil)
+	return newCredentialFixtureObserved(t, sharing, nil)
+}
+func newCredentialFixtureObserved(t *testing.T, sharing bool, observe func(*http.Request)) credentialFixture {
+	t.Helper()
+	a, b, h, _, linkToken := nodePair(t, observe)
 	admin, hubAdmin := token(t, a, "owner"), token(t, b, "owner")
 	requireStatus(t, request(h, "POST", "/api/servers/remote/verify-identity", "{}", admin), 204)
 	node, e := discovery.LoadNodePolicy(a.store)
@@ -387,5 +396,178 @@ func TestCredentialHubLocalAnonymousUsernameRetainsBoundRefresh(t *testing.T) {
 	}
 	if generation, e := s.auth.Generation(body["token"]); e != nil || generation == "" || body["mode"] != "local" {
 		t.Fatal("local account confused with trusted-mode identity", e)
+	}
+}
+
+func TestCredentialHubUnauthenticatedFloodDoesNotWriteDurableState(t *testing.T) {
+	f := newCredentialFixture(t, true)
+	snapshot := func() map[string]string {
+		t.Helper()
+		out := map[string]string{}
+		for _, dir := range []string{"data/events", "data/credential-hub"} {
+			if e := filepath.WalkDir(filepath.Join(f.hub.store.Home, dir), func(p string, d os.DirEntry, e error) error {
+				if e != nil {
+					return e
+				}
+				if d.IsDir() {
+					return nil
+				}
+				b, e := os.ReadFile(p)
+				out[p] = string(b)
+				return e
+			}); e != nil {
+				t.Fatal(e)
+			}
+		}
+		return out
+	}
+	before := snapshot()
+	limited := 0
+	for i := 0; i < 1000; i++ {
+		r := httptest.NewRequest("POST", "https://localhost"+credentialExchangePath, strings.NewReader(`{"operation":"issue"}`))
+		r.RemoteAddr = fmt.Sprintf("192.0.%d.%d:1234", i/250, i%250+1)
+		r.Header.Set("Authorization", "Bearer "+strings.Repeat("z", 43))
+		r.Header.Set("X-WebMux-Node-ID", f.peer.Identity.NodeID)
+		w := httptest.NewRecorder()
+		f.hub.credentialExchange(w, r)
+		if w.Code == 429 {
+			limited++
+		} else if w.Code != 403 {
+			t.Fatal(w.Code)
+		}
+	}
+	if limited == 0 {
+		t.Fatal("dedicated exchange limiter did not reject distributed flood")
+	}
+	if !reflect.DeepEqual(before, snapshot()) {
+		t.Fatal("unauthenticated refusals changed durable event or vault storage")
+	}
+}
+func credentialSelectionRequest(t *testing.T, f credentialFixture) *http.Request {
+	t.Helper()
+	generation, e := f.spoke.auth.Generation(f.admin)
+	if e != nil {
+		t.Fatal(e)
+	}
+	r := httptest.NewRequest("DELETE", "https://localhost/api/credentials/selection", nil)
+	return r.WithContext(context.WithValue(r.Context(), credentialSessionKey{}, generation))
+}
+func TestCredentialHubSelectionCommitRejectsStaleDelete(t *testing.T) {
+	f := newCredentialFixture(t, true)
+	f.selectHub(t)
+	var previous credentialSelections
+	if e := f.spoke.store.InspectConfigs(func(read func(string, any) error) error {
+		var e error
+		previous, e = readCredentialSelections(read)
+		return e
+	}); e != nil {
+		t.Fatal(e)
+	}
+	// A delete which observed the earlier revision cannot remove the new selection.
+	f.selectHub(t)
+	r := credentialSelectionRequest(t, f)
+	e := f.spoke.commitCredentialSelection(r, "owner", previous.Revision, previous.Bindings["owner"].Principal, nil, "", nil)
+	if !errors.Is(e, errCredentialSelectionChanged) {
+		t.Fatal("stale unselect accepted", e)
+	}
+	current, _, _, found, e := f.spoke.credentialBindingSnapshot("owner")
+	if e != nil || !found || current.ID == previous.Bindings["owner"].ID {
+		t.Fatal("new selection lost", e)
+	}
+}
+
+func TestCredentialHubDelayedSelectionCannotRestoreOrOverwriteCurrentAuthority(t *testing.T) {
+	for _, change := range []string{"unselect-absent", "unselect-existing", "new-selection", "account", "peer"} {
+		t.Run(change, func(t *testing.T) {
+			entered, release := make(chan struct{}), make(chan struct{})
+			var armed, blocked atomic.Bool
+			f := newCredentialFixtureObserved(t, true, func(r *http.Request) {
+				if !armed.Load() || r.URL.Path != credentialExchangePath {
+					return
+				}
+				data, e := io.ReadAll(r.Body)
+				if e != nil {
+					t.Error(e)
+					return
+				}
+				r.Body = io.NopCloser(strings.NewReader(string(data)))
+				var in credentialExchangeInput
+				if json.Unmarshal(data, &in) == nil && in.Operation == "availability" && blocked.CompareAndSwap(false, true) {
+					close(entered)
+					select {
+					case <-release:
+					case <-r.Context().Done():
+					}
+				}
+			})
+			// Always release the held real TLS request, even after a failed assertion.
+			var released sync.Once
+			unblock := func() { released.Do(func() { close(release) }) }
+			defer unblock()
+			if change == "unselect-existing" {
+				f.selectHub(t)
+			}
+			armed.Store(true)
+			body, _ := json.Marshal(map[string]string{"peer": "remote", "secret_id": f.secretID, "consumer": "ai.openai"})
+			done := make(chan *httptest.ResponseRecorder, 1)
+			go func() {
+				done <- credentialRequest(f.handler, "PUT", "/api/credentials/selection", string(body), f.admin)
+			}()
+			select {
+			case <-entered:
+			case <-time.After(3 * time.Second):
+				t.Fatal("selection did not reach remote availability")
+			}
+			expected := 409
+			var preservedID string
+			switch change {
+			case "unselect-absent", "unselect-existing":
+				requireStatus(t, credentialRequest(f.handler, "DELETE", "/api/credentials/selection", "", f.admin), 204)
+			case "new-selection":
+				f.selectHub(t)
+				current, _, _, ok, e := f.spoke.credentialBindingSnapshot("owner")
+				if e != nil || !ok {
+					t.Fatal(e)
+				}
+				preservedID = current.ID
+			case "account":
+				expected = 403
+				if e := storage.UpdateConfig(f.spoke.store, "auth.yaml", func(c *auth.Config) error {
+					c.Auth.Users[0].PasswordHash = "replacement-account-during-availability"
+					return nil
+				}); e != nil {
+					t.Fatal(e)
+				}
+			case "peer":
+				expected = 403
+				if e := storage.UpdateConfig(f.spoke.store, "servers.yaml", func(d *serverDirectory) error { d.Servers[0].CredentialEpoch = newCredentialEpoch(); return nil }); e != nil {
+					t.Fatal(e)
+				}
+			}
+			unblock()
+			select {
+			case got := <-done:
+				requireStatus(t, got, expected)
+			case <-time.After(3 * time.Second):
+				t.Fatal("delayed selection did not finish")
+			}
+			if e := f.spoke.store.InspectConfigs(func(read func(string, any) error) error {
+				current, e := readCredentialSelections(read)
+				if e != nil {
+					return e
+				}
+				binding, found := current.Bindings["owner"]
+				if preservedID != "" {
+					if !found || binding.ID != preservedID {
+						t.Error("newer selection overwritten")
+					}
+				} else if found {
+					t.Error("delayed selection restored a removed or stale binding")
+				}
+				return nil
+			}); e != nil {
+				t.Fatal(e)
+			}
+		})
 	}
 }

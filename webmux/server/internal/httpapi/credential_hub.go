@@ -25,6 +25,8 @@ import (
 
 const credentialExchangePath = "/api/federation/credentials"
 
+var errCredentialSelectionChanged = errors.New("credential selection changed; refresh and retry")
+
 func randomCredentialNonce() string {
 	var b [32]byte
 	if _, e := rand.Read(b[:]); e != nil {
@@ -56,6 +58,7 @@ type credentialBinding struct {
 }
 type credentialSelections struct {
 	Version  int                          `yaml:"version"`
+	Revision uint64                       `yaml:"revision"`
 	Bindings map[string]credentialBinding `yaml:"bindings"`
 	Extra    map[string]any               `yaml:",inline"`
 }
@@ -128,7 +131,8 @@ func credentialDecode(w http.ResponseWriter, r *http.Request, out any) bool {
 	return true
 }
 func (s *Server) credentialError(w http.ResponseWriter, owner, operation string, e error) {
-	_ = s.store.AppendEvent(map[string]any{"event": "credential.operation_refused", "owner": owner, "operation": operation})
+	// Refusals before authentication must never amplify into durable event writes.
+	// Authorized vault operations have their own bounded redacted audit.
 	code := 503
 	message := credentialhub.ErrUnavailable.Error()
 	if errors.Is(e, credentialhub.ErrDenied) {
@@ -138,6 +142,9 @@ func (s *Server) credentialError(w http.ResponseWriter, owner, operation string,
 	if errors.Is(e, credentialhub.ErrLimit) {
 		code = 429
 		message = credentialhub.ErrLimit.Error()
+	}
+	if errors.Is(e, errCredentialSelectionChanged) {
+		code, message = http.StatusConflict, errCredentialSelectionChanged.Error()
 	}
 	writeError(w, code, message)
 }
@@ -379,6 +386,11 @@ type credentialExchangeReply struct {
 
 func (s *Server) credentialExchange(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")
+	if !s.credentialGate.allow(r.RemoteAddr, time.Now()) {
+		w.Header().Set("Retry-After", "1")
+		writeError(w, http.StatusTooManyRequests, credentialhub.ErrLimit.Error())
+		return
+	}
 	if r.TLS == nil {
 		s.credentialError(w, "", "transport", credentialhub.ErrDenied)
 		return
@@ -602,12 +614,18 @@ func (s *Server) credentialSelect(w http.ResponseWriter, r *http.Request, owner 
 	var peer serverPeer
 	var token string
 	var principal string
+	var revision uint64
 	e := s.store.InspectConfigs(func(read func(string, any) error) error {
 		var e error
 		principal, e = credentialRequestPrincipal(read, r, owner)
 		if e != nil {
 			return e
 		}
+		selections, e := readCredentialSelections(read)
+		if e != nil {
+			return e
+		}
+		revision = selections.Revision
 		var d serverDirectory
 		if read("servers.yaml", &d) != nil || validateServerDirectory(d) != nil {
 			return credentialhub.ErrDenied
@@ -641,29 +659,70 @@ func (s *Server) credentialSelect(w http.ResponseWriter, r *http.Request, owner 
 		return
 	}
 	binding := credentialBinding{Principal: principal, ID: randomCredentialNonce(), Peer: peer.ID, SecretID: input.SecretID, Consumer: input.Consumer, Fingerprint: credentialPeerFingerprint(peer, token)}
-	e = storage.UpdateConfigOrCreate(s.store, "credential-hubs.yaml", credentialSelections{Version: 1, Bindings: map[string]credentialBinding{}}, func(d *credentialSelections) error {
-		if d.Version != 1 || d.Bindings == nil || len(d.Extra) != 0 || (len(d.Bindings) >= 64 && d.Bindings[owner].ID == "") {
-			return credentialhub.ErrUnavailable
-		}
-		d.Bindings[owner] = binding
-		return nil
-	})
+	e = s.commitCredentialSelection(r, owner, revision, principal, &peer, token, &binding)
 	if e != nil {
 		s.credentialError(w, owner, "select", e)
 		return
 	}
 	w.WriteHeader(204)
 }
-func (s *Server) credentialUnselect(w http.ResponseWriter, r *http.Request, owner string) {
-	e := s.store.InspectConfigs(func(read func(string, any) error) error { return credentialRequestAccount(read, r, owner) })
-	if e == nil {
-		e = storage.UpdateConfigOrCreate(s.store, "credential-hubs.yaml", credentialSelections{Version: 1, Bindings: map[string]credentialBinding{}}, func(d *credentialSelections) error {
-			if d.Version != 1 || d.Bindings == nil || len(d.Extra) != 0 {
-				return credentialhub.ErrUnavailable
+
+// Revalidate all selection authority and commit in the same configuration
+// critical section. A persisted monotonic revision also fences an unselect of
+// an absent binding, so a delayed PUT cannot recreate the removed selection.
+func (s *Server) commitCredentialSelection(r *http.Request, owner string, revision uint64, principal string, peer *serverPeer, token string, binding *credentialBinding) error {
+	return storage.UpdateConfigSnapshot(s.store, "credential-hubs.yaml", credentialSelections{Version: 1, Bindings: map[string]credentialBinding{}}, func(d *credentialSelections, read func(string, any) error) error {
+		current, e := credentialRequestPrincipal(read, r, owner)
+		if e != nil || current != principal {
+			return credentialhub.ErrDenied
+		}
+		if d.Version != 1 || d.Bindings == nil || len(d.Extra) != 0 || len(d.Bindings) > 64 {
+			return credentialhub.ErrUnavailable
+		}
+		if d.Revision != revision || d.Revision == ^uint64(0) {
+			return errCredentialSelectionChanged
+		}
+		if binding != nil {
+			var directory serverDirectory
+			if peer == nil || read("servers.yaml", &directory) != nil || validateServerDirectory(directory) != nil {
+				return credentialhub.ErrDenied
 			}
+			matched := false
+			for _, p := range directory.Servers {
+				if p.ID == peer.ID && credentialPeerFingerprint(p, serverCredential(p.TokenEnv, p.Credential)) == credentialPeerFingerprint(*peer, token) {
+					matched = true
+					break
+				}
+			}
+			if !matched || binding.Principal != current || binding.Fingerprint != credentialPeerFingerprint(*peer, token) {
+				return credentialhub.ErrDenied
+			}
+			if len(d.Bindings) >= 64 && d.Bindings[owner].ID == "" {
+				return credentialhub.ErrLimit
+			}
+			d.Bindings[owner] = *binding
+		} else {
 			delete(d.Bindings, owner)
-			return nil
-		})
+		}
+		d.Revision++
+		return nil
+	})
+}
+func (s *Server) credentialUnselect(w http.ResponseWriter, r *http.Request, owner string) {
+	var revision uint64
+	var principal string
+	e := s.store.InspectConfigs(func(read func(string, any) error) error {
+		var e error
+		principal, e = credentialRequestPrincipal(read, r, owner)
+		if e != nil {
+			return e
+		}
+		d, e := readCredentialSelections(read)
+		revision = d.Revision
+		return e
+	})
+	if e == nil {
+		e = s.commitCredentialSelection(r, owner, revision, principal, nil, "", nil)
 	}
 	if e != nil {
 		s.credentialError(w, owner, "unselect", e)

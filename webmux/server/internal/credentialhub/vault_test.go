@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -201,7 +202,7 @@ func TestOptInAndBounds(t *testing.T) {
 	if _, e = v.Put("alice", s.SecretID, "Fixture", "key", "ai.nvidia", true); !errors.Is(e, ErrDenied) {
 		t.Fatal("consumer rebound", e)
 	}
-	for range 256 {
+	for range handlesPerEnrollment {
 		if _, _, e = v.Issue(s); e != nil {
 			t.Fatal(e)
 		}
@@ -230,5 +231,88 @@ func TestDeniedCredentialIdentifierIsNotEchoedInAudit(t *testing.T) {
 		if bytes.Contains(b, []byte(value)) {
 			t.Fatal("refused raw credential identifier echoed in metadata")
 		}
+	}
+}
+
+// All current grant recipients retain their own capacity, including when one
+// recipient has already exhausted its allowance. Regranting cannot leak slots.
+func TestHandleCapacityIsReservedForEveryEnrollment(t *testing.T) {
+	v, scope, _ := fixture(t)
+	now := time.Now()
+	v.now = func() time.Time { return now }
+	scopes := []Scope{scope}
+	for i := 1; i < maxGrants; i++ {
+		other := scope
+		other.EnrollmentID = fmt.Sprintf("receiver-%d", i)
+		if _, e := v.Grant(other); e != nil {
+			t.Fatal(e)
+		}
+		scopes = append(scopes, other)
+	}
+	tokens := make([]string, 0, maxGrants)
+	for _, s := range scopes {
+		for n := 0; n < handlesPerEnrollment; n++ {
+			token, _, e := v.Issue(s)
+			if e != nil {
+				t.Fatal("one enrollment starved another", s.EnrollmentID, e)
+			}
+			if n == 0 {
+				tokens = append(tokens, token)
+			}
+		}
+		if _, _, e := v.Issue(s); !errors.Is(e, ErrLimit) {
+			t.Fatal("enrollment exceeded its capacity", e)
+		}
+	}
+	if len(v.handles) != maxHandles {
+		t.Fatal("unexpected bounded global capacity", len(v.handles))
+	}
+	// Existing handles remain usable after every other recipient has filled up.
+	for i, s := range scopes {
+		if _, e := v.Redeem(s, tokens[i]); e != nil {
+			t.Fatal("recipient lost reserved handle", e)
+		}
+	}
+	// Expiry reclaims all capacity without a restart.
+	now = now.Add(handleTTL)
+	if _, _, e := v.Issue(scope); e != nil {
+		t.Fatal(e)
+	}
+	if len(v.handles) != 1 {
+		t.Fatal("expired capacity retained", len(v.handles))
+	}
+}
+func TestInvalidatedHandlesDoNotConsumeEnrollmentCapacity(t *testing.T) {
+	for _, action := range []string{"rotate", "regrant"} {
+		t.Run(action, func(t *testing.T) {
+			v, s, _ := fixture(t)
+			for range handlesPerEnrollment {
+				if _, _, e := v.Issue(s); e != nil {
+					t.Fatal(e)
+				}
+			}
+			if action == "rotate" {
+				if _, e := v.Put(s.Owner, s.SecretID, "Fixture", "rotated-fixture-key", "ai.openai", true); e != nil {
+					t.Fatal(e)
+				}
+			} else {
+				view, e := v.View(s.Owner)
+				if e != nil {
+					t.Fatal(e)
+				}
+				if e = v.Revoke(s.Owner, view.Grants[0].ID); e != nil {
+					t.Fatal(e)
+				}
+				if _, e = v.Grant(s); e != nil {
+					t.Fatal(e)
+				}
+			}
+			if _, _, e := v.Issue(s); e != nil {
+				t.Fatal("invalidated handles retained quota", e)
+			}
+			if len(v.handles) != 1 {
+				t.Fatal("invalidated handles retained", len(v.handles))
+			}
+		})
 	}
 }

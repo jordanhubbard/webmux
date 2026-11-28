@@ -35,6 +35,7 @@ import (
 
 type Server struct {
 	credentialVault    *credentialhub.Vault
+	credentialGate     credentialExchangeGate
 	sessionCoord       sessionCoordination
 	nodePeersCancel    context.CancelFunc
 	nodePeersDone      chan struct{}

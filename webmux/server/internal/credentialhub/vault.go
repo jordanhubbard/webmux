@@ -29,6 +29,9 @@ var (
 
 const maxDocument = 2 << 20
 const handleTTL = 30 * time.Second
+const maxGrants = 256
+const handlesPerEnrollment = 4
+const maxHandles = maxGrants * handlesPerEnrollment
 const associatedData = "webmux.credential-hub.v1"
 
 // Scope is derived from a current independently revocable incoming enrollment.
@@ -192,7 +195,7 @@ func (v *Vault) load() (document, []byte, error) {
 	}
 	dec := json.NewDecoder(bytes.NewReader(plain))
 	dec.DisallowUnknownFields()
-	if dec.Decode(&d) != nil || dec.Decode(new(any)) != io.EOF || d.Version != 1 || d.Owners == nil || len(d.Owners) > 64 || len(d.Secrets) > 64 || len(d.Grants) > 256 || len(d.Audit) > 512 {
+	if dec.Decode(&d) != nil || dec.Decode(new(any)) != io.EOF || d.Version != 1 || d.Owners == nil || len(d.Owners) > 64 || len(d.Secrets) > 64 || len(d.Grants) > maxGrants || len(d.Audit) > 512 {
 		return document{}, nil, ErrUnavailable
 	}
 	ids := map[string]bool{}
@@ -402,7 +405,7 @@ func (v *Vault) Grant(scope Scope) (Grant, error) {
 			return g.Grant, nil
 		}
 	}
-	if len(d.Grants) >= 256 {
+	if len(d.Grants) >= maxGrants {
 		return Grant{}, ErrLimit
 	}
 	g := storedGrant{Grant: Grant{ID: randomID(), SecretID: scope.SecretID, EnrollmentID: scope.EnrollmentID, SourceNode: scope.SourceNode, SourceOwner: scope.SourceOwner, Consumer: scope.Consumer}, Owner: scope.Owner, Fingerprint: scope.EnrollmentFingerprint}
@@ -483,12 +486,22 @@ func (v *Vault) Issue(s Scope) (string, time.Time, error) {
 		}
 		return "", time.Time{}, ErrDenied
 	}
+	// Prune expired AND invalidated handles before counting capacity. The
+	// global bound reserves four slots for every possible current enrollment
+	// (there cannot be more enrolled recipients than the 256 stored grants).
+	// A recipient cannot consume another enrollment's reserved capacity.
+	enrollmentHandles := 0
 	for k, h := range v.handles {
-		if !now.Before(h.Expires) {
+		liveSecret, liveGrant, live := authorized(d, h.Scope)
+		if !now.Before(h.Expires) || !live || liveGrant.ID != h.GrantID || liveSecret.Version != h.Version {
 			delete(v.handles, k)
+			continue
+		}
+		if h.Scope.Owner == s.Owner && h.Scope.EnrollmentID == s.EnrollmentID && h.Scope.EnrollmentFingerprint == s.EnrollmentFingerprint {
+			enrollmentHandles++
 		}
 	}
-	if len(v.handles) >= 256 {
+	if enrollmentHandles >= handlesPerEnrollment || len(v.handles) >= maxHandles {
 		return "", time.Time{}, ErrLimit
 	}
 	token := randomID()

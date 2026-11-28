@@ -108,3 +108,21 @@ a receiving account invalidates its existing selection; reset/recreation of the
 hub account also invalidates its old vault namespace. Existing managed native
 agent sessions are not credential consumers in this version: their provider
 profiles, conversations and lifecycle ownership remain under the native provider.
+
+
+The public exchange has a fixed-size in-memory admission window: at most 128
+requests per second overall and 32 per source IP, independent of source port.
+Unauthenticated or malformed refusals never append durable event records.
+Authorized vault operations retain their bounded, redacted audit.
+
+Each current incoming enrollment can hold four live retrieval handles across
+all its secrets and consumers. The global ceiling reserves that capacity for
+all 256 possible current grants (at most 1024 live handles); expired, revoked,
+regranted and rotated handles are reclaimed before admission. Filling one
+recipient's allowance does not consume another enrollment's reserved capacity.
+
+Selection changes use a persisted monotonic revision. Removing an absent
+selection also advances it. A delayed selection cannot undo a newer removal
+or overwrite a newer selection; it receives 409 and requires a fresh attempt.
+The commit checks the current authenticated account generation and enrolled
+peer fingerprint under the same configuration lock as the selection write.
