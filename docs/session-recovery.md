@@ -3133,6 +3133,23 @@ python3 scripts/qualify-four-codex-sessions.py \
   --model ACCOUNT_MODEL --output /new/private/receipt.json
 ```
 
+To qualify a controller image transition, also supply `--initial-webmux` and
+`--initial-webmux-sha256`. The baseline starts that independently verified old
+controller; the orderly restart starts `--webmux`, and the crash restart uses
+the replacement again. Identical old and replacement hashes are refused. Each
+start rechecks the image hash and records the controller epoch and image digest.
+`controller_image_cutover_qualified` requires the complete coding and cleanup
+proof to pass. This tests the controller transition only: the viewer launcher
+and SSH helpers use the replacement WebMux image throughout, and the native
+daemon remains the supplied candidate. It does not qualify an old native client
+or daemon upgrade.
+
+Use `--embedded-assets` when the installed replacement will serve its embedded
+assets. This omits `-root` for every controller start; otherwise the historical
+checkout asset override remains. The receipt records the selected asset mode.
+The API-driven fixture does not exercise browser rendering. Private configuration
+is still initialized from the checkout defaults before session creation.
+
 The default `--profile full` requires every phase below. An explicit
 `--profile controller` qualifies only the four original coding turns across
 controller restart, crash and reconnect, plus their completion and cleanup.

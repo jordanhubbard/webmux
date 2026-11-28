@@ -21,6 +21,7 @@ import shlex
 import shutil
 import signal
 import socket
+import stat
 import subprocess
 import tempfile
 import time
@@ -44,6 +45,17 @@ def digest(path):
         for block in iter(lambda: stream.read(1024 * 1024), b''):
             value.update(block)
     return value.hexdigest()
+
+
+def private_ssh_options(known_hosts):
+    if known_hosts is None:
+        return []
+    metadata = known_hosts.lstat()
+    require(stat.S_ISREG(metadata.st_mode) and metadata.st_uid == os.getuid()
+        and not metadata.st_mode & 0o022, 'owned-ssh-known-hosts-required')
+    return ['-o', 'UserKnownHostsFile='+str(known_hosts.resolve(strict=True)),
+        '-o', 'GlobalKnownHostsFile=/dev/null', '-o', 'StrictHostKeyChecking=yes',
+        '-o', 'UpdateHostKeys=no']
 
 
 def verify_continuity(before, after):
@@ -151,6 +163,7 @@ class Fixture:
         if args.ssh_host:
             self.configure_private_ssh(nativebin)
         self.controller = self.rpc = None
+        self.controller_starts = 0
         self.daemon_start_attempted = False
         self.daemon_pid = None
         self.daemon_epoch = None
@@ -162,12 +175,16 @@ class Fixture:
             'profile': getattr(args, 'profile', 'full'),
             'fixture_root': str(self.root), 'source': subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=self.repo, text=True).strip(),
             'native_sha256': args.native_sha256, 'webmux_sha256': args.webmux_sha256,
+            'initial_webmux_sha256': args.initial_webmux_sha256,
+            'controller_asset_mode': 'embedded' if args.embedded_assets else 'checkout-override',
+            'controller_images': [],
             'code_mode_host_sha256': getattr(args, 'code_mode_host_sha256', None),
             'qualifier_sha256': digest(Path(__file__)), 'phases': [],
             'worker_start': {'load': list(os.getloadavg()), 'cpus': os.cpu_count(),
                 'free_disk_bytes': shutil.disk_usage(self.root).free, 'machine': os.uname().machine},
             'model_requests_attempted': 0, 'model_requests_submitted': 0, 'coding_requests_replayed': 0, 'native_daemon_restarts': 0,
             'ssh_host': args.ssh_host, 'ssh_execution_boot_sha256': args.ssh_boot_sha256,
+            'ssh_known_hosts_sha256': digest(args.ssh_known_hosts) if args.ssh_known_hosts else None,
             'scope': ('four isolated actual SSH durable providers on the verified same-kernel macOS account' if args.ssh_host else 'four isolated local durable providers') + '; actual native model coding turns; installed/legacy viewer migration and other execution hosts unqualified'}
         self.output = args.output.open('x')
         os.chmod(args.output, 0o600)
@@ -193,7 +210,7 @@ class Fixture:
             + 'if len(args) < 2 or not any(value == host or value.endswith("@"+host) for value in args) or args[-1] == host or args[-1].endswith("@"+host):\n    raise SystemExit("Fixture SSH destination or remote command is missing")\n'
             + 'args[-1] = '+repr(prefix)+' + args[-1]\n'
             + 'trace = ["-vv", "-E", '+repr(str(self.root / 'ssh-capability-debug.log'))+'] if "--recovery-capabilities" in args[-1] else []\n'
-            + 'os.execv("/usr/bin/ssh", ["ssh", *trace, "-o", "BatchMode=yes", "-o", "ConnectTimeout=5", "-o", "ControlMaster=no", "-o", "ControlPath=none", "-o", "ControlPersist=no", *args])\n')
+            + 'os.execv("/usr/bin/ssh", ["ssh", *trace, *'+repr(self.args.ssh_options)+', "-o", "BatchMode=yes", "-o", "ConnectTimeout=5", "-o", "ControlMaster=no", "-o", "ControlPath=none", "-o", "ControlPersist=no", *args])\n')
         os.chmod(shim, 0o700)
         self.env['PATH'] = str(shimdir) + os.pathsep + self.env['PATH']
 
@@ -288,13 +305,25 @@ class Fixture:
 
     def start_controller(self):
         require(self.controller is None or self.controller.poll() is not None, 'controller-already-live')
-        self.controller = subprocess.Popen([str(self.args.webmux), '-root', str(self.repo / 'webmux'), '-listen', self.address],
+        initial = self.controller_starts == 0 and self.args.initial_webmux is not None
+        binary = self.args.initial_webmux if initial else self.args.webmux
+        expected = self.args.initial_webmux_sha256 if initial else self.args.webmux_sha256
+        require(digest(binary) == expected, 'controller-image-changed')
+        command = [str(binary), '-listen', self.address]
+        if not self.args.embedded_assets:
+            command.extend(['-root', str(self.repo / 'webmux')])
+        self.controller = subprocess.Popen(command,
             env=self.env, cwd=self.root, stdin=subprocess.DEVNULL,
             stdout=self.log(f'controller-{len(self.receipt["phases"])}.log'), stderr=subprocess.STDOUT,
             start_new_session=True)
         self.record_process('controller', self.controller.pid)
         self.wait(self.ready, 'controller-startup')
-        return self.epoch(self.controller.pid)
+        epoch = self.epoch(self.controller.pid)
+        self.receipt['controller_images'].append({'sha256': expected, 'epoch': epoch,
+            'initial_image': initial, 'asset_mode': self.receipt['controller_asset_mode']})
+        self.controller_starts += 1
+        self.save()
+        return epoch
 
     def stop_controller(self, abrupt=False):
         require(self.controller is not None and self.controller.poll() is None, 'owned-controller-not-live')
@@ -511,6 +540,14 @@ class Fixture:
             self.save()
 
     def start_work(self):
+        catalog = self.native_rpc('model/list', {'limit': 1000})
+        require(isinstance(catalog.get('data'), list), 'model-catalog-shape')
+        require(not catalog.get('nextCursor'), 'model-catalog-incomplete')
+        require(any(isinstance(row, dict) and row.get('model') == self.args.model
+            and not row.get('hidden', False) for row in catalog['data']), 'selected-model-not-listed')
+        self.receipt['selected_model_verified'] = self.args.model
+        self.receipt['model_catalog_count'] = len(catalog['data'])
+        self.save()
         for session in self.sessions:
             # Attach this fixture-only observer before submitting any model work.
             # No overrides and no turn input: subscribe to the already loaded actor.
@@ -802,12 +839,24 @@ def main():
         parser.add_argument('--'+name, required=True)
     parser.add_argument('--profile', choices=('full', 'controller'), default='full',
         help='Controller profile preserves all original viewers; full additionally qualifies viewer replacement')
+    parser.add_argument('--initial-webmux', type=Path,
+        help='Optional old controller for baseline only; launchers and remote helpers use --webmux throughout')
+    parser.add_argument('--initial-webmux-sha256', help='Required with --initial-webmux; must differ from --webmux-sha256')
+    parser.add_argument('--embedded-assets', action='store_true',
+        help='Omit the checkout asset override for every controller start')
     parser.add_argument('--ssh-host', help='Real SSH profile; must resolve to this kernel and account; uses private helpers/tmux')
+    parser.add_argument('--ssh-known-hosts', type=Path,
+        help='Optional owned trust file containing already-verified public host keys; never updates SSH configuration')
     args = parser.parse_args()
     args.ssh_boot_sha256 = None
+    require(not args.ssh_known_hosts or args.ssh_host, 'ssh-known-hosts-requires-ssh-host')
+    args.ssh_options = private_ssh_options(args.ssh_known_hosts)
     require(os.uname().sysname == 'Darwin', 'native-macos-required')
     require(not args.output.exists(), 'exclusive-output-required')
-    for name in ('native', 'webmux'):
+    require(bool(args.initial_webmux) == bool(args.initial_webmux_sha256), 'initial-controller-path-and-hash-required')
+    require(not args.initial_webmux or args.initial_webmux_sha256 != args.webmux_sha256,
+        'controller-cutover-requires-distinct-images')
+    for name in ('native', 'webmux', *(['initial_webmux'] if args.initial_webmux else [])):
         binary = getattr(args, name).resolve(strict=True)
         expected = getattr(args, name+'_sha256')
         require(re.fullmatch('[0-9a-f]{64}', expected) and digest(binary) == expected, name+'-hash-mismatch')
@@ -822,7 +871,7 @@ def main():
         require(re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9.-]{0,252}', args.ssh_host), 'ssh-host-name-required')
         local_boot = subprocess.check_output(['/usr/sbin/sysctl', '-n', 'kern.bootsessionuuid'], text=True, timeout=5).strip()
         code = 'import json,os,subprocess;print(json.dumps({"uid":os.getuid(),"boot":subprocess.check_output(["/usr/sbin/sysctl","-n","kern.bootsessionuuid"],text=True).strip()}))'
-        peer = subprocess.run(['/usr/bin/ssh', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=5', '-o', 'ControlMaster=no', '-o', 'ControlPath=none', args.ssh_host,
+        peer = subprocess.run(['/usr/bin/ssh', *args.ssh_options, '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=5', '-o', 'ControlMaster=no', '-o', 'ControlPath=none', args.ssh_host,
             shlex.join(['/usr/bin/python3', '-c', code])], capture_output=True, text=True, timeout=15, check=True)
         identity = json.loads(peer.stdout)
         require(identity.get('uid') == os.getuid() and identity.get('boot') == local_boot, 'ssh-profile-requires-this-kernel-and-account')
@@ -850,6 +899,7 @@ def main():
         fixture.receipt['passed'] = passed and settled
         fixture.receipt['active_work_qualified'] = passed and settled
         fixture.receipt['four_session_survival_qualified'] = passed and settled
+        fixture.receipt['controller_image_cutover_qualified'] = passed and settled and args.initial_webmux is not None
         fixture.receipt['active_viewer_handoff_qualified'] = passed and settled and args.profile == 'full'
         fixture.receipt['worktree_read_parity_qualified'] = passed and settled and args.profile == 'full'
         fixture.receipt['worktree_creation_qualified'] = False
