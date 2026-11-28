@@ -338,3 +338,11 @@ the metadata-only observer remain preserved. This qualifies the changed Snap
 storage and scoped shutdown behavior; broader platform, SSH/provider, roadmap,
 signing and release gates remain open. The operator service was not deployed
 or restarted.
+
+## Make source-workflow acceptance reconciliation
+
+The [2026-11-28 Make acceptance record](make-target-acceptance-2026-11-28/README.md)
+reconciles the original #762 requirements with current configure/delegation and
+25 passing Make/release controls, rehashed original native command logs, and
+separate published-release evidence. The native source/platform boundaries and
+remaining roadmap requirements above remain attached to their original results.
