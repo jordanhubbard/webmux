@@ -2,6 +2,7 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { spawnSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
+import { selectBrowserCompanion, preflightBrowserCompanion } from './browser-companion-preflight.mts';
 import { runWithPrivateTmux } from './private-test-tmux.mts';
 import { isolatedPlaywrightRuns, withPlaywrightOutput } from './playwright-runs.mts';
 
@@ -11,10 +12,18 @@ const webmuxDir = path.resolve(import.meta.dirname, '..');
 const nodeModules = path.join(webmuxDir, 'node_modules');
 const playwrightCli = require.resolve('@playwright/test/cli', { paths: [webmuxDir] });
 const args = process.argv.slice(2);
-const childEnv = {
+const childEnv: NodeJS.ProcessEnv = {
   ...process.env,
   NODE_PATH: [nodeModules, process.env.NODE_PATH].filter(Boolean).join(path.delimiter),
 };
+
+// Refuse an unusable native companion before discovery allocates any fixture.
+// Freeze the selected executable for every child; never silently substitute it.
+if (process.platform === 'linux') {
+  const selection = selectBrowserCompanion(childEnv);
+  console.error('Browser companion preflight:', JSON.stringify(await preflightBrowserCompanion(selection)));
+  childEnv.WEBMUX_BROWSER_EXECUTABLE = selection.executablePath;
+}
 
 // The suite shares one client address. Give each discovered file a fresh server
 // so unrelated browser workflows cannot exhaust its production request budget.

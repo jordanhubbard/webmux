@@ -1,0 +1,91 @@
+{
+  "at": "2026-11-28T01:25:36.855771+00:00",
+  "base_commit": "175ae6fd831fbffc2df4b18feaacf43c3e8bef82",
+  "platform": "Linux x86_64",
+  "source_sha256": {
+    "webmux/scripts/browser-companion-preflight.mts": "7ab1f4e549441e9a19438c0f949e79801e7e7fb1c80157d38b9c89eedb8636aa",
+    "webmux/scripts/browser-companion-preflight.test.mts": "f79ed0f8ecc667fbd0eb49094109a860d1cd9a6f36a2ee5467e7f0756680fb69",
+    "webmux/scripts/run-playwright.mts": "84bdb79882e2b55fe1df9a8d2ce6a7c2a7fec1960d66377c845231d3f7582954",
+    "tests/e2e/start-server.mts": "041f56bedfd5999e6e736daecc07941d5fbc92ecdb1e11a7142195252e6c1129",
+    "webmux/package.json": "1ce198229373cb4000461d7e20c1673955a222a16f112f06d68ca0a956f2c6f0",
+    "webmux/scripts/check-browser.mts": "3d759cedd9904f85a39b2cea2b46986971e8fc527ecf1dea6af9c2d3dae06ca6",
+    "webmux/server/internal/browser/worker.go": "bb5575212b2a91efff3bb38d0dbfae9cf8f7d8a33a70b81eb8b787b904f29ff6",
+    "scripts/ensure-e2e-browser.sh": "d4355083911d63d6c6d57e801971e7400d2caa2bf32aad2195d8da504f738bf4"
+  },
+  "scope": "Linux native companion sandbox/CDP readiness before E2E discovery; not application/profile or non-Linux qualification",
+  "native_controls": [
+    {
+      "case": "managed-refusal",
+      "exit": 1,
+      "expected_exit": 1,
+      "log_sha256": "2cba3321bc076205e8cd253f986830a8ed6183062bd14e4cd67ca6eb872c1410",
+      "sandbox_disabled": false,
+      "discovery_started": false,
+      "refused_before_discovery_or_server_fixture": true,
+      "refusal": "Chromium sandbox admission failed"
+    },
+    {
+      "case": "installed-admission",
+      "exit": 0,
+      "expected_exit": 0,
+      "log_sha256": "0a009a89664db3143fa2621c43a733d8b866788e84dc8afbb71e6f0974187423",
+      "sandbox_disabled": false,
+      "discovery_started": true,
+      "admission": {
+        "executablePath": "/usr/bin/google-chrome",
+        "source": "WEBMUX_BROWSER_EXECUTABLE",
+        "version": "158.0.8127.36",
+        "sandbox": true
+      }
+    },
+    {
+      "case": "explicit-invalid-refusal",
+      "exit": 1,
+      "expected_exit": 1,
+      "log_sha256": "1c9726e05d5df3c5b7645252f702901d11df1b1e3f6583d445b8f585391d2979",
+      "sandbox_disabled": false,
+      "discovery_started": false,
+      "refused_before_discovery_or_server_fixture": true,
+      "refusal": "Explicit executable absent; no fallback"
+    }
+  ],
+  "focused_tests": {
+    "exit_code": 0,
+    "passed": 5,
+    "log_sha256": "4878ac2ff9d84d2b12376334ae7db721fb57f8b1629d8b5c240d064105f33e2a"
+  },
+  "strict_typecheck": {
+    "exit_code": 0,
+    "log_sha256": "ceb954dc8a5dbf5cd8fa3319092613d0e576a89ddb7850cbd38e87dbac62cbd3"
+  },
+  "full_quality_gates": {
+    "full-test-corrected": {
+      "exit_code": 0,
+      "log_sha256": "4fbc6c0aeeaada427368937b24e249e8b2dc527d7bc5ed2ade3321fe08de5984"
+    },
+    "full-lint-corrected": {
+      "exit_code": 0,
+      "log_sha256": "66eee00f557ac4cd993690e4a42352361e0cce412d5eb9b93e8beaecb9193049"
+    },
+    "e2e_passed": 1418,
+    "e2e_existing_platform_optin_skips": 22,
+    "frontend_passed": 500,
+    "helper_passed": 304,
+    "helper_existing_platform_optin_skips": 3,
+    "private_encrypted_keyring": true,
+    "private_tmux": true,
+    "native_browser": "/usr/bin/google-chrome"
+  },
+  "bounds": {
+    "launch_ms": 20000,
+    "navigation_ms": 5000,
+    "contexts": 2,
+    "sandbox_enabled": true,
+    "executable_selection_precedence_changed": false,
+    "fallback_after_refusal": false,
+    "production_browser_source_changed": false,
+    "host_sandbox_policy_changed": false,
+    "application_assertions_or_deadlines_changed": false,
+    "non_linux_admission_changed": false
+  }
+}

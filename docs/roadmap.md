@@ -651,6 +651,11 @@ updates. The dependency-audit gate remains enabled and passed for this release.
   controls now support bounded DOM interaction with native stale-reference,
   identity and once-only dispatch controls under [#419](https://github.com/jordanhubbard/webmux/issues/419).
   Broader DOM/iframe, mobile and assistive-technology acceptance remain open.
+  Linux E2E startup now preflights the separately selected companion with its
+  sandbox enabled before fixture allocation ([#784](https://github.com/jordanhubbard/webmux/issues/784));
+  [native A/B controls](validation/browser-preflight-2026-11-27/README.md) distinguish
+  host sandbox refusal from driver readiness. Full application assertions and
+  the broader native/mobile qualification scope remain unchanged.
   Automatic launch for new Mosh shells is implemented under
   [#468](https://github.com/jordanhubbard/webmux/issues/468), using the existing
   authenticated host control channel with sealed, expiring requests and durable
