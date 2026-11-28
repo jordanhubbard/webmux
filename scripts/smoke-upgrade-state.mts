@@ -76,7 +76,17 @@ try {
     await fs.writeFile(snapshot, JSON.stringify(saved), { mode: 0o600, flag: 'wx' });
   } else {
     assert.deepEqual(await request('GET', '/api/hosts', undefined, token), saved.hosts, 'Saved hosts changed');
-    assert.deepEqual(await request('GET', '/api/hosts', undefined, textField(saved, 'token')), saved.hosts, 'Pre-upgrade JWT stopped working');
+    // Legacy sessions do not carry the authenticated account generation. They
+    // must neither access saved state nor refresh into a current-generation JWT.
+    const legacy = textField(saved, 'token');
+    for (const [method, route] of [['GET', '/api/hosts'], ['POST', '/api/auth/refresh']] as const) {
+      const response = await fetch(`${base}${route}`, { method, signal: AbortSignal.timeout(5000),
+        headers: { Authorization: `Bearer ${legacy}` } });
+      assert.equal(response.status, 401, `Legacy session accepted by ${method} ${route}`);
+      await response.arrayBuffer();
+    }
+    assert.notEqual(token, legacy, 'Fresh login did not replace the legacy session');
+    assert.deepEqual(await request('GET', '/api/hosts', undefined, token), saved.hosts, 'Fresh login lost saved hosts');
     for (const name of ['app', 'auth']) assert.equal(await fs.readFile(path.join(home, `config/${name}.yaml`), 'utf8'), textField(saved, name));
   }
   console.log(`${backend}: upgrade ${phase} passed account login, saved hosts, signing-secret and configuration checks`);
