@@ -1,0 +1,235 @@
+{
+  "schema": "webmux.make.acceptance.v1",
+  "checked_at": "2026-11-28T05:50:16.986599+00:00",
+  "issue": 762,
+  "current_source": "f02f158c437b09a9b02d747ff2753d9ca087cbc9",
+  "original_native_source": "2cc3a26d249f9b04e17e0a85f49466128ba47855",
+  "public_targets": [
+    "all",
+    "build",
+    "build-client",
+    "build-server",
+    "changelog-init",
+    "check-guacd",
+    "check-tmux",
+    "clean",
+    "configure",
+    "deps",
+    "help",
+    "install",
+    "install-agent-deck",
+    "install-all",
+    "install-client",
+    "install-optional-agent-deck",
+    "install-server",
+    "lint",
+    "package",
+    "package-assets",
+    "package-client",
+    "package-server",
+    "release",
+    "release-major",
+    "release-minor",
+    "release-publish",
+    "restart",
+    "start",
+    "status",
+    "stop",
+    "test",
+    "test-e2e",
+    "test-unit",
+    "toolchain-go",
+    "toolchain-node",
+    "uninstall",
+    "uninstall-all",
+    "uninstall-client",
+    "uninstall-server"
+  ],
+  "focused_regression": {
+    "command": [
+      "node",
+      "--test",
+      "scripts/make-controls.test.mts",
+      "scripts/release-workflow.test.mts",
+      "scripts/release-readiness.test.mts"
+    ],
+    "source": "f02f158c437b09a9b02d747ff2753d9ca087cbc9",
+    "exit_code": 0,
+    "dependencies": "locked npm ci --ignore-scripts; Node24.22.3 and Go1.27.4 explicit PATH; private caches",
+    "passed": 25,
+    "failed": 0,
+    "skipped": 0,
+    "log_sha256": "286a71f6bcd49406bbc8b90d1df25e047d418f5a3420f5e3c9e6c2390aa3d089"
+  },
+  "actual_current_configure": {
+    "checks": [
+      {
+        "workspace": "root",
+        "command": [
+          "make",
+          "--no-print-directory",
+          "-o",
+          "deps",
+          "configure",
+          "WEBMUX_HOME=<private path with spaces>",
+          "HTTP_PORT=19271",
+          "HTTPS_PORT=0",
+          "AUTH_MODE=none"
+        ],
+        "exit_code": 0,
+        "fresh_or_preserved": true
+      },
+      {
+        "workspace": "webmux",
+        "command": [
+          "make",
+          "--no-print-directory",
+          "-o",
+          "deps",
+          "configure",
+          "WEBMUX_HOME=<private path with spaces>",
+          "HTTP_PORT=19272",
+          "HTTPS_PORT=0",
+          "AUTH_MODE=none"
+        ],
+        "exit_code": 0,
+        "fresh_or_preserved": true
+      }
+    ],
+    "prerequisite": "Locked dependencies prepared separately; -o deps excludes repeated dependency install only; actual configure recipe executed"
+  },
+  "original_native_commands": [
+    {
+      "name": "package-public",
+      "exit_code": 0,
+      "actual_log_sha256": "505e2feafba46b60907eb66596e368a1ba21d629001efd80ee05754f1bed066c",
+      "actual_log_hash_matches": true
+    },
+    {
+      "name": "combined-runtime",
+      "exit_code": 0,
+      "actual_log_sha256": "8efd1d99a2cfafea8be1a78164c961cb2cdf4216b6b0eab38aab81064c46f735",
+      "actual_log_hash_matches": true
+    },
+    {
+      "name": "source-public-lifecycle",
+      "exit_code": 0,
+      "actual_log_sha256": "ee05cf25361e597866cb052b64ff4d10af8b07fd772965a3d9c274cb5ceebc68",
+      "actual_log_hash_matches": true
+    },
+    {
+      "name": "combined-public-install",
+      "exit_code": 0,
+      "actual_log_sha256": "f78068efef66dbb7afdca6a6dda1b3d1a027f0580e82e060e52ccc4a846e4cd1",
+      "actual_log_hash_matches": true
+    }
+  ],
+  "original_audit_logs": [
+    {
+      "name": "targets.json",
+      "sha256": "93f11199a5018ffc5033f07fc333c400168b1381f64ebbe6d8648bd8043877ca",
+      "bytes": 641
+    },
+    {
+      "name": "configure.log",
+      "sha256": "ff5be3aa39151eb8d583cdb85adc2686944b6ca07133176404a664a0685fd3ad",
+      "bytes": 688
+    },
+    {
+      "name": "nested-client.log",
+      "sha256": "a994fda1028964d16a6fc88f67d97236ade7c22fc488a6ed2e614e455a84a9a2",
+      "bytes": 75
+    },
+    {
+      "name": "make-controls-final.log",
+      "sha256": "3e2140bfab03c887f6508524071034e2283d39c1bfded694a1348902f0424062",
+      "bytes": 1705
+    },
+    {
+      "name": "bootstrap-controls-final.log",
+      "sha256": "bd6aa402d48320b4b47edef02ad3f78d8a133fac8842b9a829b2101d3efc2ccf",
+      "bytes": 106
+    },
+    {
+      "name": "browser-preflight-controls.log",
+      "sha256": "81270f50ffa174e58167811ef528c952afde8dce7d5d08bcf9a5a48a05a773f4",
+      "bytes": 757
+    },
+    {
+      "name": "lint.log",
+      "sha256": "412c96135e25c0600e82ebbf91f1615bfd1fd5179b2d0e0cdedacec18bebf93a",
+      "bytes": 829
+    },
+    {
+      "name": "clean.log",
+      "sha256": "ec3500c2553c2cbb65c086373b651d9a2393acc9ae1c22f4d5dcbfd5be1c0015",
+      "bytes": 95
+    },
+    {
+      "name": "install-optional-agent-deck.log",
+      "sha256": "3dfe17429dc56837824c5214459ce495af2e245645fa6d6139202b7b86205911",
+      "bytes": 69
+    },
+    {
+      "name": "build.log",
+      "sha256": "a9f0687a34bc9713c60f5e0e21b69dfe29639fbc008a40485d3ad050a347568f",
+      "bytes": 1668
+    }
+  ],
+  "source_identity": [
+    {
+      "path": "Makefile",
+      "sha256": "56303044538ddb8470c56ed91df58ad083faa3434e13fcd85fb7ecc2a723897b",
+      "identical_to_full_make_qualified_source": true
+    },
+    {
+      "path": "webmux/Makefile",
+      "sha256": "0c4d3c50bac569690fc25c31cb780f8a77869e8fc6d9e9742fa083653801c002",
+      "identical_to_full_make_qualified_source": true
+    },
+    {
+      "path": "scripts/configure.mts",
+      "sha256": "f11d4919868c445f64f28923ede5fdc65088bdf817001e0ee2a7ff471f91e90f",
+      "identical_to_full_make_qualified_source": true
+    },
+    {
+      "path": "scripts/release.sh",
+      "sha256": "9dcd091ccb82796e85a14d961582ac61c9b0d5c210c5fbcb5d2279f75539a9a3",
+      "identical_to_full_make_qualified_source": true
+    },
+    {
+      "path": "scripts/release-readiness.mts",
+      "sha256": "f7aed79702a2153c1a74cc5c1e6f5a06239acaaa6677ecc07557ef545906c671",
+      "identical_to_full_make_qualified_source": true
+    },
+    {
+      "path": "scripts/runtime-ports.mts",
+      "sha256": "42453872b3857e6d2f75ab21b56c7842d3b61374ed574315b7418c6b05d5430c",
+      "identical_to_full_make_qualified_source": true
+    },
+    {
+      "path": "scripts/make-controls.test.mts",
+      "sha256": "435e16bb7f21252a69ce8c029299fbff43466878e5cc81fb3b4f5600b3060df4",
+      "identical_to_full_make_qualified_source": true
+    }
+  ],
+  "existing_full_linux_make": {
+    "source": "5b8d882bc5392aaae14093bb748ff54995a5aa44",
+    "exit_code": 0,
+    "log_sha256": "cfda53229cbedd0cef77a41870f4339af048efd448c1e5bb4c3d46f0d91c2c22",
+    "scope": "Original complete Make suite from PR796; recorded platform/integration skips retained; Make/runtime regression sources byte-identical to current source"
+  },
+  "environment_setup_failures_retained": [
+    "Initial focused run lacked installed js-yaml; locked dependencies installed with install scripts disabled",
+    "Second focused run omitted Go from PATH; corrected to qualified Node24.22.3/Go1.27.4 and private caches before unchanged passing run"
+  ],
+  "publication": {
+    "tag": "v1.4.7",
+    "source": "4b8c59a140fd9dddbc3401fc45706c86880d5b9f",
+    "assets": 28,
+    "url": "https://github.com/jordanhubbard/webmux/releases/tag/v1.4.7",
+    "claim": "Published release is separate from original development-version local packaging and controlled patch/minor/major Git transition tests"
+  },
+  "installed_services_changed": false,
+  "other_roadmap_acceptance_complete": false
+}

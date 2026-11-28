@@ -179,6 +179,11 @@ roadmap checkbox.
 
 ## Current reliability work
 
+The [Make workflow acceptance reconciliation](validation/make-target-acceptance-2026-11-28/README.md)
+completes the scoped #762 configuration/delegation audit with current controls and
+retained native evidence. Platform, installed-service and broader roadmap
+requirements remain open at their recorded boundaries.
+
 The [2026-11-26 Make target and roadmap audit](validation/make-target-audit-2026-11-26.md)
 tracks #762's source build/install/lifecycle qualification and #763's browser
 storage correction. At source `2cc3a26d`, private native macOS service and
