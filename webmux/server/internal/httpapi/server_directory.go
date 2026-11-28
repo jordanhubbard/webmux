@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/jordanhubbard/webmux/server/internal/credentialhub"
 	"github.com/jordanhubbard/webmux/server/internal/storage"
 )
 
@@ -52,6 +53,7 @@ type managedPeer struct {
 	Identity                 nodeIdentity `json:"identity"`
 }
 type managedGrant struct {
+	CredentialSharing        bool   `json:"credential_sharing"`
 	CoordinationReservations bool   `json:"coordination_reservations,omitempty"`
 	CoordinationMessages     bool   `json:"coordination_messages,omitempty"`
 	SourceNode               string `json:"source_node_id,omitempty"`
@@ -78,7 +80,7 @@ func (s *Server) getServerDirectory(w http.ResponseWriter, r *http.Request, owne
 		peers = append(peers, managedPeer{CoordinationReservations: p.CoordinationReservations, CoordinationMessages: p.CoordinationMessages, CoordinationOwner: p.CoordinationOwner, ID: p.ID, Name: p.Name, URL: p.URL, AllowHTTP: p.AllowHTTP, TokenEnv: p.TokenEnv, CredentialReady: validSavedCredential(serverCredential(p.TokenEnv, p.Credential)), Identity: p.Identity})
 	}
 	for _, g := range d.Grants {
-		grants = append(grants, managedGrant{CoordinationReservations: g.CoordinationReservations, CoordinationMessages: g.CoordinationMessages, SourceNode: g.SourceNode, SourceOwner: g.SourceOwner, Coordination: g.Coordination, ID: g.ID, Owner: g.Owner, TokenEnv: g.TokenEnv, CredentialReady: validSavedCredential(serverCredential(g.TokenEnv, g.Credential))})
+		grants = append(grants, managedGrant{CredentialSharing: g.CredentialSharing, CoordinationReservations: g.CoordinationReservations, CoordinationMessages: g.CoordinationMessages, SourceNode: g.SourceNode, SourceOwner: g.SourceOwner, Coordination: g.Coordination, ID: g.ID, Owner: g.Owner, TokenEnv: g.TokenEnv, CredentialReady: validSavedCredential(serverCredential(g.TokenEnv, g.Credential))})
 	}
 	w.Header().Set("Cache-Control", "no-store")
 	writeJSON(w, 200, map[string]any{"servers": peers, "grants": grants})
@@ -173,6 +175,7 @@ func (s *Server) saveServerPeer(w http.ResponseWriter, r *http.Request, owner st
 				if p.URL == old.URL {
 					p.DiscoveredAddress = old.DiscoveredAddress
 				}
+				p.CredentialEpoch = newCredentialEpoch()
 				d.Servers[i] = p
 				return nil
 			}
@@ -180,6 +183,7 @@ func (s *Server) saveServerPeer(w http.ResponseWriter, r *http.Request, owner st
 		if p.Credential != "" {
 			p.TokenEnv = ""
 		}
+		p.CredentialEpoch = newCredentialEpoch()
 		d.Servers = append(d.Servers, p)
 		return nil
 	})
@@ -205,6 +209,7 @@ func (s *Server) saveServerGrant(w http.ResponseWriter, r *http.Request, owner s
 		return
 	}
 	var body struct {
+		CredentialSharing        *bool   `json:"credential_sharing"`
 		CoordinationReservations *bool   `json:"coordination_reservations"`
 		CoordinationMessages     *bool   `json:"coordination_messages"`
 		SourceNode               *string `json:"source_node_id"`
@@ -226,7 +231,10 @@ func (s *Server) saveServerGrant(w http.ResponseWriter, r *http.Request, owner s
 		return
 	}
 	s.changeServerDirectory(w, func(d *serverDirectory) error {
-		g := serverGrant{ID: r.PathValue("grant"), Owner: body.Owner, TokenEnv: body.TokenEnv, Credential: body.Credential}
+		g := serverGrant{CredentialEpoch: newCredentialEpoch(), ID: r.PathValue("grant"), Owner: body.Owner, TokenEnv: body.TokenEnv, Credential: body.Credential}
+		if body.CredentialSharing != nil {
+			g.CredentialSharing = *body.CredentialSharing
+		}
 		if body.Coordination != nil {
 			g.Coordination = *body.Coordination
 		}
@@ -244,6 +252,9 @@ func (s *Server) saveServerGrant(w http.ResponseWriter, r *http.Request, owner s
 		}
 		for i, old := range d.Grants {
 			if old.ID == g.ID {
+				if body.CredentialSharing == nil {
+					g.CredentialSharing = old.CredentialSharing
+				}
 				same := old.Owner == g.Owner && (body.SourceNode == nil || *body.SourceNode == old.SourceNode) && (body.SourceOwner == nil || *body.SourceOwner == old.SourceOwner)
 				if body.SourceNode == nil {
 					g.SourceNode = old.SourceNode
@@ -290,4 +301,8 @@ func (s *Server) deleteServerGrant(w http.ResponseWriter, r *http.Request, owner
 		}
 		return errors.New("Grant is no longer configured; refresh the directory")
 	})
+}
+
+func newCredentialEpoch() string {
+	return credentialhub.Fingerprint(struct{ Nonce string }{Nonce: randomCredentialNonce()})
 }

@@ -51,3 +51,6 @@ func validateNodePolicy(p NodePolicy) error {
 	}
 	return nil
 }
+
+// Validate checks a policy read as part of an atomic authorization snapshot.
+func (p NodePolicy) Validate() error { return validateNodePolicy(p) }

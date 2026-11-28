@@ -3,6 +3,9 @@ package session
 import (
 	"context"
 	"errors"
+	"strings"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/jordanhubbard/webmux/server/internal/coordination"
 	"github.com/jordanhubbard/webmux/server/internal/recovery"
@@ -77,6 +80,66 @@ func (b *Broker) coordinationRepositoryCurrent(e *entry, snapshot Session) bool 
 	return v.Owner == snapshot.Owner && v.CreatedAt == snapshot.CreatedAt && v.Transport == snapshot.Transport && v.Hostname == snapshot.Hostname &&
 		v.Username == snapshot.Username && v.Port == snapshot.Port && v.KeyID == snapshot.KeyID && v.RecoveryKey == snapshot.RecoveryKey &&
 		*v.CoordinationActivity == *snapshot.CoordinationActivity
+}
+
+// ObserveCoordinationDirectory restores missing live routing context through the
+// current provider's authenticated, read-only probe. Retained history and caller
+// supplied paths cannot establish this observation. Provider work never holds
+// the broker lock, and a newer signed observation always wins the race.
+func (b *Broker) ObserveCoordinationDirectory(ctx context.Context, snapshot Session) (Session, error) {
+	b.mu.Lock()
+	e := b.entries[snapshot.ID]
+	if !b.coordinationDirectoryObservationCurrent(e, snapshot) {
+		b.mu.Unlock()
+		return Session{}, coordination.ErrRepository
+	}
+	r := e.run
+	controller, ok := r.process.(recoveryController)
+	b.mu.Unlock()
+	if !ok {
+		return Session{}, coordination.ErrRepository
+	}
+	response := controller.RecoveryRPC(ctx, recovery.RPCRequest{Operation: "coordination-observe"})
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	if b.entries[snapshot.ID] != e || e.run != r || !b.coordinationDirectoryObservationCurrent(e, snapshot) || ctx.Err() != nil {
+		return Session{}, coordination.ErrRepository
+	}
+	directory := response.CoordinationDirectory
+	if response.Protocol != 1 || response.Error != "" || len(directory) > 4096 || !utf8.ValidString(directory) || strings.ContainsFunc(directory, unicode.IsControl) ||
+		!coordinationObservedDirectory(recovery.Event{Platform: response.CoordinationPlatform, Cwd: directory}) {
+		return Session{}, errors.New("live provider directory observation unavailable")
+	}
+	observation := CoordinationObservation{Directory: directory}
+	if e.value.CoordinationActivity != nil {
+		observation = *e.value.CoordinationActivity
+		observation.Directory = directory
+	}
+	e.value.CoordinationActivity = &observation
+	value := e.value.clone()
+	value.CoordinationRun, value.CoordinationLive = r.generation, true
+	return value, nil
+}
+
+// Caller holds b.mu. Only a current ordinary local run with no directory may
+// be probed; an RPC response cannot overwrite routing learned in the meantime.
+func (b *Broker) coordinationDirectoryObservationCurrent(e *entry, snapshot Session) bool {
+	eligible := func(s Session) bool {
+		return s.Transport == "local" && s.Rig == nil && !s.Agent() && s.Companion == "" && s.OpenRigView == "" &&
+			s.ExecCwd == "" && (s.CoordinationActivity == nil || s.CoordinationActivity.Directory == "")
+	}
+	if b.closed || e == nil || e.run == nil || !snapshot.CoordinationLive || snapshot.CoordinationRun == 0 ||
+		e.run.generation != snapshot.CoordinationRun || e.value.State != "connected" || !eligible(e.value) || !eligible(snapshot) {
+		return false
+	}
+	v := e.value
+	if v.Owner != snapshot.Owner || v.CreatedAt != snapshot.CreatedAt || v.RecoveryKey == "" || v.RecoveryKey != snapshot.RecoveryKey {
+		return false
+	}
+	if v.CoordinationActivity == nil || snapshot.CoordinationActivity == nil {
+		return v.CoordinationActivity == nil && snapshot.CoordinationActivity == nil
+	}
+	return *v.CoordinationActivity == *snapshot.CoordinationActivity
 }
 
 // WaitCoordinationLaunch waits for this caller's provider, not another session.

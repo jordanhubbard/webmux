@@ -21,6 +21,7 @@ import (
 	"github.com/jordanhubbard/webmux/server/internal/authhandoff"
 	"github.com/jordanhubbard/webmux/server/internal/browser"
 	"github.com/jordanhubbard/webmux/server/internal/coordination"
+	"github.com/jordanhubbard/webmux/server/internal/credentialhub"
 	"github.com/jordanhubbard/webmux/server/internal/desktop"
 	"github.com/jordanhubbard/webmux/server/internal/discovery"
 	"github.com/jordanhubbard/webmux/server/internal/macsetup"
@@ -32,6 +33,8 @@ import (
 )
 
 type Server struct {
+	credentialVault    *credentialhub.Vault
+	credentialGate     credentialExchangeGate
 	sessionCoord       sessionCoordination
 	nodePeersCancel    context.CancelFunc
 	nodePeersDone      chan struct{}
@@ -71,13 +74,18 @@ type Server struct {
 }
 
 type Options struct {
-	Restart    func() error
-	Name       string
-	SecureMode bool
-	JWTSecret  string
-	Logger     *slog.Logger
-	WebDir     string
-	WebFS      fs.FS
+	// PeerRoots optionally supplies trust for an embedded private deployment. Nil uses OS roots.
+	PeerRoots *x509.CertPool
+	// Optional embedding hooks; never configured through browser or peer input.
+	AIHTTPClient  *http.Client
+	AIEnvironment func(string) string
+	Restart       func() error
+	Name          string
+	SecureMode    bool
+	JWTSecret     string
+	Logger        *slog.Logger
+	WebDir        string
+	WebFS         fs.FS
 }
 
 func New(store *storage.Store, options Options) (*Server, error) {
@@ -101,7 +109,7 @@ func New(store *storage.Store, options Options) (*Server, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Server{sessionCoord: sessionCoordination{service: coordination.New(store.Home), bindings: map[string]coordinationProjectObservation{}}, usbLeases: usbforward.LeaseManager{Store: store}, restart: options.Restart, store: store, auth: service, name: options.Name, secure: options.SecureMode, webDir: options.WebDir, webFS: options.WebFS, passwordSlots: make(chan struct{}, 2), logger: logger, sessions: sessions, vnc: vnc, rdp: rdp, targets: netguard.New(os.Getenv("WEBMUX_ALLOW_LOCAL_TARGETS") == "1"), uploads: upload.New(store), ai: ai.New(nil, nil), clientSockets: make(map[string]*clientConnection), clientFacts: make(map[string]clientSnapshot)}, nil
+	return &Server{sessionCoord: sessionCoordination{service: coordination.New(store.Home), bindings: map[string]coordinationProjectObservation{}}, usbLeases: usbforward.LeaseManager{Store: store}, restart: options.Restart, store: store, auth: service, name: options.Name, secure: options.SecureMode, webDir: options.WebDir, webFS: options.WebFS, passwordSlots: make(chan struct{}, 2), logger: logger, sessions: sessions, vnc: vnc, rdp: rdp, targets: netguard.New(os.Getenv("WEBMUX_ALLOW_LOCAL_TARGETS") == "1"), uploads: upload.New(store), ai: ai.New(options.AIEnvironment, options.AIHTTPClient), credentialVault: credentialhub.New(store.Home), peerRoots: options.PeerRoots, clientSockets: make(map[string]*clientConnection), clientFacts: make(map[string]clientSnapshot)}, nil
 }
 
 func (s *Server) RestoreSessions() error {
@@ -132,6 +140,7 @@ func (s *Server) Close() error {
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	s.registerFederation(mux)
+	s.registerCredentialHub(mux)
 	mux.Handle("GET /api/session-coordination", s.protected(false, s.getSessionCoordination))
 	mux.Handle("GET /api/session-coordination/policy", s.protected(false, s.getSessionCoordinationPolicy))
 	mux.Handle("PUT /api/session-coordination/policy", s.protected(false, s.setSessionCoordinationPolicy))

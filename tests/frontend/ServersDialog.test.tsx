@@ -54,7 +54,7 @@ describe('server management', () => {
     fireEvent.change(screen.getByLabelText('Grant name'), { target: { value: 'controller' } });
     fireEvent.change(screen.getByLabelText('Credential', { exact: true }), { target: { value: 'c'.repeat(40) } });
     fireEvent.click(screen.getByRole('button', { name: 'Save grant' }));
-    await waitFor(() => expect(mocks.grant).toHaveBeenCalledWith('controller', { owner: 'owner', coordination: false, coordination_messages: false, coordination_reservations: false, source_node_id: '', source_owner: '', credential: 'c'.repeat(40), token_env: '' }));
+    await waitFor(() => expect(mocks.grant).toHaveBeenCalledWith('controller', { owner: 'owner', credential_sharing: false, coordination: false, coordination_messages: false, coordination_reservations: false, source_node_id: '', source_owner: '', credential: 'c'.repeat(40), token_env: '' }));
   });
 });
 
