@@ -3,6 +3,7 @@ package httpapi
 import (
 	"errors"
 	"net/http"
+	"strings"
 	"unicode/utf16"
 
 	"github.com/jordanhubbard/webmux/server/internal/auth"
@@ -68,8 +69,8 @@ func (s *Server) authStatus(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, map[string]any{"mode": config.Auth.Mode, "bootstrap_required": len(config.Auth.Users) == 0})
 }
 
-func (s *Server) token(w http.ResponseWriter, username, mode string) {
-	token, err := s.auth.Sign(username)
+func (s *Server) token(w http.ResponseWriter, username, mode, generation string) {
+	token, err := s.auth.SignGeneration(username, generation)
 	if err != nil {
 		s.internalError(w, err)
 		return
@@ -88,7 +89,7 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if config.Auth.Mode == "none" {
-		s.token(w, body.Username, "none")
+		s.token(w, body.Username, "none", "")
 		return
 	}
 	for _, user := range config.Auth.Users {
@@ -106,7 +107,7 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 		}
 		if valid {
 			s.event(map[string]any{"type": "login_success", "username": body.Username})
-			s.token(w, body.Username, "local")
+			s.token(w, body.Username, "local", auth.AccountGeneration(body.Username, user.PasswordHash))
 			return
 		}
 		break
@@ -153,15 +154,26 @@ func (s *Server) bootstrap(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.event(map[string]any{"type": "bootstrap_complete", "username": body.Username})
-	s.token(w, body.Username, "local")
+	s.token(w, body.Username, "local", auth.AccountGeneration(body.Username, hash))
 }
 
 func (s *Server) refresh(w http.ResponseWriter, r *http.Request, username string) {
-	mode := "local"
-	if username == "anonymous" {
-		mode = "none"
+	c, err := auth.LoadConfig(s.store)
+	if err != nil {
+		s.internalError(w, err)
+		return
 	}
-	s.token(w, username, mode)
+	mode := c.Auth.Mode
+	if mode == "none" {
+		s.token(w, username, mode, "")
+		return
+	}
+	token, err := s.auth.Refresh(strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer "))
+	if err != nil {
+		writeError(w, 401, "Account session changed; sign in again")
+		return
+	}
+	writeJSON(w, 200, map[string]string{"token": token, "mode": mode})
 }
 
 func checkAdmin(config *auth.Config, actor string) error {
@@ -272,7 +284,8 @@ func (s *Server) deleteUser(w http.ResponseWriter, r *http.Request, actor string
 }
 
 func (s *Server) issueTicket(w http.ResponseWriter, r *http.Request, username string) {
-	ticket, err := s.auth.IssueTicket(username)
+	generation, _ := s.auth.Generation(strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer "))
+	ticket, err := s.auth.IssueTicket(username, generation)
 	if err != nil {
 		s.internalError(w, err)
 		return

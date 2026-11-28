@@ -213,3 +213,30 @@ func TestSameOriginProviderRedirectPreservesRequest(t *testing.T) {
 		t.Fatal(got, err)
 	}
 }
+
+func TestPrivateCredentialConsumersAreIsolated(t *testing.T) {
+	var calls atomic.Int32
+	s := fixture(map[string]string{"WEBMUX_RCC_URL": "https://ambient.invalid", "NVIDIA_API_KEY": "ambient-nvidia", "OPENAI_API_KEY": "ambient-openai"}, func(r *http.Request) (*http.Response, error) {
+		calls.Add(1)
+		want := map[string]string{"api.openai.com": "dedicated-openai", "integrate.api.nvidia.com": "dedicated-nvidia"}[r.URL.Host]
+		if r.URL.Scheme != "https" || r.URL.Path != "/v1/chat/completions" || want == "" || r.Header.Get("Authorization") != "Bearer "+want {
+			t.Error("private credential crossed provider boundary")
+		}
+		return response(200, `{"choices":[{"message":{"content":"private reply"}}]}`), nil
+	})
+	for _, pair := range [][2]string{{"ai.openai", "dedicated-openai"}, {"ai.nvidia", "dedicated-nvidia"}} {
+		private, err := s.WithCredential(pair[0], pair[1])
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err = private.Chat(context.Background(), Request{Message: "qualification"}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if calls.Load() != 2 {
+		t.Fatal("unexpected provider calls", calls.Load())
+	}
+	if _, err := s.WithCredential("unknown", "fixture-key"); err == nil {
+		t.Fatal("unknown consumer accepted")
+	}
+}

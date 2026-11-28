@@ -32,6 +32,9 @@ func (s *Server) commitNodePeer(previous, next serverPeer, secret string) error 
 					return errors.New("This node and account are already enrolled as " + other.ID)
 				}
 			}
+			if next.Identity != previous.Identity || next.CredentialEpoch == "" {
+				next.CredentialEpoch = newCredentialEpoch()
+			}
 			d.Servers[i] = next
 			return validateServerDirectory(*d)
 		}

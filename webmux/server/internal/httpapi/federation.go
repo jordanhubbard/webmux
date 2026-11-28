@@ -24,6 +24,7 @@ import (
 // Federation configuration is administrator-managed. Read APIs never return
 // credentials. Each inbound credential selects exactly one local session owner.
 type serverPeer struct {
+	CredentialEpoch          string       `yaml:"credential_epoch,omitempty" json:"-"`
 	CoordinationReservations bool         `yaml:"coordination_reservations,omitempty" json:"coordination_reservations,omitempty"`
 	CoordinationMessages     bool         `yaml:"coordination_messages,omitempty" json:"coordination_messages,omitempty"`
 	CoordinationOwner        string       `yaml:"coordination_owner,omitempty" json:"coordination_owner,omitempty"`
@@ -37,6 +38,8 @@ type serverPeer struct {
 	DiscoveredAddress        string       `yaml:"discovered_address,omitempty" json:"-"`
 }
 type serverGrant struct {
+	CredentialSharing        bool   `yaml:"credential_sharing,omitempty" json:"credential_sharing,omitempty"`
+	CredentialEpoch          string `yaml:"credential_epoch,omitempty" json:"-"`
 	CoordinationReservations bool   `yaml:"coordination_reservations,omitempty" json:"coordination_reservations,omitempty"`
 	CoordinationMessages     bool   `yaml:"coordination_messages,omitempty" json:"coordination_messages,omitempty"`
 	SourceNode               string `yaml:"source_node_id,omitempty" json:"source_node_id,omitempty"`
@@ -109,6 +112,10 @@ func validateServerDirectory(d serverDirectory) error {
 	seen = map[string]bool{}
 	tokens := map[string]bool{}
 	for _, g := range d.Grants {
+		if g.CredentialSharing && (!plane.ValidSenderScope(g.SourceNode, g.SourceOwner) || g.CredentialEpoch == "") {
+			return errors.New("credential sharing requires a source node/account and independent enrollment generation")
+		}
+
 		if (g.CoordinationMessages || g.CoordinationReservations) && (!g.Coordination || !plane.ValidSenderScope(g.SourceNode, g.SourceOwner)) {
 			return errors.New("coordination messages require summary permission and a source node/account binding")
 		}
@@ -445,7 +452,7 @@ func (s *Server) serverTerminal(w http.ResponseWriter, r *http.Request) {
 	defer ticker.Stop()
 	authorized := func() bool {
 		currentPeer, newToken, err := s.peer(peer.ID)
-		return err == nil && newToken == token && currentPeer == peer && s.socketAuthorized(owner, mode) && s.federationAdmin(owner)
+		return err == nil && newToken == token && sameTerminalPeer(currentPeer, peer) && s.socketAuthorized(owner, mode) && s.federationAdmin(owner)
 	}
 	for {
 		select {
@@ -500,4 +507,11 @@ func (s *Server) serverTerminal(w http.ResponseWriter, r *http.Request) {
 func (s *Server) federationAdmin(owner string) bool {
 	c, err := auth.LoadConfig(s.store)
 	return err == nil && (c.Auth.Mode == "none" || auth.IsAdmin(c.Auth.Users, owner))
+}
+
+// Credential-only enrollment fences do not change terminal ownership/lifetime.
+func sameTerminalPeer(a, b serverPeer) bool {
+	a.CredentialEpoch = ""
+	b.CredentialEpoch = ""
+	return a == b
 }

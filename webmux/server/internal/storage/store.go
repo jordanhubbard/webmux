@@ -150,7 +150,16 @@ func UpdateConfigOrCreate[T any](s *Store, name string, initial T, change func(*
 	return updateConfig(s, name, &initial, change)
 }
 
+// UpdateConfigSnapshot updates an optional configuration while checking related
+// fixed-name configuration files under the same lock. No network I/O or other
+// Store configuration calls are permitted inside change.
+func UpdateConfigSnapshot[T any](s *Store, name string, initial T, change func(*T, func(string, any) error) error) error {
+	return updateConfigSnapshot(s, name, &initial, change)
+}
 func updateConfig[T any](s *Store, name string, initial *T, change func(*T) error) error {
+	return updateConfigSnapshot(s, name, initial, func(v *T, _ func(string, any) error) error { return change(v) })
+}
+func updateConfigSnapshot[T any](s *Store, name string, initial *T, change func(*T, func(string, any) error) error) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	var value T
@@ -160,7 +169,7 @@ func updateConfig[T any](s *Store, name string, initial *T, change func(*T) erro
 		}
 		value = *initial
 	}
-	if err := change(&value); err != nil {
+	if err := change(&value, func(name string, out any) error { return readYAML(s.ConfigPath(name), out) }); err != nil {
 		return err
 	}
 	return writeYAML(s.ConfigPath(name), value)
@@ -248,4 +257,13 @@ func (s *Store) AppendEvent(event map[string]any) error {
 	}
 	_, writeErr := f.Write(append(line, '\n'))
 	return errors.Join(writeErr, f.Close())
+}
+
+// InspectConfigs holds one configuration snapshot across related authorization
+// inputs. The callback may read fixed internal names through read; it must not
+// call other Store configuration methods. No network I/O belongs in callbacks.
+func (s *Store) InspectConfigs(inspect func(read func(string, any) error) error) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return inspect(func(name string, out any) error { return readYAML(s.ConfigPath(name), out) })
 }
