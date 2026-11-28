@@ -94,31 +94,17 @@ func (b *Broker) Recovery(owner, id string) (RecoveryView, error) {
 		view.Waiting, view.Instance = control.Mode == "waiting" && hostReady, control.Instance
 	}
 	if s.Rig != nil {
-		view.Instance = managedInstance(*s.Rig)
-		_, view.ManagedOriginalContract = NativeRigReference(*s.Rig)
-		view.CanResumeManaged = s.Recovery != nil && managedNativeSupported(*s.Rig)
-		if nativeRigPending(s.Recovery) {
-			if request, ok := originalManagedRequest(s.Recovery); ok && request.Instance == view.Instance {
-				request.Inspect = true
-				view.ManagedOriginalRequest = &request
-				view.CanResumeManaged = false
-			}
-		}
+		view.CanResumeManaged = false
 		view.ManagerProfile = s.Rig.ManagerProfile
 		view.ManagerSnapshotID = s.Rig.ManagerSnapshotID
 		view.ManagerNativeSession, view.ManagerNativeStateFile = s.Rig.NativeSessionID, s.Rig.NativeStateFile
 		view.ManagerNativeSource, view.ManagerNativeObservedAt = s.Rig.NativeSource, s.Rig.NativeObservedAt
 		view.ManagerTarget, view.ManagerDirectory = s.Rig.Target, s.Rig.Workspace
-		// Hostname on an exec viewer describes its local transport, not an
-		// externally enrolled Rig provider's unverified execution host.
 		view.Hostname = s.Rig.Host
-		view.LifecycleOwner = s.Rig.Provider
-		if view.LifecycleOwner == "" {
-			view.LifecycleOwner = "rig"
-		}
+		view.LifecycleOwner = "external-tmux"
 	}
 	if s.Agent() {
-		view.LifecycleOwner = "agent-deck"
+		view.LifecycleOwner = "agent"
 	}
 	if s.Recovery != nil && s.Recovery.Activity != nil && view.Waiting && view.LifecycleOwner == "webmux" {
 		a := s.Recovery.Activity
@@ -128,6 +114,9 @@ func (b *Broker) Recovery(owner, id string) (RecoveryView, error) {
 	if s.Recovery == nil {
 		if controlError != "" {
 			view.Message = controlError
+		}
+		if s.Rig != nil {
+			view.Message = externalSessionMessage(s)
 		}
 		return view, nil
 	}
@@ -182,7 +171,17 @@ func (b *Broker) Recovery(owner, id string) (RecoveryView, error) {
 	if a := s.Recovery.Activity; a != nil && a.Configuration != nil && a.Configuration.ManualReason != "" {
 		view.Message += " " + a.Configuration.ManualReason
 	}
+	if s.Rig != nil {
+		view.Message = externalSessionMessage(s)
+	}
 	return view, nil
+}
+
+func externalSessionMessage(s Session) string {
+	if ExternalTmuxAttach(s.ExecArgv) {
+		return "This viewer reattaches with tmux and does not stop the external session."
+	}
+	return "Agent Deck and OpenRig are no longer launched by WebMux. The external tmux session was left running. Attach it from a WebMux terminal with tmux attach. Nothing was stopped."
 }
 
 func (b *Broker) recoveryEventLocked(e *entry, r *run, event recovery.Event) {

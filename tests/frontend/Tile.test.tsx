@@ -347,10 +347,10 @@ it('shows explicit Rig provenance separately from title and transport', () => {
   const view = render(<Tile session={session} fontSize={14} onClose={vi.fn()} onReconnect={vi.fn()} onRename={vi.fn()} />, { wrapper });
   expect(screen.getByText('demo-release / My shell title')).toBeVisible();
   expect(screen.getByText('SSH')).toBeVisible();
-  expect(screen.getByLabelText('Rig viewer')).toHaveTextContent('Rig');
-  expect(screen.getByLabelText('Rig viewer')).toHaveAttribute('title', expect.stringContaining('demo-release'));
+  expect(screen.getByLabelText('External tmux session')).toHaveTextContent('External tmux');
+  expect(screen.getByLabelText('External tmux session')).toHaveAttribute('title', expect.stringContaining('demo-release'));
   view.rerender(<Tile session={makeSession({ title: 'Rig demo-release reviewer build-host' })} fontSize={14} onClose={vi.fn()} onReconnect={vi.fn()} onRename={vi.fn()} />);
-  expect(screen.queryByLabelText('Rig viewer')).toBeNull();
+  expect(screen.queryByLabelText('External tmux session')).toBeNull();
 });
 
 it('saves an explicit project label for an unmanaged session and shows it as identity', async () => {

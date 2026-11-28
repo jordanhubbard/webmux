@@ -25,7 +25,7 @@ const config = {
     },
     terminal_grid: { max_cols: null, max_rows: 4 },
     session_logging: { enabled: false },
-    coordination: { enabled_providers: ['agent-deck', 'rig'] as Array<'agent-deck' | 'rig'>, default_launch_provider: 'agent-deck' as const, default_view: 'all' as const },
+    coordination: { enabled_providers: [] as string[], default_launch_provider: 'webmux' as const, default_view: 'all' as const },
     transport: { prefer_mosh: false, ssh_fallback: true, mosh_server_path: '' },
     ui: { default_pane: 'terminals' },
   },
@@ -116,20 +116,11 @@ describe('SettingsDialog', () => {
     expect(api.updateConfig).not.toHaveBeenCalled();
   });
 
-  it('defaults missing coordination settings to WebMux', async () => {
-    (api.getConfig as ReturnType<typeof vi.fn>).mockResolvedValue({ ...config, app: { ...config.app, coordination: undefined } });
+  it('explains that Agent Deck and OpenRig are no longer launched', async () => {
     render(<SettingsDialog workspaceOptions={workspaceOptions} onClose={vi.fn()} onSaved={vi.fn()} />);
-    expect(await screen.findByLabelText('Default launch owner')).toHaveValue('webmux');
-  });
-
-  it('changes the default coordination experience', async () => {
-    render(<SettingsDialog workspaceOptions={workspaceOptions} onClose={vi.fn()} onSaved={vi.fn()} />);
-    fireEvent.change(await screen.findByLabelText('Default launch owner'), { target: { value: 'rig' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Save settings' }));
-
-    await waitFor(() => expect(api.updateConfig).toHaveBeenCalledWith({
-      app: { coordination: { default_launch_provider: 'rig' } },
-    }));
+    expect(await screen.findByText(/no longer launched by WebMux/)).toBeDefined();
+    expect(screen.queryByLabelText('Default launch owner')).toBeNull();
+    expect(screen.queryByLabelText('Enable Agent Deck')).toBeNull();
   });
 
   it('reports save errors without closing the dialog', async () => {
@@ -142,21 +133,4 @@ describe('SettingsDialog', () => {
     expect(await screen.findByText('Admin privileges required')).toBeDefined();
     expect(screen.getByRole('dialog', { name: 'Settings' })).toBeDefined();
   });
-it('keeps integrations independent and resets a disabled launch owner to WebMux', async () => {
-  render(<SettingsDialog workspaceOptions={workspaceOptions} onClose={vi.fn()} onSaved={vi.fn()} />);
-  fireEvent.click(await screen.findByLabelText('Enable Agent Deck'));
-  expect(screen.getByLabelText('Enable Rig')).toBeChecked();
-  expect(screen.getByLabelText('Default launch owner')).toHaveValue('webmux');
-  fireEvent.change(screen.getByLabelText('Default session view'), { target: { value: 'rig' } });
-  fireEvent.click(screen.getByRole('button', { name: 'Save settings' }));
-  await waitFor(() => expect(api.updateConfig).toHaveBeenCalledWith({ app: { coordination: { enabled_providers: ['rig'], default_launch_provider: 'webmux', default_view: 'rig' } } }));
-});
-
-  it('saves a view change without rewriting integrations or launch ownership', async () => {
-    render(<SettingsDialog workspaceOptions={workspaceOptions} onClose={vi.fn()} onSaved={vi.fn()} />);
-    fireEvent.change(await screen.findByLabelText('Default session view'), { target: { value: 'rig' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Save settings' }));
-    await waitFor(() => expect(api.updateConfig).toHaveBeenCalledWith({ app: { coordination: { default_view: 'rig' } } }));
-  });
-
 });

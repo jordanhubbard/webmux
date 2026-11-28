@@ -1,6 +1,4 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { RigSeatStatus } from './RigSeatStatus';
-import type { CoordinationSeat } from './CoordinationDialog';
 import { Terminal, type TerminalHandle } from './Terminal';
 import { AuthHandoff } from './AuthHandoff';
 import { BrowserCompanion } from './BrowserCompanion';
@@ -19,7 +17,6 @@ import type { Session, ConnectionState, NamedTheme, ManagedClient } from '../typ
 interface TileProps {
   session: Session;
   onGridWheel?: (event: WheelEvent) => boolean;
-  rigObservations?: CoordinationSeat[];
   canManageHosts?: boolean;
   managedClient?: ManagedClient;
   onManagedClientChanged?: () => void;
@@ -51,7 +48,6 @@ interface TileProps {
 export function Tile({
   session,
   onGridWheel,
-  rigObservations,
   canManageHosts = true,
   managedClient,
   onManagedClientChanged,
@@ -231,7 +227,7 @@ export function Tile({
           )}
           <span style={styles.transport}>{session.transport.toUpperCase()}</span>
           {session.transport === 'ssh' && managedClient && <span style={{ ...styles.transport, color: managedClient.online ? '#50fa7b' : '#aaa' }} title={`Managed host ${managedClient.online ? 'connected' : 'offline'}`}>Host {managedClient.online ? '●' : '○'}</span>}
-          {session.rig && <span aria-label={session.rig.provider === 'agent-deck' ? 'Agent Deck-managed worker' : 'Rig viewer'} title={`${identity.source} · ${identity.project} · ${identity.name} · ${identity.host} · ${session.rig.target}`} style={{ ...styles.transport, color: '#c5b8ff' }}>{identity.source}</span>}
+          {session.rig && <span aria-label="External tmux session" title={`${identity.source} · ${identity.project} · ${identity.name} · ${identity.host} · ${session.rig.target}`} style={{ ...styles.transport, color: '#c5b8ff' }}>{identity.source}</span>}
           {!session.rig && <button style={{ ...styles.browserBtn, flexShrink: 0 }} onClick={editProject}>{identity.project ? 'Edit project' : 'Set project'}</button>}
         </div>
         <div style={styles.chromeRight}>
@@ -283,7 +279,6 @@ export function Tile({
         </div>
       </div>
 
-      <RigSeatStatus session={session} observations={rigObservations} />
       {handoff && <AuthHandoff key={handoff.key} session={session} url={handoff.url}
         onDismiss={() => { if (handoff.requestId) termHandleRef.current?.acknowledgeBrowser(handoff.requestId); setHandoff(null); termHandleRef.current?.focus(); }}
         onCompanion={url => { setBrowserNavigation({ url }); setShowBrowser(true); }} />}

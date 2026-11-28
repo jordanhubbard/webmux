@@ -10,7 +10,6 @@
 #   make lint             Lint all code
 #   make clean            Remove build artifacts and dependencies
 #   make install          Install the client executable only
-#   make install-agent-deck Install the qualified Agent Deck coordinator
 #   make install-server   Install the server as an OS service
 #   make install-all      Install both client and server
 #   make uninstall        Remove the client executable
@@ -29,8 +28,6 @@
 #   JWT_SECRET         Token signing secret    (default: dev secret)
 #   SECURE_MODE        true | false            (default: false)
 #   CLIENT_BINDIR      Client install directory (default: ~/.local/bin)
-#   AGENT_DECK_BINDIR  Agent Deck install directory (default: ~/.local/bin)
-#   INSTALL_AGENT_DECK Install Agent Deck with the server (default: no)
 #
 # Examples:
 #   make start HTTP_PORT=9090
@@ -60,9 +57,6 @@ WEBMUX_DIR   := $(CURDIR)/webmux
 WEBMUX_ROOT  := $(WEBMUX_DIR)
 WEBMUX_HOME  ?= $(HOME)/.config/webmux
 CLIENT_BINDIR ?= $(HOME)/.local/bin
-AGENT_DECK_BINDIR ?= $(HOME)/.local/bin
-AGENT_DECK_VERSION ?= v1.16.39
-INSTALL_AGENT_DECK ?= no
 PIDFILE      := $(WEBMUX_HOME)/.webmux.pid
 LOGFILE      := $(WEBMUX_HOME)/logs/webmux.log
 NODE         := node
@@ -93,7 +87,7 @@ SECURE_MODE  ?=
 
 # ── Targets ────────────────────────────────────────────────────────
 .PHONY: all build build-server build-client deps toolchain-node toolchain-go check-tmux check-guacd start stop restart status test test-unit test-e2e lint clean configure help \
-       install install-client install-agent-deck install-optional-agent-deck install-server install-all uninstall uninstall-client uninstall-server uninstall-all \
+       install install-client install-server install-all uninstall uninstall-client uninstall-server uninstall-all \
        release release-minor release-major release-publish changelog-init \
        package package-server package-client package-assets _start_manual _stop_manual
 
@@ -131,7 +125,6 @@ help:
 	@printf "  $(C_CYN)make lint$(C_RST)           Lint all code\n"
 	@printf "  $(C_CYN)make clean$(C_RST)          Remove build artifacts\n"
 	@printf "  $(C_CYN)make install$(C_RST)        Install the client executable only\n"
-	@printf "  $(C_CYN)make install-agent-deck$(C_RST) Install the qualified Agent Deck coordinator\n"
 	@printf "  $(C_CYN)make install-server$(C_RST) Install the server service\n"
 	@printf "  $(C_CYN)make install-all$(C_RST)    Install both client and server\n"
 	@printf "  $(C_CYN)make uninstall$(C_RST)      Remove the client executable\n"
@@ -151,8 +144,6 @@ help:
 	@printf "  $(C_YLW)HTTPS_PORT$(C_RST)=$(C_DIM)8443$(C_RST)             HTTPS listen port\n"
 	@printf "  $(C_YLW)LISTEN_HOST$(C_RST)=$(C_DIM)0.0.0.0$(C_RST)          Bind address\n"
 	@printf "  $(C_YLW)CLIENT_BINDIR$(C_RST)=$(C_DIM)~/.local/bin$(C_RST)     Client install directory\n"
-	@printf "  $(C_YLW)AGENT_DECK_BINDIR$(C_RST)=$(C_DIM)~/.local/bin$(C_RST) Agent Deck install directory\n"
-	@printf "  $(C_YLW)INSTALL_AGENT_DECK$(C_RST)=$(C_DIM)no$(C_RST)          Install Agent Deck with server\n"
 
 check-tmux:
 	@sh scripts/check-tmux.sh
@@ -393,20 +384,6 @@ install-client: build-client
 	@printf "  Discover the server's advertised port, then enroll:\n"
 	@printf "  %s/webmux-client --server WEBMUX_HOST --background\n" "$(CLIENT_BINDIR)"
 
-install-agent-deck:
-	@AGENT_DECK_BINDIR="$(AGENT_DECK_BINDIR)" AGENT_DECK_VERSION="$(AGENT_DECK_VERSION)" \
-		sh scripts/install-agent-deck.sh
-
-install-optional-agent-deck:
-	@if [ "$(INSTALL_AGENT_DECK)" = "yes" ]; then \
-		AGENT_DECK_BINDIR="$(AGENT_DECK_BINDIR)" AGENT_DECK_VERSION="$(AGENT_DECK_VERSION)" \
-			sh scripts/install-agent-deck.sh; \
-	elif [ "$(INSTALL_AGENT_DECK)" = "no" ]; then \
-		printf "$(C_YLW)! $(C_RST) Agent Deck installation skipped (INSTALL_AGENT_DECK=no).\n"; \
-	else \
-		printf "$(C_RED)✗$(C_RST) INSTALL_AGENT_DECK must be yes or no.\n" >&2; exit 2; \
-	fi
-
 # Finish client installation before restarting the server that may own this
 # terminal. A recursive target also preserves that order under make -j.
 install-all: install-client
@@ -414,11 +391,11 @@ install-all: install-client
 
 # Finish fallible preparation before interrupting the installed service.
 # Do not list stop as a prerequisite: make -j can run it beside the build.
-install-server: check-tmux install-optional-agent-deck build-server
+install-server: check-tmux build-server
 ifeq ($(shell uname),Darwin)
 	@printf "$(C_BLU)▸$(C_RST) Installing launchd service…\n"
 	@$(NODE) scripts/macos-app.mts "$(WEBMUX_DIR)/bin/webmux" "$(MACOS_APP)"
-	@PATH="$(AGENT_DECK_BINDIR):$$PATH" $(NODE) scripts/render-service.mts
+	@$(NODE) scripts/render-service.mts
 	@$(NODE) scripts/check-launchd.mts "$(LAUNCHD_SVC)" "$(LOGFILE)" "$$WEBMUX_SERVICE_OUTPUT"
 	@printf "$(C_GRN)✓$(C_RST) Installed: $(C_CYN)%s$(C_RST)\n" "$$WEBMUX_SERVICE_OUTPUT"
 	@printf "  $(C_DIM)config:$(C_RST) %s\n" "$$WEBMUX_HOME"
@@ -427,7 +404,7 @@ ifeq ($(shell uname),Darwin)
 	@printf "  Open WebMux in your browser to complete Mac permissions setup: http://localhost:8080\n"
 else
 	@printf "$(C_BLU)▸$(C_RST) Installing systemd user service…\n"
-	@PATH="$(AGENT_DECK_BINDIR):$$PATH" $(NODE) scripts/render-service.mts
+	@$(NODE) scripts/render-service.mts
 	@systemctl --user daemon-reload
 	@systemctl --user stop "$(SYSTEMD_UNIT)"
 	@systemctl --user enable --now "$(SYSTEMD_UNIT)"

@@ -27,7 +27,6 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/jordanhubbard/webmux/server/internal/discovery"
-	"github.com/jordanhubbard/webmux/server/internal/rigobservation"
 	"golang.org/x/term"
 )
 
@@ -40,12 +39,11 @@ type identity struct {
 }
 
 type snapshot struct {
-	Rig      *rigobservation.Report `json:"rig,omitempty"`
-	Hostname string                 `json:"hostname"`
-	OS       string                 `json:"os"`
-	Arch     string                 `json:"arch"`
-	CPUs     int                    `json:"cpus"`
-	Load1    *float64               `json:"load1,omitempty"`
+	Hostname string   `json:"hostname"`
+	OS       string   `json:"os"`
+	Arch     string   `json:"arch"`
+	CPUs     int      `json:"cpus"`
+	Load1    *float64 `json:"load1,omitempty"`
 }
 
 type frame struct {
@@ -72,7 +70,6 @@ func run() error {
 	background := flags.Bool("background", false, "continue in the background after enrollment")
 	pairCode := flags.Bool("pair-code", false, "print a new one-time host pairing code")
 	allowHTTP := flags.Bool("allow-insecure-http", false, "allow cleartext HTTP for an explicitly trusted network")
-	observeRig := flags.Bool("observe-rig", false, "report canonical local Rig seats without starting Rig")
 	child := flags.Bool("run-child", false, "internal background worker")
 	if err := flags.Parse(os.Args[1:]); err != nil {
 		return err
@@ -132,7 +129,7 @@ func run() error {
 		if err := probeConnection(endpoint, id.Credential); err != nil {
 			return fmt.Errorf("server check-in failed: %w", err)
 		}
-		return startBackground(*server, *statePath, *allowHTTP, *observeRig)
+		return startBackground(*server, *statePath, *allowHTTP)
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
@@ -140,7 +137,7 @@ func run() error {
 	backoff := time.Second
 	activeEndpoint := endpoint
 	for ctx.Err() == nil {
-		err := connectWithRig(ctx, activeEndpoint, id.Credential, *observeRig)
+		err := connect(ctx, activeEndpoint, id.Credential)
 		if errors.Is(err, errRevoked) {
 			return err
 		}
@@ -347,10 +344,6 @@ func hostSnapshot() snapshot {
 }
 
 func connect(ctx context.Context, server, credential string) error {
-	return connectWithRig(ctx, server, credential, false)
-}
-
-func connectWithRig(ctx context.Context, server, credential string, observeRig bool) error {
 	endpoint, err := url.Parse(server + "/api/clients/connect")
 	if err != nil {
 		return err
@@ -387,9 +380,6 @@ func connectWithRig(ctx context.Context, server, credential string, observeRig b
 		_ = connection.SetWriteDeadline(time.Now().Add(5 * time.Second))
 		return connection.WriteJSON(frame{Type: "snapshot", ID: id, Snapshot: func() *snapshot {
 			value := hostSnapshot()
-			if observeRig {
-				value.Rig = rigobservation.Observe(ctx)
-			}
 			return &value
 		}()})
 	}

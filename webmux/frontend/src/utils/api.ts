@@ -1,5 +1,4 @@
-import type { CoordinationDrainResult, CoordinationSendResult, CoordinationStatus, WorkspaceListing } from '../components/CoordinationDialog';
-import type { RigStopPreview, RigStopReceipt } from '../components/RigStopDialog';
+import type { CoordinationStatus } from '../components/CoordinationDialog';
 import type {
   AgentTmuxSession,
   AppConfig,
@@ -26,12 +25,6 @@ const API_BASE = '/api';
 
 class ApiError extends Error {
   constructor(message: string, readonly status: number, readonly body: unknown) { super(message); }
-}
-export class CoordinationCreationUnconfirmedError extends Error {
-  constructor(message: string) { super(message); }
-}
-export class CoordinationTrustRequiredError extends Error {
-  constructor(readonly requestId: string) { super('Review project trust in native Codex before retrying the saved request.'); }
 }
 
 function getToken(): string | null {
@@ -65,17 +58,6 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
   if (res.status === 204) return undefined as T;
   return res.json() as Promise<T>;
-}
-
-export interface CoordinationSendInput {
-  requestId: string; scope: string; provider: string; target: string; message: string; queue: boolean;
-}
-export function checkedCoordinationSendOutcome(value: CoordinationSendResult, id: string, scope: string): CoordinationSendResult {
-  if (!value || value.requestId !== id || !['unobserved', 'pending', 'uncertain', 'completed', 'refused', 'cancelled'].includes(value.requestState || '')
-    || (value.request && (value.request.requestId !== id || value.request.scope !== scope || value.request.provider !== 'agent-deck' || !value.request.target || typeof value.request.message !== 'string' || typeof value.request.queue !== 'boolean'))) {
-    throw new Error('The original send outcome is unconfirmed. Keep its saved request; do not resend as a new instruction.');
-  }
-  return value;
 }
 
 export interface BrowserAction {
@@ -144,62 +126,6 @@ export interface USBForwardingLease {
 }
 export interface USBForwardingTicket { lease: USBForwardingLease; pair_code: string }
 
-export interface CoordinationCreateRequest {
-  provider: string; mode: 'new' | 'existing'; projectId?: string; projectName: string; context?: string;
-  name: string; host: string; workspace: string; runtime: string; row?: number; col?: number; inspect?: boolean; trustRequest?: string; creationRequestId?: string; continueOriginal?: boolean;
-}
-export type CoordinationCreateResponse = { target: string; session: Session; creation?: never }
-  | { creation: { state: 'uncertain'; stage: 'project' | 'agent'; code: string; operationId: string }; session?: never; target?: never };
-
-async function createCoordinatedAgent(input: CoordinationCreateRequest): Promise<CoordinationCreateResponse> {
-  try {
-    const endpoint = input.creationRequestId
-      ? '/coordination/creation-requests/' + encodeURIComponent(input.creationRequestId) : '/coordination/agents';
-    const result = await request<CoordinationCreateResponse>(endpoint, { method: 'POST', body: JSON.stringify(input) });
-    if (input.creationRequestId) {
-      const object = (value: unknown): value is Record<string, unknown> => !!value && typeof value === 'object' && !Array.isArray(value);
-      if (!object(result)) throw new Error('Creation response was incomplete.');
-      const creation = result.creation;
-      const pending = object(creation) && Object.keys(result).join(',') === 'creation'
-        && Object.keys(creation).sort().join(',') === 'code,operationId,stage,state'
-        && creation.state === 'uncertain' && ['project', 'agent'].includes(String(creation.stage))
-        && typeof creation.code === 'string' && /^[a-z][a-z0-9_]{0,95}$/.test(creation.code)
-        && typeof creation.operationId === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(creation.operationId);
-      const attached = !('creation' in result) && !('blocked' in result) && !('refused' in result)
-        && typeof result.target === 'string' && !!result.target && object(result.session)
-        && typeof result.session.id === 'string' && !!result.session.id;
-      if (!pending && !attached) throw new Error('Creation response was incomplete.');
-    }
-    return result;
-  }
-  catch (error) {
-    if (error instanceof ApiError && error.status === 409 && input.provider === 'rig' && input.runtime === 'codex'
-      && (!input.host || input.host === 'localhost') && (input.mode === 'new' || input.mode === 'existing')
-      && error.body && typeof error.body === 'object' && 'blocked' in error.body
-      && !('creation' in error.body) && !('session' in error.body)) {
-      const blocked = error.body.blocked;
-      if (blocked && typeof blocked === 'object' && Object.keys(blocked).sort().join(',') === 'code,requestId,state'
-        && 'state' in blocked && blocked.state === 'blocked'
-        && 'code' in blocked && blocked.code === 'native_project_trust_required' && 'requestId' in blocked
-        && typeof blocked.requestId === 'string' && /^[a-f0-9]{64}$/.test(blocked.requestId)) {
-        throw new CoordinationTrustRequiredError(blocked.requestId);
-      }
-    }
-    if (input.creationRequestId) {
-      // Only an explicit pre-dispatch refusal can clear the first attempt.
-      // A refusal of a continuation says nothing about the ORIGINAL outcome.
-      const refused = error instanceof ApiError && error.body && typeof error.body === 'object'
-        && !('creation' in error.body) && !('session' in error.body) && !('blocked' in error.body)
-        && 'refused' in error.body ? error.body.refused : null;
-      if (error instanceof ApiError && [400, 409].includes(error.status) && !input.continueOriginal && !input.inspect && !input.trustRequest && refused && typeof refused === 'object'
-        && Object.keys(refused).sort().join(',') === 'code,state' && 'state' in refused && refused.state === 'refused'
-        && 'code' in refused && refused.code === 'invalid_creation_request') throw error;
-      throw new CoordinationCreationUnconfirmedError(error instanceof Error ? error.message : 'Creation response was not confirmed.');
-    }
-    throw error;
-  }
-}
-
 export interface SessionCoordinationPolicy { contract: 'webmux-session-coordination-policy/v1'; enabled: boolean }
 async function getSessionCoordinationPolicy(signal?: AbortSignal): Promise<SessionCoordinationPolicy> {
   const value = await request<Partial<SessionCoordinationPolicy> | null>('/session-coordination/policy', { signal, cache: 'no-store' });
@@ -232,24 +158,7 @@ export const api = {
   reconnectServerSession: (server: string, id: string) => request<Session>(`/servers/${encodeURIComponent(server)}/sessions/${encodeURIComponent(id)}/reconnect`, { method: 'POST', body: '{}' }),
   sendServerMessage: (server: string, id: string, message: string) => request<{ queued: boolean; processed: boolean }>(`/servers/${encodeURIComponent(server)}/sessions/${encodeURIComponent(id)}/messages`, { method: 'POST', body: JSON.stringify({ message }) }),
   getCoordination: (provider?: string, signal?: AbortSignal) => request<CoordinationStatus>(`/coordination${provider ? `?provider=${encodeURIComponent(provider)}` : ''}`, signal ? { signal } : undefined),
-  previewRigStop: (target: string, reason: string) => request<RigStopPreview>('/coordination/stop/preview', { method: 'POST', body: JSON.stringify({ provider: 'rig', target, reason }) }),
-  executeRigStop: (id: string) => request<RigStopReceipt>('/coordination/stop', { method: 'POST', body: JSON.stringify({ id, confirm: true }) }),
-  getRigChanges: (signal?: AbortSignal) => request<{ contract: string; available: boolean; changed: boolean }>('/coordination/changes', { signal }),
-  getRigObservations: (signal?: AbortSignal) => request<CoordinationStatus>('/coordination?provider=rig&observations=rig', { signal }),
-  createCoordinatedAgent,
-  getRigProjectPods: (projectId: string, projectName: string) => request<{ projectId: string; projectName: string; pods: string[]; source: 'native-spec' | 'legacy-seats' }>('/coordination/rig/pods', { method: 'POST', body: JSON.stringify({ projectId, projectName }) }),
-  browseCoordinationWorkspaces: (provider: string, host: string, path?: string) => request<WorkspaceListing>('/coordination/workspaces', { method: 'POST', body: JSON.stringify({ provider, host, path }) }),
-  attachCoordinatedAgent: (provider: string, target: string, position?: { row: number; col: number }) => request<Session>('/coordination/attach', { method: 'POST', body: JSON.stringify({ provider, target, ...position }) }),
-  sendCoordinationMessage: async (input: CoordinationSendInput) => checkedCoordinationSendOutcome(await request<CoordinationSendResult>('/coordination/messages', { method: 'POST', body: JSON.stringify(input) }), input.requestId, input.scope),
-  getCoordinationSendScope: () => request<{ scope: string }>('/coordination/send-intents', { cache: 'no-store' }),
-  inspectCoordinationSend: async (id: string, scope: string) => checkedCoordinationSendOutcome(await request<CoordinationSendResult>(`/coordination/send-intents/${encodeURIComponent(id)}`, { cache: 'no-store', headers: { 'X-WebMux-Send-Scope': scope } }), id, scope),
-  dismissCoordinationSend: async (id: string, scope: string) => checkedCoordinationSendOutcome(await request<CoordinationSendResult>(`/coordination/send-intents/${encodeURIComponent(id)}/dismiss`, { method: 'POST', headers: { 'X-WebMux-Send-Scope': scope } }), id, scope),
-  getCoordinationSendStatus: (provider: string, target: string, sendId: string) => request<Record<string, unknown>>('/coordination/send-status', { method: 'POST', body: JSON.stringify({ provider, target, sendId }) }),
-  drainCoordinationRemote: (provider: string, remote: string, target: string) => request<CoordinationDrainResult>('/coordination/drain', { method: 'POST', body: JSON.stringify({ provider, remote, target }) }),
-  getOpenRig: () => request<{ available: boolean; message: string; session: Session | null; views?: Record<string, Session>; proof?: { phase: string; run_id: string; message: string; nonce_a?: string; nonce_b?: string; digest?: string } | null }>('/openrig'),
-  getOpenRigAgents: () => request<{ target: string; runtime: string; rig: string; status: string }[]>('/openrig/agents'),
-  attachOpenRig: (view = 'dashboard', target?: string) => request<Session>('/openrig/attach', { method: 'POST', body: JSON.stringify({ view, target }) }),
-  stopOpenRigProof: () => request('/openrig/proof/stop', { method: 'POST' }),
+  attachCoordinatedSession: (sessionId: string) => request<Session>('/coordination/attach', { method: 'POST', body: JSON.stringify({ provider: 'webmux', sessionId }) }),
   getMacSetup: () => request<MacSetup>('/setup/macos'),
   macSetupAction: (action: string, transport?: 'local' | 'ssh') => request<PermissionResult | { ok?: boolean; restarting?: boolean }>('/setup/macos', { method: 'POST', body: JSON.stringify({ action, transport }) }),
   beginAuthHandoff: (id: string, authorization: string) => request<{ id: string; expires_in: number }>(`/sessions/${id}/auth-handoff`, { method: 'POST', body: JSON.stringify({ authorization }) }),

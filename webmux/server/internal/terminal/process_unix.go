@@ -10,7 +10,6 @@ import (
 	"syscall"
 
 	"github.com/creack/pty"
-	"github.com/jordanhubbard/webmux/server/internal/agentdeckattach"
 	"golang.org/x/sys/unix"
 )
 
@@ -21,13 +20,6 @@ type unixProcess struct {
 
 func startNative(spec Command) (nativeProcess, error) {
 	command := exec.Command(spec.Path, spec.Args...)
-	if argv := append([]string{spec.Path}, spec.Args...); agentdeckattach.Match(argv) {
-		executable, err := os.Executable()
-		if err != nil {
-			return nil, err
-		}
-		command = exec.Command(executable, append([]string{agentdeckattach.Helper}, argv...)...)
-	}
 	command.Dir, command.Env = spec.Dir, spec.Env
 	file, err := pty.StartWithSize(command, &pty.Winsize{Cols: uint16(spec.Cols), Rows: uint16(spec.Rows)})
 	if err != nil {

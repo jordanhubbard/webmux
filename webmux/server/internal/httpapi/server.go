@@ -13,7 +13,6 @@ import (
 	"os"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/gorilla/websocket"
 
@@ -40,15 +39,10 @@ type Server struct {
 	nodes              *discovery.NodeBrowser
 	nodePolicy         discovery.NodePolicy
 	nodeDiscoveryError string
-	rigCaptureCursor   int
-	rigChangesMu       sync.Mutex
-	rigChangesOwners   map[string]bool
 	browserProfileMu   sync.Mutex
 	clientMu           sync.Mutex
 	clientSockets      map[string]*clientConnection
 	clientFacts        map[string]clientSnapshot
-	coordinationOnce   sync.Once
-	coordinationCancel context.CancelFunc
 	macSetup           macsetup.Manager
 	usbLeases          usbforward.LeaseManager
 	restart            func() error
@@ -111,30 +105,9 @@ func New(store *storage.Store, options Options) (*Server, error) {
 }
 
 func (s *Server) RestoreSessions() error {
-	s.startCoordination()
-	terminalErr := s.sessions.Restore()
-	if terminalErr == nil {
-		// One unreachable remote manager is waited for once per startup, not
-		// once for every viewer it owns. Viewers are restored sequentially.
-		unreachable := map[string]error{}
-		terminalErr = s.sessions.RestoreManaged(context.Background(), func(parent context.Context, owner string, identity session.RigIdentity) ([]string, error) {
-			if err := s.openRigPermission(owner); err != nil {
-				return nil, err
-			}
-			remote := managedRemoteKey(owner, identity)
-			if err := unreachable[remote]; remote != "" && err != nil {
-				return nil, err
-			}
-			ctx, cancel := context.WithTimeout(parent, 20*time.Second)
-			defer cancel()
-			launch, err := s.resolveManagedReattachment(ctx, owner, identity)
-			if down := (*agentDeckRemoteUnavailable)(nil); remote != "" && errors.As(err, &down) {
-				unreachable[remote] = err
-			}
-			return launch.Argv, err
-		})
-	}
-	return errors.Join(terminalErr, s.vnc.Restore(), s.rdp.Restore())
+	// Persisted viewers are reattached by WebMux itself. Agent Deck and OpenRig
+	// are not started, and a saved external tmux session is not killed.
+	return errors.Join(s.sessions.Restore(), s.vnc.Restore(), s.rdp.Restore())
 }
 func (s *Server) StartSlave(host string, port int) error {
 	_, err := s.sessions.ResetForSlave(host, port)
@@ -152,9 +125,6 @@ func (s *Server) Close() error {
 	}
 	if s.nodes != nil {
 		_ = s.nodes.Close()
-	}
-	if s.coordinationCancel != nil {
-		s.coordinationCancel()
 	}
 	return errors.Join(coordinationErr, s.closeSocketsAndSessions())
 }
@@ -223,25 +193,8 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("PATCH /api/session-recovery/{id}", s.protected(false, s.patchRecovery))
 	mux.HandleFunc("GET /api/term/{id}", s.terminalSocket)
 	mux.Handle("GET /api/agents/config", s.protected(false, s.getAgentConfig))
-	mux.Handle("GET /api/coordination/changes", s.protected(false, s.getRigChanges))
 	mux.Handle("GET /api/coordination", s.protected(false, s.getCoordination))
-	mux.Handle("POST /api/coordination/agents", s.protected(false, s.createCoordinatedAgent))
-	mux.Handle("POST /api/coordination/creation-requests/{requestId}", s.protected(false, s.createCoordinatedAgent))
-	mux.Handle("POST /api/coordination/workspaces", s.protected(false, s.browseCoordinationWorkspaces))
-	mux.Handle("POST /api/coordination/rig/pods", s.protected(false, s.coordinationRigPods))
-	mux.Handle("POST /api/coordination/attach", s.protected(false, s.attachManagedRig))
-	mux.Handle("POST /api/coordination/stop/preview", s.protected(false, s.previewRigStop))
-	mux.Handle("POST /api/coordination/stop", s.protected(false, s.executeRigStop))
-	mux.Handle("POST /api/coordination/messages", s.protected(false, s.sendCoordinationMessage))
-	mux.Handle("GET /api/coordination/send-intents", s.protected(false, s.coordinationSendScope))
-	mux.Handle("GET /api/coordination/send-intents/{requestId}", s.protected(false, s.inspectCoordinationSend))
-	mux.Handle("POST /api/coordination/send-intents/{requestId}/dismiss", s.protected(false, s.dismissCoordinationSend))
-	mux.Handle("POST /api/coordination/send-status", s.protected(false, s.coordinationSendStatus))
-	mux.Handle("POST /api/coordination/drain", s.protected(false, s.drainCoordinationRemote))
-	mux.Handle("GET /api/openrig", s.protected(false, s.getOpenRig))
-	mux.Handle("GET /api/openrig/agents", s.protected(false, s.getOpenRigAgents))
-	mux.Handle("POST /api/openrig/attach", s.protected(false, s.attachOpenRig))
-	mux.Handle("POST /api/openrig/proof/stop", s.protected(false, s.stopOpenRigProof))
+	mux.Handle("POST /api/coordination/attach", s.protected(false, s.attachCoordinatedSession))
 	mux.Handle("GET /api/agents/sessions", s.protected(false, s.listAgents))
 	mux.Handle("GET /api/agents/{agentId}/sessions", s.protected(false, s.listAgents))
 	mux.Handle("POST /api/agents/{agentId}/attach", s.protected(false, s.attachAgent))
@@ -266,7 +219,7 @@ func (s *Server) Handler() http.Handler {
 	interactive := newLimiter(1800, globalWindow).wrap(mux)
 	return s.cors(apiPaths(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, pattern := mux.Handler(r)
-		if pattern == "GET /api/coordination" || pattern == "GET /api/coordination/changes" || pattern == "GET /api/servers" || pattern == "GET /api/servers/{server}/sessions" || pattern == "GET /api/federation/sessions" {
+		if pattern == "GET /api/coordination" || pattern == "GET /api/servers" || pattern == "GET /api/servers/{server}/sessions" || pattern == "GET /api/federation/sessions" {
 			discovery.ServeHTTP(w, r)
 			return
 		}

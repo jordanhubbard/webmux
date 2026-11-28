@@ -265,9 +265,9 @@ export interface AppConfig {
       enabled?: boolean;
     };
     coordination?: {
-      enabled_providers?: Array<'agent-deck' | 'rig'>;
-      default_launch_provider?: 'webmux' | 'agent-deck' | 'rig';
-      default_view?: 'all' | 'webmux' | 'agent-deck' | 'rig';
+      enabled_providers?: string[];
+      default_launch_provider?: 'webmux';
+      default_view?: 'all' | 'webmux';
     };
     transport?: {
       prefer_mosh?: boolean;

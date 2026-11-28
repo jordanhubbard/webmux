@@ -11,11 +11,9 @@ const VISUAL_PARITY = process.env.WEBMUX_VISUAL_PARITY === '1';
 export default defineConfig({
   testDir: '../tests/e2e',
   testMatch: SCREEN_REPLAY_ONLY ? 'screen-replay.spec.ts' : '*.spec.ts',
-  // Positive independent-provider coverage runs in the required native fixture.
   testIgnore: '**/*.native.spec.ts',
   timeout: 30_000,
   retries: 0,
-  globalTeardown: SCREEN_REPLAY_ONLY ? undefined : path.resolve(__dirname, '../tests/e2e/stop-openrig.mts'),
   workers: 1,
   reporter: [['list']],
   snapshotPathTemplate: '{testDir}/.visual-baseline/{platform}/{arg}{ext}',

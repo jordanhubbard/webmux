@@ -1,5 +1,9 @@
 # Automatic session coordination architecture
 
+WebMux no longer launches Agent Deck or OpenRig. The comparison below is a
+historical record of those interfaces. Current coordination is the built-in
+WebMux ledger. See [what was removed](openrig.md).
+
 Provider-interface comparison completed 2026-11-22 under
 [#656](https://github.com/jordanhubbard/webmux/issues/656). The proposed project-authority
 amendment below responds to the design direction clarified in
@@ -68,14 +72,14 @@ queue mutation, live conversation or existing provider configuration was accesse
 | Built-in WebMux plane | Existing WebMux identities, private session capabilities, durable ledger, separately authorized peer context/messages/claims/reservations, authenticated execution-host project observations and scoped CLI/MCP. The pinned native comparison exposes two coordination tools and refuses reads without private access. | Ships with the Go server/helper, avoiding a mandatory manager on otherwise ordinary nodes. WebMux owns schema, transport, revocation, retention and resource-bound maintenance. Runtime-specific native policies, sandbox reachability, managed-provider channels and platform custody still require dedicated adapters and acceptance. |
 | MAC execution authority | Project/task ledger, canonical machine/worker identities, task-attempt leases, dependencies, evidence/review/publication and integration observations/findings. | Reuse the existing fleet for connected projects. The interactive-session adapter, source-roadmap mapping and strict project priority/write-scope admission still require implementation and qualification. MAC dispatch classes are scheduling hints, not proof of roadmap ordering or arbitrary file exclusivity. |
 
-The existing adapters inspected include
-[`coordination_providers.go`](../webmux/server/internal/httpapi/coordination_providers.go),
-[`coordination_service.go`](../webmux/server/internal/httpapi/coordination_service.go),
-[`openrigcoord`](../webmux/server/internal/openrigcoord/coord.go),
+The adapters inspected for that comparison included the former
+`coordination_providers.go`, `coordination_service.go`, and `openrigcoord`
+packages, plus
 [`federation.go`](../webmux/server/internal/httpapi/federation.go) and
 [`session_coordination.go`](../webmux/server/internal/httpapi/session_coordination.go).
-Their tests and retained native receipts establish specific provider behaviors;
-MCP tool availability alone establishes no new native workflow acceptance.
+Agent Deck and OpenRig adapters have been removed. Retained native receipts
+establish the provider behaviors that were tested; MCP tool availability alone
+established no new native workflow acceptance.
 
 ## Runtime and platform boundaries
 

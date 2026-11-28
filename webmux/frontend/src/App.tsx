@@ -9,7 +9,6 @@ import type { ConnectedServer } from './utils/api';
 import { Workspace } from './components/Workspace';
 import { GraphicsWorkspace } from './components/GraphicsWorkspace';
 import { AgentWorkspace } from './components/AgentWorkspace';
-import { OpenRigWorkspace } from './components/OpenRigWorkspace';
 import { CoordinationDialog } from './components/CoordinationDialog';
 import { UsersDialog } from './components/UsersDialog';
 import { SettingsDialog } from './components/SettingsDialog';
@@ -160,12 +159,6 @@ function AuthenticatedApp({
     setActivePane('terminals');
   }, [setActivePane]);
 
-  if (new URLSearchParams(window.location.search).get('panel') === 'openrig') {
-    return canManageSettings
-      ? <OpenRigWorkspace fontSize={fontSize} fontFamily={fontFamily} poppedOut />
-      : <p role="alert">Administrator access is required for the host OpenRig dashboard.</p>;
-  }
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <TopBar
@@ -209,7 +202,6 @@ function AuthenticatedApp({
         <div style={{ display: activePane === 'terminals' ? 'flex' : 'none', height: '100%', flexDirection: 'column' }}>
           {serverView !== 'local' ? <InputBroadcastProvider><ServerWorkspace onManageServers={() => setShowServers('manage')} onRefreshDirectory={refreshServerDirectory} directoryRevision={serverDirectoryRevision} servers={servers} selected={serverView} fontSize={fontSize} fontFamily={fontFamily} themes={themes} globalTheme={globalTheme} /></InputBroadcastProvider> : <Workspace
             appName={appName}
-            canManageRig={canManageSettings}
             canManageHosts={auth.authStatus?.mode === 'local'}
             fontSize={fontSize}
             fontFamily={fontFamily}
@@ -392,7 +384,7 @@ export default function App() {
   }, [agentConfig, canManageSettings]);
   const workspaceOptions = useMemo(() => availablePanes.map(pane => ({
     value: pane,
-    label: pane === 'terminals' ? 'Terminals' : pane === 'desktops' ? 'Desktops' : pane === 'coordination' ? 'Coordination' : pane === 'openrig' ? 'OpenRig' : pane === 'agents'
+    label: pane === 'terminals' ? 'Terminals' : pane === 'desktops' ? 'Desktops' : pane === 'coordination' ? 'Coordination' : pane === 'agents'
       ? 'Agents'
       : agentConfig.definitions.find(definition => definition.workspace === pane)?.plural_label ?? pane,
   })), [agentConfig.definitions, availablePanes]);

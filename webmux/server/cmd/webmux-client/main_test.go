@@ -128,7 +128,7 @@ func TestOutboundClientRespondsToHostFactRequest(t *testing.T) {
 			return
 		}
 		var initial frame
-		if err := connection.ReadJSON(&initial); err != nil || initial.Type != "snapshot" || initial.Snapshot == nil || initial.Snapshot.OS == "" || initial.Snapshot.Rig != nil {
+		if err := connection.ReadJSON(&initial); err != nil || initial.Type != "snapshot" || initial.Snapshot == nil || initial.Snapshot.OS == "" {
 			return
 		}
 		close(connected)
@@ -180,47 +180,4 @@ func TestProbeRequiresMatchingProtocol(t *testing.T) {
 	if err := probeConnection(server.URL, "client.secret"); err == nil || !strings.Contains(err.Error(), "protocol") {
 		t.Fatalf("unsupported protocol passed probe: %v", err)
 	}
-}
-
-func TestOutboundRigObservationIsOptIn(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("Rig supports Unix hosts")
-	}
-	directory := t.TempDir()
-	if err := os.WriteFile(filepath.Join(directory, "rig"), []byte(`#!/bin/sh
-printf '%s\n' '{"entries":[{"rigId":"r","rigName":"project","logicalId":"worker","tmuxAttachCommand":"tmux attach -t observed-pane"}]}'
-`), 0700); err != nil {
-		t.Fatal(err)
-	}
-	t.Setenv("PATH", directory+string(os.PathListSeparator)+os.Getenv("PATH"))
-	received := make(chan bool, 1)
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		socket, err := (&websocket.Upgrader{}).Upgrade(w, r, nil)
-		if err != nil {
-			return
-		}
-		defer socket.Close()
-		if socket.WriteJSON(frame{Type: "hello", Protocol: protocol}) != nil {
-			return
-		}
-		var report frame
-		if socket.ReadJSON(&report) != nil {
-			return
-		}
-		received <- report.Snapshot != nil && report.Snapshot.Rig != nil && report.Snapshot.Rig.State == "ok" && len(report.Snapshot.Rig.Seats) == 1 && report.Snapshot.Rig.Seats[0].TmuxTarget == "observed-pane"
-	}))
-	defer server.Close()
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	done := make(chan error, 1)
-	go func() { done <- connectWithRig(ctx, server.URL, "client.secret", true) }()
-	select {
-	case ok := <-received:
-		if !ok {
-			t.Fatal("host client did not report the opt-in observation")
-		}
-	case <-ctx.Done():
-		t.Fatal("observation did not arrive")
-	}
-	<-done
 }

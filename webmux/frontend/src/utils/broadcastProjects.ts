@@ -3,7 +3,7 @@ import { executionHostLabel } from './sessionIdentity';
 
 const provider = (session: Session) => session.rig?.provider || 'rig';
 const ownerLabel = (session: Session) => {
-  const name = provider(session) === 'agent-deck' ? 'Agent Deck' : provider(session) === 'rig' ? 'Rig' : provider(session);
+  const name = 'External tmux';
   return session.rig?.manager_profile ? `${name} (${session.rig.manager_profile})` : name;
 };
 const recipientBase = (session: Session) => session.rig
@@ -29,7 +29,7 @@ export function broadcastProjects(sessions: Session[]) {
     const group = groups.get(key);
     if (group) group.ids.push(session.id);
     else groups.set(key, { key, label: `Project: ${rig.project} · ${ownerLabel(session)} · ${executionHostLabel(rig.host)}`,
-      identity: `${rig.project_id}${rig.rig_host_id ? ` · Rig host ${rig.rig_host_id}` : ''}`, ids: [session.id] });
+      identity: `${rig.project_id}${rig.rig_host_id ? ` · host ${rig.rig_host_id}` : ''}`, ids: [session.id] });
   }
   const values = [...groups.values()];
   return values.map(group => ({ ...group, label: values.filter(other => other.label === group.label).length > 1 ? `${group.label} · ${group.identity}` : group.label }))

@@ -57,7 +57,7 @@ export function HelpDialog({ onClose }: HelpDialogProps) {
         </Section>
 
         <Section title="Controls">
-          <Row label="Coordination tab" desc="Start a coding agent in a folder, or open an existing coordinated session. WebMux suggests editable project and purpose-based session names." />
+          <Row label="Coordination tab" desc="Lists built-in WebMux terminals. Existing external tmux sessions stay running and can be attached with tmux attach." />
           <Row label="Session tools" desc="Open a browser, sign in, manage a host client, or change one terminal’s theme." />
           <Row label="Type to All" desc="Toggle broadcast mode. Input follows the current recipients." />
           <Row label="Display → A− / A+" desc="Decrease or increase the terminal font size (8–32 px, persisted)." />

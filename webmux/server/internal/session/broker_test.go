@@ -425,14 +425,13 @@ func TestProjectLabelPersistenceOwnershipAndProviderAuthority(t *testing.T) {
 	if err != nil || restored.ProjectLabel != label {
 		t.Fatalf("restored project: %+v %v", restored, err)
 	}
-	managed, err := next.EnsureRigTerminal("owner", "seat", "reviewer", []string{"fixture"}, RigIdentity{Target: "seat", Project: "Canonical", Name: "reviewer", Workspace: "/work/canonical"})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := next.Patch("owner", managed.ID, Patch{ProjectLabel: &label}); err == nil {
+	next.mu.Lock()
+	next.entries[restored.ID].value.Rig = &RigIdentity{Provider: "rig", Target: "seat", Project: "Canonical", Name: "reviewer", Workspace: "/work/canonical", Host: "localhost", Runtime: "shell"}
+	next.mu.Unlock()
+	if _, err := next.Patch("owner", restored.ID, Patch{ProjectLabel: &label}); err == nil {
 		t.Fatal("manual label overrode provider project")
 	}
-	if current, _ := next.Get("owner", managed.ID); current.Rig.Project != "Canonical" || current.Rig.Workspace != "/work/canonical" {
+	if current, _ := next.Get("owner", restored.ID); current.Rig.Project != "Canonical" || current.Rig.Workspace != "/work/canonical" {
 		t.Fatalf("provider identity lost: %+v", current)
 	}
 }

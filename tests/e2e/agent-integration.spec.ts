@@ -1,6 +1,5 @@
 import { test, expect } from '@playwright/test';
 import { spawnSync } from 'node:child_process';
-import { randomBytes } from 'node:crypto';
 import { mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -27,16 +26,7 @@ test('real tmux discovery, browser attachment, reload and scratch shell', async 
     expect(result.status, result.stderr).toBe(0);
     return result.stdout.trim();
   };
-  const home = path.resolve(__dirname, '.test-home');
-  const rig = path.join(home, 'openrig-bin/rig');
-  const rigEnv = process.env.WEBMUX_REAL_OPENRIG === '1' ? { ...process.env, OPENRIG_HOST_SELECTED: 'local',
-    TMUX_TMPDIR: readFileSync(path.join(home, 'openrig-tmux-directory'), 'utf8') } : process.env;
-  const rigRun = (binary: string, args: string[]) => {
-    const result = spawnSync(binary, args, { env: rigEnv, encoding: 'utf8', timeout: 15000 });
-    expect(result.status, result.stdout + result.stderr).toBe(0);
-    return result.stdout.trim();
-  };
-  let rigProject = '', rigSeat = '', rigViewer = '', rigTarget = '', rigPID = '', observedPID = '';
+  let observedPID = '';
   type AgentSession = { id: string; agent_id?: string; agent_role?: string; exec_cwd?: string };
   const ids = new Set<string>();
   const responseFor = (role: 'attach' | 'scratch') => page.waitForResponse(response =>
@@ -57,21 +47,6 @@ test('real tmux discovery, browser attachment, reload and scratch shell', async 
     const section = /^  agents:\n(?: {4}.*\n)+/m;
     expect(original).toMatch(section);
     replaceConfig(original.replace(section, `  agents: ${JSON.stringify(agents)}\n`));
-    if (process.env.WEBMUX_REAL_OPENRIG === '1') {
-      const project = `coexist-${randomBytes(5).toString('hex')}`;
-      const spec = path.join(home, `${project}.json`);
-      writeFileSync(spec, JSON.stringify({ version: '0.2', name: project, pods: [{ id: 'agents', label: project,
-        members: [{ id: 'native', label: 'Native seat', agent_ref: 'builtin:terminal', profile: 'none', runtime: 'terminal', cwd: home }] }], edges: [] }));
-      rigProject = (JSON.parse(rigRun(rig, ['up', spec, '--yes', '--json'])) as { rigId: string }).rigId;
-      const inventory = await (await request.get('/api/coordination?provider=rig')).json() as {
-        seats: { id: string; projectId: string; logicalId: string; attachmentTarget: string }[] };
-      const seat = inventory.seats.find(value => value.projectId === rigProject && value.logicalId === 'agents.native');
-      expect(seat).toBeTruthy(); rigSeat = seat!.id; rigTarget = seat!.attachmentTarget;
-      rigPID = rigRun('tmux', ['display-message', '-p', '-t', rigTarget, '#{pane_pid}']);
-      const opened = await request.post('/api/coordination/attach', { data: { provider: 'rig', target: rigSeat, row: 1, col: 1 } });
-      expect(opened.status()).toBe(200); rigViewer = (await opened.json() as { id: string }).id;
-      ids.add(rigViewer);
-    }
     await page.goto('/');
     await page.getByRole('button', { name: 'Agents', exact: true }).click();
     await expect(page.getByRole('region', { name: 'Session ownership and activity' })).toContainText('do not verify Rig ownership or readiness');
@@ -111,26 +86,10 @@ test('real tmux discovery, browser attachment, reload and scratch shell', async 
     // observed provider or relabeling a configured tmux group as Rig ownership.
     await page.getByRole('button', { name: 'Coordinated sessions', exact: true }).click();
     await expect(page.getByRole('region', { name: 'Coordination', exact: true })).toBeVisible();
-    if (process.env.WEBMUX_REAL_OPENRIG === '1') {
-      const status = await (await request.get('/api/coordination?provider=rig')).json();
-      expect(status.providers.find((provider: { id: string }) => provider.id === 'rig')).toMatchObject({ enabled: true, available: true });
-      expect(status.errors.rig).toBeUndefined();
-      const native = status.seats.find((seat: { id: string }) => seat.id === rigSeat);
-      expect(native).toMatchObject({ projectId: rigProject, logicalId: 'agents.native', state: 'running', managed: false, enrollmentOrigin: 'launched' });
-      expect(attached.id).not.toBe(rigViewer);
-      const daemon = readFileSync(path.resolve(__dirname, '.test-home/openrig-daemon-url'), 'utf8');
-      expect((await request.get(`${daemon}/healthz`)).ok()).toBe(true);
-    }
     await page.getByRole('button', { name: 'Agents', exact: true }).click();
     await expect(rows).toContainText('input: agent-browser-input');
     await page.getByRole('button', { name: 'Terminal grid', exact: true }).click();
     await expect(page.getByTestId('workspace-scroll')).toBeVisible();
-    if (rigViewer) {
-      await expect(page.getByTestId(`tile-cell-${rigViewer}`).getByLabel('Rig seat status')).toContainText('Rig running · Attachment unknown · Bootstrap ready');
-      const nativeViewer = await (await request.get(`/api/sessions/${rigViewer}`)).json();
-      expect([nativeViewer.id, nativeViewer.row, nativeViewer.col, nativeViewer.rig.seat_id]).toEqual([rigViewer, 1, 1, rigSeat]);
-      expect(rigRun('tmux', ['display-message', '-p', '-t', rigTarget, '#{pane_pid}'])).toBe(rigPID);
-    }
     await page.getByRole('button', { name: 'Agents', exact: true }).click();
     await expect(rows).toContainText('input: agent-browser-input');
     expect(tmux('display-message', '-p', '-t', 'fixture-task', '#{pane_pid}')).toBe(providerPID);
@@ -169,15 +128,9 @@ test('real tmux discovery, browser attachment, reload and scratch shell', async 
     await expect(layout.locator('.xterm-helper-textarea')).toHaveCount(1);
     const providerSessions = tmux('list-sessions', '-F', '#{session_name}').split('\n');
     expect(providerSessions).toEqual(['fixture-task']);
-    if (rigViewer) {
-      const nativeViewer = await (await request.get(`/api/sessions/${rigViewer}`)).json();
-      expect([nativeViewer.id, nativeViewer.row, nativeViewer.col, nativeViewer.rig.seat_id]).toEqual([rigViewer, 1, 1, rigSeat]);
-      expect(rigRun('tmux', ['display-message', '-p', '-t', rigTarget, '#{pane_pid}'])).toBe(rigPID);
-    }
-    const receipt = { activeRigSeat: Boolean(rigSeat), rigViewerPreserved: Boolean(rigViewer), rigProviderPIDUnchanged: Boolean(rigPID), platform: process.platform, node: process.version, browser: page.context().browser()?.version(), tmux: tmux('-V'), originalPID: providerPID,
+    const receipt = { platform: process.platform, node: process.version, browser: page.context().browser()?.version(), tmux: tmux('-V'), originalPID: providerPID,
       finalPID: tmux('display-message', '-p', '-t', 'fixture-task', '#{pane_pid}'), observedViewer: attached.id, viewerReusedAfterReload: true,
-      coordinationAndGridNavigation: true, noRigIdentityInferred: true, scratchClosed: true,
-      liveRigInventory: process.env.WEBMUX_REAL_OPENRIG === '1', providerSessions };
+      coordinationAndGridNavigation: true, noRigIdentityInferred: true, scratchClosed: true, providerSessions };
     expect(receipt.finalPID).toBe(providerPID);
     const receiptPath = info.outputPath('observed-tmux-provenance.json');
     writeFileSync(receiptPath, JSON.stringify(receipt));
@@ -193,12 +146,7 @@ test('real tmux discovery, browser attachment, reload and scratch shell', async 
     } catch (error) { if (!failed) throw error; }
     finally {
       try {
-        try {
-          if (!failed && observedPID) expect(tmux('display-message', '-p', '-t', 'fixture-task', '#{pane_pid}')).toBe(observedPID);
-          if (!failed && rigPID) expect(rigRun('tmux', ['display-message', '-p', '-t', rigTarget, '#{pane_pid}'])).toBe(rigPID);
-        } finally {
-          if (rigProject) rigRun(rig, ['down', rigProject]);
-        }
+        if (!failed && observedPID) expect(tmux('display-message', '-p', '-t', 'fixture-task', '#{pane_pid}')).toBe(observedPID);
       } finally {
         try { replaceConfig(original); }
         finally {
