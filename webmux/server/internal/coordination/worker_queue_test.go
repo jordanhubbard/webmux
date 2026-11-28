@@ -135,6 +135,36 @@ func TestWorkerQueueCancellationExpiryAndRestart(t *testing.T) {
 	}
 }
 
+func TestWorkerQueueSameActorNewEnqueueIDPreservesOriginalTicketAndLease(t *testing.T) {
+	h := fixture(t)
+	resource := "node:" + testNode + ":heavy"
+	holder := h.execute(t, 3, Request{ID: "holder-before-deduplicated-enqueue", Action: "reserve", Resource: resource, LeaseSeconds: 120})
+	first := h.execute(t, 0, Request{ID: "original-waiting-enqueue", Action: "enqueue-reservation", Resource: resource, LeaseSeconds: 15, WaitSeconds: 120})
+	if first.Status != "queued" || first.Queue == nil || first.Lease != nil {
+		t.Fatal(first)
+	}
+	h.now = h.now.Add(20 * time.Second)
+	// A new request ID with longer requested deadlines must reuse the original
+	// waiting ticket, not extend its wait, change its lease or consume an order.
+	duplicate := h.execute(t, 0, Request{ID: "different-enqueue-id-same-actor", Action: "enqueue-reservation", Resource: resource, LeaseSeconds: 900, WaitSeconds: 900})
+	if !reflect.DeepEqual(duplicate, first) {
+		t.Fatal("new enqueue ID replaced or extended the waiting ticket", first, duplicate)
+	}
+	view := h.view(t, 3)
+	if len(view.Resources) != 1 || view.Resources[0].Fence != holder.Fence || view.Resources[0].Expires == nil || !view.Resources[0].Expires.Equal(*holder.Expires) {
+		t.Fatal("deduplicated enqueue changed the current holder's lease", holder, view.Resources)
+	}
+	next := h.execute(t, 1, Request{ID: "next-actor-after-deduplication", Action: "enqueue-reservation", Resource: resource})
+	if next.Queue == nil || next.Queue.Sequence != first.Queue.Sequence+1 || next.Queue.Position != 2 {
+		t.Fatal("deduplication consumed an order or created another waiter", first, next)
+	}
+	h.execute(t, 3, Request{ID: "holder-releases-before-original-grant", Action: "release-reservation", Resource: resource, Record: holder.Record, Fence: holder.Fence})
+	grant := h.execute(t, 0, Request{ID: "acquire-original-deduplicated-ticket", Action: "acquire-reservation", Resource: resource, Record: first.Record})
+	if grant.Status != "reserved" || grant.Record != first.Record || grant.Fence != holder.Fence+1 || grant.Lease == nil || !grant.Lease.Current || grant.Expires == nil || !grant.Expires.Equal(h.now.Add(15*time.Second)) {
+		t.Fatal("new enqueue ID changed the original ticket's lease duration", grant)
+	}
+}
+
 func TestWorkerQueueRemoteAndLocalShareFIFOAuthority(t *testing.T) {
 	r := sharedFixture(t)
 	resource := "node:" + r.node + ":heavy"
