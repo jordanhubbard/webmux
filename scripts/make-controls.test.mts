@@ -93,8 +93,8 @@ test('missing tmux blocks Unix server installation and startup before service ch
     const env = { ...process.env, PATH: directory };
     for (const action of ['install-server', 'start', 'restart', '_start_manual']) {
       const result = spawnSync(make, ['--no-print-directory', '-j4',
-        '-o', 'build-server', '-o', 'install-optional-agent-deck', '-o', 'check-guacd', action,
-        `AGENT_DECK_BINDIR=${directory}`, `WEBMUX_HOME=${path.join(directory, 'home')}`,
+        '-o', 'build-server', '-o', 'check-guacd', action,
+        `WEBMUX_HOME=${path.join(directory, 'home')}`,
         'SVC_INSTALLED=true', `SVC_STOP=/usr/bin/touch ${marker}`,
         `SVC_START=/usr/bin/touch ${marker}`, `SVC_RESTART=/usr/bin/touch ${marker}`,
         `NODE=/usr/bin/touch ${marker}`, 'SHELL=/bin/sh'], {
@@ -116,7 +116,7 @@ test('missing tmux blocks Unix server installation and startup before service ch
     assert.doesNotMatch(npmStart.stderr, /Unable to start native WebMux/);
 
     fs.writeFileSync(path.join(directory, 'tmux'), '#!/bin/sh\nexit 0\n', { mode: 0o700 });
-    const installed = spawnSync(make, ['--no-print-directory', 'check-tmux', `AGENT_DECK_BINDIR=${directory}`], {
+    const installed = spawnSync(make, ['--no-print-directory', 'check-tmux'], {
       cwd: root, encoding: 'utf8', timeout: 10000, env,
     });
     assert.ifError(installed.error);
@@ -141,7 +141,7 @@ test('failed server builds preserve the installed service, including parallel in
   const marker = path.join(directory, 'stopped');
   try {
     for (const action of ['install-server', 'install-all']) {
-      const result = spawnSync('make', ['--no-print-directory', '-j4', '-o', 'check-tmux', '-o', 'install-optional-agent-deck', '-o', 'build-client',
+      const result = spawnSync('make', ['--no-print-directory', '-j4', '-o', 'check-tmux', '-o', 'build-client',
         action, 'NPM=false', `CLIENT_BINDIR=${path.join(directory, 'bin')}`,
         'SVC_INSTALLED=true', 'SVC_STOP=touch "$$WEBMUX_STOP_MARKER"'], {
         cwd: path.resolve(import.meta.dirname, '..'), encoding: 'utf8', timeout: 10000,
@@ -167,8 +167,8 @@ install-server:
 \t@test -f "${marker}"
 `);
     const result = spawnSync('make', ['--no-print-directory', '-j4', '-f', makefile,
-      '-o', 'build-client', '-o', 'build-server', '-o', 'install-optional-agent-deck',
-      'install-all', `MAKE=make -f ${makefile} -o build-server -o install-optional-agent-deck -o check-tmux`], {
+      '-o', 'build-client', '-o', 'build-server',
+      'install-all', `MAKE=make -f ${makefile} -o build-server -o check-tmux`], {
       cwd: path.resolve(import.meta.dirname, '..'), encoding: 'utf8', timeout: 10000,
     });
     assert.ifError(result.error);
@@ -321,73 +321,17 @@ test('default Make install delivers only the client executable and does not requ
   } finally { fs.rmSync(directory, { recursive: true, force: true }); }
 });
 
-test('Make keeps Agent Deck optional and installs its qualified release idempotently when requested', { skip: process.platform === 'win32' }, () => {
-  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'webmux-agent-deck-install-'));
-  const bin = path.join(directory, 'bin');
-  const executable = path.join(bin, 'agent-deck');
-  const installer = path.join(directory, 'installer.sh');
-  const marker = path.join(directory, 'installer-ran');
+test('server installation no longer installs or prefers Agent Deck', { skip: process.platform === 'win32' }, () => {
   const root = path.resolve(import.meta.dirname, '..');
-  fs.mkdirSync(bin);
-  const writeVersion = (version: string) => fs.writeFileSync(executable, `#!/bin/sh
-printf 'Agent Deck v${version}\\n'
-`, { mode: 0o700 });
-  fs.writeFileSync(installer, `#!/bin/bash
-set -eu
-version=
-bindir=
-while [[ $# -gt 0 ]]; do
-  case "$1" in
-    --version) version="\${2#v}"; shift 2 ;;
-    --dir) bindir="$2"; shift 2 ;;
-    --non-interactive) shift ;;
-    *) exit 64 ;;
-  esac
-done
-printf ran > "$WEBMUX_AGENT_DECK_MARKER"
-mkdir -p "$bindir"
-printf '#!/bin/sh\\nprintf "Agent Deck v%s\\\\n"\\n' "$version" > "$bindir/agent-deck"
-chmod +x "$bindir/agent-deck"
-`, { mode: 0o700 });
-  const run = (target = 'install-agent-deck', ...extra: string[]) => spawnSync('make', ['--no-print-directory', target,
-    `AGENT_DECK_BINDIR=${bin}`, 'AGENT_DECK_VERSION=v1.16.39', ...extra], {
-    cwd: root, encoding: 'utf8', timeout: 30000,
-    env: { ...process.env, PATH: `${bin}:${process.env.PATH ?? '/usr/bin:/bin'}`,
-      AGENT_DECK_INSTALLER_URL: `file://${installer}`, WEBMUX_AGENT_DECK_MARKER: marker },
+  const service = spawnSync('make', ['--no-print-directory', '-n', 'install-server',
+    '-o', 'stop', '-o', 'build-server'], { cwd: root, encoding: 'utf8', timeout: 10000 });
+  assert.ifError(service.error); assert.equal(service.status, 0, service.stdout + service.stderr);
+  assert.doesNotMatch(service.stdout + service.stderr, /agent-deck|AGENT_DECK/);
+  const missing = spawnSync('make', ['--no-print-directory', '-n', 'install-agent-deck'], {
+    cwd: root, encoding: 'utf8', timeout: 10000,
   });
-  try {
-    writeVersion('1.17.0');
-    const current = run();
-    assert.ifError(current.error); assert.equal(current.status, 0, current.stdout + current.stderr);
-    assert.match(current.stdout, /Agent Deck 1\.17\.0 found/);
-    assert(!fs.existsSync(marker), 'current Agent Deck unexpectedly ran the installer');
-
-    writeVersion('1.15.0');
-    const upgraded = run();
-    assert.ifError(upgraded.error); assert.equal(upgraded.status, 0, upgraded.stdout + upgraded.stderr);
-    assert.match(upgraded.stdout, /older than WebMux requires/);
-    assert.match(spawnSync(executable, ['version'], { encoding: 'utf8' }).stdout, /v1\.16\.39/);
-    assert(fs.existsSync(marker), 'old Agent Deck did not run the installer');
-
-    fs.rmSync(marker);
-    const skipped = run('install-optional-agent-deck');
-    assert.ifError(skipped.error); assert.equal(skipped.status, 0, skipped.stdout + skipped.stderr);
-    assert.match(skipped.stdout, /installation skipped/);
-    assert(!fs.existsSync(marker), 'default installation ran the Agent Deck installer');
-    const optedIn = run('install-optional-agent-deck', 'INSTALL_AGENT_DECK=yes');
-    assert.ifError(optedIn.error); assert.equal(optedIn.status, 0, optedIn.stdout + optedIn.stderr);
-    assert.match(optedIn.stdout, /Agent Deck 1\.16\.39 found/);
-
-    const invalid = run('install-optional-agent-deck', 'INSTALL_AGENT_DECK=maybe');
-    assert.ifError(invalid.error); assert.notEqual(invalid.status, 0);
-    assert.match(invalid.stderr, /must be yes or no/);
-
-    const service = spawnSync('make', ['--no-print-directory', '-n', 'install-server',
-      '-o', 'install-optional-agent-deck', '-o', 'stop', '-o', 'build-server',
-      'AGENT_DECK_BINDIR=/qualified/agent-deck'], { cwd: root, encoding: 'utf8', timeout: 10000 });
-    assert.ifError(service.error); assert.equal(service.status, 0, service.stdout + service.stderr);
-    assert.match(service.stdout, /PATH="\/qualified\/agent-deck:\$PATH" node scripts\/render-service\.mts/);
-  } finally { fs.rmSync(directory, { recursive: true, force: true }); }
+  assert.ifError(missing.error);
+  assert.notEqual(missing.status, 0);
 });
 
 test('manual Make startup preserves literal runtime data, zero ports and fresh logs', { skip: process.platform === 'win32' }, async () => {

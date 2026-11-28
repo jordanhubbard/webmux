@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test('empty slots offer local tmux, saved tuples, one-time connections and optional coordinators', async ({ page, request }) => {
+test('empty slots offer local tmux, saved tuples and one-time connections', async ({ page, request }) => {
   test.skip(process.platform === 'win32', 'Local tmux requires Unix');
   const saved = await request.post('/api/hosts', { data: { hostname: 'saved.example.test', username: 'saved-user', port: 2222, transport: 'ssh', tags: [], mosh_allowed: false } });
   expect(saved.ok()).toBe(true);
@@ -13,7 +13,7 @@ test('empty slots offer local tmux, saved tuples, one-time connections and optio
     await add.click();
     const connection = page.getByRole('dialog', { name: 'Connect to Host', exact: true });
     await expect(connection.getByRole('button', { name: 'Localhost' })).toBeFocused();
-    await expect(connection.getByLabel('Coordinator', { exact: true })).toHaveValue('none');
+    await expect(connection.getByLabel('Coordinator')).toHaveCount(0);
     await expect(connection.getByPlaceholder('hostname or IP')).toBeHidden();
     await expect(connection.getByTitle('Connect to saved-user@saved.example.test:2222')).toBeVisible();
     // Localhost creates a real persistent tmux terminal at the chosen position.
@@ -53,15 +53,7 @@ test('empty slots offer local tmux, saved tuples, one-time connections and optio
     await expect(connection).toHaveCount(0);
     await add.click();
     await expect(connection.getByTitle('Connect to saved-user@saved.example.test:2222')).toBeVisible();
-    for (const [provider, label] of [['agent-deck', 'Agent Deck'], ['rig', 'Rig']]) {
-      await connection.getByLabel('Coordinator', { exact: true }).selectOption(provider);
-      const launch = page.getByRole('dialog', { name: `New ${label} session`, exact: true });
-      await expect(launch.getByLabel('Code folder', { exact: true })).toBeVisible();
-      await expect(launch.getByLabel('Launch owner', { exact: true })).toHaveCount(0);
-      await expect(launch.getByText('Your projects and sessions', { exact: true })).toHaveCount(0);
-      await launch.getByRole('button', { name: 'Back to terminal connection' }).click();
-      await expect(connection.getByLabel('Coordinator', { exact: true })).toHaveValue('none');
-    }
+    await expect(connection.getByLabel('Coordinator')).toHaveCount(0);
     await page.screenshot({ path: 'test-results/terminal-connect.png' });
   } finally {
     await request.delete(`/api/hosts/${hostId}`);

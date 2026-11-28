@@ -256,19 +256,6 @@ jobs:
           export WEBMUX_BROWSER_EXECUTABLE="$(node -e "process.stdout.write(require('@playwright/test').chromium.executablePath())")"
           cd server
           go test -race ./internal/browser -run '^TestNativePageFrameControls$' -count=1 -timeout=2m -json | tee "$RUNNER_TEMP/browser-frame-controls.jsonl"
-      - name: Install qualified tmux for Rig coordination
-        if: runner.os == 'Linux'
-        run: |
-          sudo -n apt-get install -y libevent-dev libncurses-dev
-          curl --fail --location --retry 3 --output "$RUNNER_TEMP/tmux-3.4.tar.gz" https://github.com/tmux/tmux/releases/download/3.4/tmux-3.4.tar.gz
-          echo "551ab8dea0bf505c0ad6b7bb35ef567cdde0ccb84357df142c254f35a23e19aa  $RUNNER_TEMP/tmux-3.4.tar.gz" | sha256sum --check
-          tar -xzf "$RUNNER_TEMP/tmux-3.4.tar.gz" -C "$RUNNER_TEMP"
-          cd "$RUNNER_TEMP/tmux-3.4"
-          ./configure --prefix="$RUNNER_TEMP/webmux-tmux"
-          make -j2
-          make install
-          echo "$RUNNER_TEMP/webmux-tmux/bin" >> "$GITHUB_PATH"
-          "$RUNNER_TEMP/webmux-tmux/bin/tmux" -V
       - name: Verify browser workflows against Go
         if: runner.os == 'Linux'
         working-directory: webmux
@@ -307,48 +294,6 @@ jobs:
         env:
           WEBMUX_REAL_MOSH: '1'
         run: npm run test:e2e:go -- mosh-browser.spec.ts --output=test-results/mosh-go
-      - name: Verify managed agents through the published Rig CLI
-        if: ${{ !cancelled() && runner.os == 'Linux' && steps.desktop-tools.outcome == 'success' }}
-        working-directory: webmux
-        env:
-          WEBMUX_REAL_OPENRIG: '1'
-          OPENRIG_HOST_SELECTED: 'webmux-ci-unrelated-selection'
-        run: |
-          npm install --prefix "$RUNNER_TEMP/webmux-openrig" --no-audit --no-fund @openrig/cli@0.6.14
-          export WEBMUX_OPENRIG_CLI="$RUNNER_TEMP/webmux-openrig/node_modules/@openrig/cli/dist/bin-wrapper.js"
-          npm run test:e2e:go -- openrig.spec.ts --output=test-results/openrig-go
-          node ../scripts/qualify-openrig-fixture-lifecycle.mts test-results/rig-worker-lifecycle
-          npm run test:e2e:go -- openrig-host.spec.ts --output=test-results/openrig-host-go
-          npm run test:e2e:go -- openrig-identity.spec.ts --output=test-results/openrig-identity-go
-          npm run test:e2e:go -- openrig-activity.spec.ts --output=test-results/openrig-activity-go
-          npm run test:e2e:go -- openrig-notifications.spec.ts --output=test-results/openrig-notifications-go
-          WEBMUX_REAL_AGENTS=1 npm run test:e2e:go -- agent-integration.spec.ts --output=test-results/agents-rig-coexistence
-      - name: Preserve native Rig browser diagnostics
-        if: ${{ always() && runner.os == 'Linux' && steps.desktop-tools.outcome == 'success' }}
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
-        with:
-          name: native-rig-browser-diagnostics
-          path: webmux/test-results/openrig-go/
-          if-no-files-found: warn
-      - name: Verify checked local Rig Stop with the published native contract
-        if: ${{ !cancelled() && runner.os == 'Linux' && steps.desktop-tools.outcome == 'success' }}
-        working-directory: webmux
-        env:
-          WEBMUX_REAL_OPENRIG: '1'
-          OPENRIG_HOST_SELECTED: 'webmux-ci-unrelated-selection'
-        run: |
-          python3 -m unittest discover -s ../scripts -p test_rig_stop_relay.py -v
-          python3 -m unittest discover -s ../scripts -p test_qualify_rig_stop_relay.py -v
-          df -Pk "$RUNNER_TEMP" "$PWD" "$(npm config get cache)"
-          sudo -n apt-get install -y lsof
-          npm install --prefix "$RUNNER_TEMP/webmux-openrig-stop" --ignore-scripts --no-audit --no-fund @openrig/cli@0.7.18
-          export WEBMUX_OPENRIG_CLI="$RUNNER_TEMP/webmux-openrig-stop/node_modules/@openrig/cli/dist/bin-wrapper.js"
-          mkdir -p test-results
-          cp -f "$RUNNER_TEMP/webmux-openrig-stop/package-lock.json" test-results/openrig-stop-install-lock.json
-          test "$(node "$WEBMUX_OPENRIG_CLI" --version)" = '0.7.18 (3bf87c62)'
-          npm run test:e2e:go -- openrig-stop.spec.ts --output=test-results/openrig-checked-stop
-          df -Pk "$(docker info --format '{{.DockerRootDir}}')" "$RUNNER_TEMP" "$PWD"
-          python3 ../scripts/qualify-rig-stop-relay.py --cli "$WEBMUX_OPENRIG_CLI" --output "$PWD/test-results/openrig-stop-relay"
       - name: Verify real VNC interoperability through Go
         if: ${{ !cancelled() && runner.os == 'Linux' && steps.desktop-tools.outcome == 'success' }}
         working-directory: webmux

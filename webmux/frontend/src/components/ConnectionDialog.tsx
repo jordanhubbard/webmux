@@ -9,11 +9,9 @@ interface ConnectionDialogProps {
   suggestedRow?: number;
   suggestedCol?: number;
   localFirst?: boolean;
-  onChooseExistingSeat?: () => void;
-  onChooseCoordinator?: (provider: 'agent-deck' | 'rig', host: string) => void;
 }
 
-export function ConnectionDialog({ onConnect, onClose, suggestedRow, suggestedCol, localFirst = false, onChooseCoordinator, onChooseExistingSeat }: ConnectionDialogProps) {
+export function ConnectionDialog({ onConnect, onClose, suggestedRow, suggestedCol, localFirst = false }: ConnectionDialogProps) {
   const remoteDetailsRef = useRef<HTMLDetailsElement>(null);
   const usernameRef = useRef<HTMLInputElement>(null);
   const [hosts, setHosts] = useState<HostEntry[]>([]);
@@ -150,16 +148,6 @@ export function ConnectionDialog({ onConnect, onClose, suggestedRow, suggestedCo
     <Dialog title="Connect to Host" onClose={onClose} dismissible={!submitting}>
 
       <form onSubmit={handleConnect} style={styles.form}>
-        {onChooseExistingSeat && <button type="button" onClick={onChooseExistingSeat} disabled={submitting}>Open existing agent seat</button>}
-        {onChooseCoordinator && <label style={styles.field}>Coordinator
-          <select aria-label="Coordinator" style={styles.input} value="none" onChange={event => {
-            if (event.target.value !== 'none') onChooseCoordinator(event.target.value as 'agent-deck' | 'rig', hostname.trim() || 'localhost');
-          }}>
-            <option value="none">None</option>
-            <option value="agent-deck">Agent Deck</option>
-            <option value="rig">Rig</option>
-          </select>
-        </label>}
         <div style={styles.field}>
           <label style={styles.label}>Local terminal</label>
           <button type="button" style={localFirst ? styles.connectBtn : styles.hostCardBtn} data-dialog-autofocus={localFirst || undefined} onClick={handleLocalConnect} disabled={submitting}>

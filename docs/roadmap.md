@@ -5,6 +5,10 @@ issue states. GitHub issues track implementation and remaining acceptance work.
 The #318 and #630 tracker dispositions below were reconciled on 2026-11-23;
 historical qualification dates and limits remain attached to their own evidence.
 
+Agent Deck and OpenRig are no longer launched. Rows below that describe those
+integrations record work that has been removed, not current behavior. See
+[what was removed](openrig.md).
+
 ## Trackpad scrolling
 
 - [ ] **Scroll the selected window with two fingers** under

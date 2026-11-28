@@ -26,7 +26,7 @@ Connected WebMux servers can share authenticated terminal views and session-targ
 - **Operator settings UI** — edit runtime-safe application settings from an admin-only top-bar gear
 - **Audit log** — append-only JSONL event log (logins, session lifecycle)
 - **Optional agent views** — disabled-by-default tmux-backed agent session browser with attach and scratch-shell support
-- **Agent coordination** — built-in WebMux terminals and messaging by default, with independently enabled Agent Deck and Rig integrations, a combined inventory, and a separate launch owner in the Coordination tab; see [setup and scope](docs/openrig.md)
+- **Agent coordination** — built-in WebMux terminals and messaging. Agent Deck and OpenRig are no longer launched; existing tmux sessions stay running and can be attached with `tmux attach`. See [what was removed](docs/openrig.md)
 - **Optional managed hosts** — a separately installed `webmux-client` checks in over an outbound connection, links to saved SSH hosts by a one-time code, and reports host facts; see [managed-host setup](docs/managed-hosts.md)
 - **Session expiry handling** — visible JWT countdown and refresh controls prevent expired browser sessions from entering reconnect loops
 
@@ -92,11 +92,9 @@ below it; click a saved username/host/port entry to reconnect without retyping.
 Expand **New or one-time remote connection** for a new host: **Connect** leaves
 it unsaved, while **Save & Connect** remembers the tuple for next time.
 
-**Coordinator** starts at **None**. Select **Agent Deck** or **Rig** only when
-you want a managed coding agent. That opens the selected provider’s code-folder
-and project form, with suggested names under **Optional names and session role**.
-Rig uses projects and pods; Agent Deck uses project groups. Ordinary terminals
-need neither. The Coordination tab retains the full management interface.
+The Coordination tab lists built-in WebMux terminals. Agent Deck and OpenRig
+are no longer launched from that tab. Existing tmux sessions stay running;
+attach one from a WebMux terminal with `tmux attach`.
 
 ### Terminal images, files, and clipboard
 
@@ -168,9 +166,8 @@ brew install jordanhubbard/webmux/webmux
 brew services start jordanhubbard/webmux/webmux
 ```
 
-WebMux provides built-in terminals and messaging by default. Enable Agent Deck
-and Rig independently in Coordination; both can be used together. Inventory
-filters and the default launch owner are separate preferences.
+WebMux provides built-in terminals and messaging. Agent Deck and OpenRig are
+not installed or launched with WebMux.
 
 Open http://localhost:8080. Run services as your normal user so WebMux can
 access your SSH keys. Record formula-specific trust for WebMux before
@@ -264,10 +261,8 @@ make uninstall-all     # remove both
 ```
 
 These Make install targets support macOS and Linux. Windows uses the npm service commands documented in [README-Windows.md](README-Windows.md).
-`make install-server` uses built-in WebMux coordination. To install the optional
-qualified Agent Deck release into `~/.local/bin`, use `make install-agent-deck`
-or `make install-server INSTALL_AGENT_DECK=yes`. The service includes that
-directory on its PATH. Rig remains a separate optional installation.
+`make install-server` uses built-in WebMux coordination. It does not install
+Agent Deck or OpenRig, and it does not put those programs on the service PATH.
 
 ### Makefile Targets
 
@@ -284,7 +279,6 @@ directory on its PATH. Rig remains a separate optional installation.
 | `make restart` | Restart the server |
 | `make status` | Check if the server is running |
 | `make install` | Install the client executable only |
-| `make install-agent-deck` | Install or update the qualified Agent Deck coordinator |
 | `make install-server` | Install the server service |
 | `make install-all` | Install client and server |
 | `make uninstall` | Remove the client executable |
@@ -479,17 +473,8 @@ webmux/                          Source / install directory (WEBMUX_ROOT)
 | `PUT` | `/api/config/layout` | Update layout |
 | `GET` | `/api/agents/config` | Get normalized agent-view config |
 | `GET` | `/api/agents/sessions` | List configured agent tmux sessions |
-| `GET` | `/api/coordination` | Provider descriptors plus canonical projects, sessions, native IDs, and messages (`webmux-coordination/v1`, admin) |
-| `POST` | `/api/coordination/agents` | Launch a Rig or Agent Deck session and open it in the terminal grid (admin) |
-| `POST` | `/api/coordination/workspaces` | Browse local or registered-remote workspaces before launch (admin) |
-| `POST` | `/api/coordination/attach` | Open an existing provider-owned session (admin) |
-| `POST` | `/api/coordination/messages` | Send or safely queue an instruction through the selected coordinator (admin) |
-| `POST` | `/api/coordination/send-status` | Read a coordinator-native delivery outcome without returning message content (admin) |
-| `POST` | `/api/coordination/drain` | Collect durable remote completion records into a local conductor (admin) |
-| `GET` | `/api/openrig` | Check host OpenRig prerequisites, view attachments and live-test status (admin) |
-| `POST` | `/api/openrig/attach` | Attach the text dashboard, a listed agent CLI or the explicit live-test console (admin) |
-| `GET` | `/api/openrig/agents` | List host-local OpenRig agent terminal targets (admin) |
-| `POST` | `/api/openrig/proof/stop` | Stop only the current owner's acceptance pair (admin) |
+| `GET` | `/api/coordination` | Native WebMux terminals grouped for the Coordination tab (admin) |
+| `POST` | `/api/coordination/attach` | Reopen a minimized native WebMux terminal (`provider` must be `webmux`, admin) |
 | `GET` | `/api/agents/:agentId/sessions` | List sessions for one configured agent |
 | `POST` | `/api/agents/:agentId/attach` | Attach to a validated tmux session |
 | `POST` | `/api/agents/:agentId/scratch` | Open or reuse an agent scratch shell |
@@ -577,7 +562,7 @@ make toolchain-node toolchain-go
 PATH="$PWD/.build/toolchains/node/bin:$PWD/.build/toolchains/go/bin:$PATH" \
 GOMODCACHE="$PWD/.build/go-mod" GOCACHE="$PWD/.build/go-cache" \
 CGO_ENABLED=1 GOMAXPROCS=2 \
-  go -C webmux/server test -race -p 2 ./internal/openrigcoord ./internal/nativeobserve -count=1
+  go -C webmux/server test -race -p 2 ./internal/nativeobserve -count=1
 ```
 
 Race execution requires a native C compiler. These cache settings avoid a

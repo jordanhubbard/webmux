@@ -114,12 +114,8 @@ func TestCoordinationDefaultMigrationAndValidation(t *testing.T) {
 			t.Fatal(err)
 		}
 		prefs := AsObject(normalized.App["coordination"])
-		want := "webmux"
-		if legacy == "rig" || legacy == "agent-deck" {
-			want = legacy
-		}
-		if prefs["default_launch_provider"] != want || (CoordinationEnabled(normalized.App, "rig") != (legacy == "rig")) || (CoordinationEnabled(normalized.App, "agent-deck") != (legacy == "agent-deck")) {
-			t.Fatalf("legacy %s migrated incorrectly: %+v", legacy, prefs)
+		if prefs["default_launch_provider"] != "webmux" || prefs["default_view"] != "all" || CoordinationEnabled(normalized.App, "rig") || CoordinationEnabled(normalized.App, "agent-deck") {
+			t.Fatalf("legacy %s still enables a removed provider: %+v", legacy, prefs)
 		}
 		if _, exists := prefs["default_provider"]; exists {
 			t.Fatal("legacy preference retained as a second authority")
@@ -130,17 +126,22 @@ func TestCoordinationDefaultMigrationAndValidation(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if !CoordinationEnabled(updated.App, "rig") || !CoordinationEnabled(updated.App, "agent-deck") || AsObject(updated.App["coordination"])["default_view"] != view {
-			t.Fatalf("view changed integration enablement: %+v", updated.App)
+		wantView := view
+		if view == "agent-deck" || view == "rig" {
+			wantView = "all"
+		}
+		prefs := AsObject(updated.App["coordination"])
+		if CoordinationEnabled(updated.App, "rig") || CoordinationEnabled(updated.App, "agent-deck") || prefs["default_view"] != wantView || len(prefs["enabled_providers"].([]string)) != 0 {
+			t.Fatalf("removed providers were retained: %+v", prefs)
 		}
 		next, err := Update(updated, Object{"coordination": Object{"default_launch_provider": "agent-deck"}})
-		if err != nil || !CoordinationEnabled(next.App, "rig") {
-			t.Fatalf("launch default disabled Rig: %v", err)
+		if err != nil || AsObject(next.App["coordination"])["default_launch_provider"] != "webmux" || CoordinationEnabled(next.App, "rig") {
+			t.Fatalf("removed launch provider was retained: %+v %v", next.App, err)
 		}
 	}
 	for _, bad := range []Object{
-		{"default_provider": "other"}, {"enabled_providers": "rig"}, {"enabled_providers": []any{"rig", "rig"}}, {"enabled_providers": []any{1}}, {"enabled_providers": []any{"webmux"}},
-		{"default_launch_provider": "rig"}, {"default_launch_provider": 1}, {"default_launch_provider": "other"}, {"default_view": 1}, {"default_view": "other"},
+		{"default_provider": "other"}, {"enabled_providers": "rig"}, {"enabled_providers": []any{1}}, {"enabled_providers": []any{"webmux"}},
+		{"default_launch_provider": 1}, {"default_launch_provider": "other"}, {"default_view": 1}, {"default_view": "other"},
 	} {
 		if _, err := Update(Document{App: Object{}}, Object{"coordination": bad}); err == nil {
 			t.Fatalf("invalid coordination settings accepted: %+v", bad)

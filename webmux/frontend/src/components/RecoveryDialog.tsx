@@ -14,35 +14,26 @@ export function RecoveryDialog({ sessionId, onClose }: { sessionId: string; onCl
   const [actionError, setActionError] = useState('');
   const [approveRestart, setApproveRestart] = useState(false);
   const [approveReplay, setApproveReplay] = useState(false);
-  const [approveManaged, setApproveManaged] = useState(false);
   const [shareContext, setShareContext] = useState(false);
   const [context, setContext] = useState('');
-  const [originalRequest, setOriginalRequest] = useState<RecoveryRequest | null>(null);
-  useEffect(() => setOriginalRequest(null), [sessionId]);
   useEffect(() => {
     const controller = new AbortController();
     setValue(null); setError('');
-    setApproveRestart(false); setApproveReplay(false); setApproveManaged(false); setShareContext(false); setContext('');
+    setApproveRestart(false); setApproveReplay(false); setShareContext(false); setContext('');
     api.getSessionRecovery(sessionId, controller.signal).then(result => {
-      if (!controller.signal.aborted) {
-        setValue(result);
-        if (result.managed_original_request) setOriginalRequest(result.managed_original_request);
-        else setOriginalRequest(null);
-      }
+      if (!controller.signal.aborted) setValue(result);
     }).catch((cause: unknown) => {
       if (!controller.signal.aborted) setError(cause instanceof Error ? cause.message : 'Cannot load recorded work');
     });
     return () => controller.abort();
   }, [sessionId, refresh]);
-  const managerName = value?.lifecycle_owner === 'rig' ? 'Rig' : 'Agent Deck';
   const activity = value?.state?.activity;
-  const pendingOriginal = value?.managed_original_request ?? originalRequest;
   const recordedRoots = Object.entries(activity?.configuration?.roots ?? {}).filter(([name]) => name !== 'HOME');
-  const refreshPreview = () => { setApproveRestart(false); setApproveReplay(false); setApproveManaged(false); setShareContext(false); setContext(''); setRefresh(count => count + 1); };
+  const refreshPreview = () => { setApproveRestart(false); setApproveReplay(false); setShareContext(false); setContext(''); setRefresh(count => count + 1); };
   const perform = async (kind: RecoveryRequest['kind']) => {
-    if (!value?.state || value.host_revision == null || busy) return;
+    if (!value?.state || value.host_revision == null || busy || kind === 'managed') return;
     if (kind === 'restart' ? !value.can_restart || !value.restart_selection || !approveRestart : !value.instance) return;
-    if (kind === 'managed' ? !value.can_resume_managed || !approveManaged : kind !== 'restart' && !value.waiting) return;
+    if (kind !== 'restart' && !value.waiting) return;
     setBusy(true); setActionError('');
     try {
       const selected = kind === 'native' && shareContext ? context : '';
@@ -53,22 +44,11 @@ export function RecoveryDialog({ sessionId, onClose }: { sessionId: string; onCl
       const id = `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
       const request: RecoveryRequest = { id, kind, revision: value.state.revision,
         host_revision: value.host_revision, instance: kind === 'restart' ? value.restart_selection! : value.instance!,
-        confirm: kind === 'restart' ? approveRestart : kind === 'managed' ? approveManaged : kind === 'replay' ? approveReplay : shareContext, ...(selected ? { context: selected } : {}) };
-      if (kind === 'managed' && value.managed_original_contract) setOriginalRequest({ ...request, inspect: true });
+        confirm: kind === 'restart' ? approveRestart : kind === 'replay' ? approveReplay : shareContext, ...(selected ? { context: selected } : {}) };
       const result = await api.recoverSession(sessionId, request);
       if (result.outcome === 'uncertain' || kind === 'restart') { refreshPreview(); return; }
       onClose();
     } catch (cause) { setActionError(cause instanceof Error ? cause.message : 'Cannot continue this work'); refreshPreview(); }
-    finally { setBusy(false); }
-  };
-  const completeOriginal = async () => {
-    if (!pendingOriginal || !approveManaged || busy) return;
-    setBusy(true); setActionError('');
-    try {
-      const result = await api.recoverSession(sessionId, { ...pendingOriginal, inspect: true, confirm: true });
-      if (result.outcome === 'consumed') onClose();
-      else refreshPreview();
-    } catch (cause) { setActionError(cause instanceof Error ? cause.message : 'Cannot check the original Rig recovery'); refreshPreview(); }
     finally { setBusy(false); }
   };
   const setAutomatic = async (enabled: boolean) => {
@@ -88,7 +68,7 @@ export function RecoveryDialog({ sessionId, onClose }: { sessionId: string; onCl
         <dl className="recovery-details">
           <dt>Execution host</dt><dd>{executionHostLabel(value.hostname)}{!value.manager_target && ` · ${value.transport.toUpperCase()}`}</dd>
           {value.project_label && <><dt>Window label</dt><dd>{value.project_label} (label only; see the observed working directory below)</dd></>}
-          <dt>Session manager</dt><dd>{value.lifecycle_owner === 'webmux' ? 'WebMux' : value.lifecycle_owner}</dd>
+          <dt>Session manager</dt><dd>{value.lifecycle_owner === 'webmux' ? 'WebMux' : value.lifecycle_owner === 'external-tmux' ? 'External tmux' : value.lifecycle_owner === 'agent' ? 'Agent workspace' : value.lifecycle_owner}</dd>
           {value.manager_target && <><dt>Managed session</dt><dd>{value.manager_target}</dd></>}
           {value.manager_directory && <><dt>Managed project directory</dt><dd>{value.manager_directory}</dd></>}
           {value.manager_snapshot_id && <><dt>Recorded manager checkpoint</dt><dd>{value.manager_snapshot_id}</dd></>}
@@ -137,25 +117,8 @@ export function RecoveryDialog({ sessionId, onClose }: { sessionId: string; onCl
           <h3>Previous terminal output</h3>
           <pre className="recovery-history" tabIndex={0} aria-label="Previous terminal output">{value.history}</pre>
         </> : <p>No retained terminal output is available. Existing native conversation information is shown above when recorded.</p>}
-        {!activity && !value.can_resume_managed && !pendingOriginal && <p>{value.manager_native_session ? 'Resume this recorded conversation through its session manager. Retained terminal output is available below when recorded.' : 'No reliable command was recorded. Use any retained output to recover this session manually.'}</p>}
-        {pendingOriginal && <section role="status" aria-label="Rig recovery pending">
-          <p>The original Rig recovery is not yet confirmed. Completion reuses its recorded conversation, launch settings and original request.</p>
-          <label className="recovery-consent"><input type="checkbox" checked={approveManaged} disabled={busy}
-            onChange={event => setApproveManaged(event.target.checked)} />
-            I approve checking and completing the original Rig recovery request
-          </label>
-          <div className="recovery-actions"><button type="button" disabled={busy || !approveManaged}
-            onClick={() => void completeOriginal()}>Check and complete original Rig recovery</button></div>
-        </section>}
-        {value.can_resume_managed && !pendingOriginal && <>
-          <p>{managerName} will verify the recorded destination and policy, then reattach a surviving process or resume the recorded conversation. No terminal output will be sent to the coding service.</p>
-          <label className="recovery-consent"><input type="checkbox" checked={approveManaged} disabled={busy}
-            onChange={event => setApproveManaged(event.target.checked)} />
-            I approve asking {managerName} to resume {value.manager_native_session} on {value.hostname} in {value.manager_directory}
-          </label>
-          <div className="recovery-actions"><button type="button" disabled={busy || !approveManaged}
-            onClick={() => void perform('managed')}>Resume through {managerName}</button></div>
-        </>}
+        {!activity && value.lifecycle_owner !== 'webmux' && (value.manager_target || value.lifecycle_owner === 'external-tmux' || value.lifecycle_owner === 'rig' || value.lifecycle_owner === 'agent-deck') && <p>This external tmux session was left running. Attach it from a WebMux terminal with tmux attach. WebMux does not stop it.</p>}
+        {!activity && value.lifecycle_owner === 'webmux' && <p>No reliable command was recorded. Use any retained output to recover this session manually.</p>}
         {value.lifecycle_owner === 'webmux' && <label className="recovery-consent">
           <input type="checkbox" checked={value.state?.auto_resume ?? false} disabled={busy}
             onChange={event => void setAutomatic(event.target.checked)} />

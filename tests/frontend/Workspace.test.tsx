@@ -1,7 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
-import { WorkspacePaneProvider, useWorkspacePane } from '@frontend/contexts/WorkspacePaneContext';
-import type { CoordinationStatus } from '@frontend/components/CoordinationDialog';
 import { Workspace } from '@frontend/components/Workspace';
 import { InputBroadcastProvider, useInputBroadcast } from '@frontend/contexts/InputBroadcastContext';
 import type { ReactNode, Ref } from 'react';
@@ -23,12 +21,10 @@ vi.mock('@frontend/utils/api', () => ({
     getSession: vi.fn(),
     setMinimized: vi.fn(),
     stopLocalSession: vi.fn(),
-    getRigChanges: vi.fn(),
-    getRigObservations: vi.fn(),
-    getCoordination: vi.fn().mockResolvedValue({ agents: [], messages: [] }),
+    getCoordination: vi.fn().mockResolvedValue({ enabledProviders: [], defaultLaunchProvider: 'webmux', defaultView: 'all', projects: [] }),
     getClients: vi.fn().mockResolvedValue([]),
     createSession: vi.fn(),
-    attachCoordinatedAgent: vi.fn(),
+    attachCoordinatedSession: vi.fn(),
     deleteSession: vi.fn(),
     reconnectSession: vi.fn(),
     moveSession: vi.fn().mockResolvedValue({}),
@@ -90,10 +86,8 @@ describe('Workspace', () => {
     sessionStorage.clear();
     const { api } = await import('@frontend/utils/api');
     (api.getSessions as ReturnType<typeof vi.fn>).mockResolvedValue([]);
-    vi.mocked(api.getRigChanges).mockReset().mockResolvedValue({ contract: 'webmux-rig-changes/v1', available: false, changed: false });
-    vi.mocked(api.getRigObservations).mockReset().mockResolvedValue({ contract: 'webmux-coordination/v1', defaultLaunchProvider: 'webmux', defaultView: 'all', enabledProviders: [], providers: [], projects: [], seats: [], messages: [], errors: {} } satisfies CoordinationStatus);
-    vi.mocked(api.getCoordination).mockReset().mockResolvedValue({ contract: 'webmux-coordination/v1', defaultLaunchProvider: 'webmux', defaultView: 'all', enabledProviders: [], providers: [], projects: [], seats: [], messages: [], errors: {} });
-    vi.mocked(api.attachCoordinatedAgent).mockReset();
+    vi.mocked(api.getCoordination).mockReset().mockResolvedValue({ enabledProviders: [], defaultLaunchProvider: 'webmux', defaultView: 'all', projects: [] });
+    vi.mocked(api.attachCoordinatedSession).mockReset();
     vi.mocked(api.moveSession).mockReset().mockResolvedValue(mockSessions[0]);
   });
 
@@ -108,21 +102,21 @@ describe('Workspace', () => {
     const personal = { ...c, id: 'personal', rig: { ...c.rig, manager_profile: 'personal', target: 'local:worker-personal' } };
     vi.mocked(api.getSessions).mockResolvedValue([a, b, c, personal]);
     function Enable() { const context = useInputBroadcast(); return <button onClick={() => context.setBroadcastMode(true)}>Enable broadcast for test</button>; }
-    render(<><Enable /><Workspace {...defaultProps} canManageRig={false} /></>, { wrapper });
+    render(<><Enable /><Workspace {...defaultProps} /></>, { wrapper });
     await screen.findByTestId('terminal-a');
     fireEvent.click(screen.getByRole('button', { name: 'Enable broadcast for test' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Project: lab · Rig · foo' }));
-    expect(screen.getByRole('checkbox', { name: 'lab/worker · Rig · foo' })).toBeChecked();
-    expect(screen.getByRole('checkbox', { name: 'lab/worker · Rig · bar' })).not.toBeChecked();
-    expect(screen.getByRole('checkbox', { name: 'lab/worker · Agent Deck (work) · foo' })).not.toBeChecked();
-    expect(screen.getByRole('checkbox', { name: 'lab/worker · Agent Deck (personal) · foo' })).not.toBeChecked();
+    fireEvent.click(screen.getByRole('button', { name: 'Project: lab · External tmux · foo' }));
+    expect(screen.getByRole('checkbox', { name: 'lab/worker · External tmux · foo' })).toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'lab/worker · External tmux · bar' })).not.toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'lab/worker · External tmux (work) · foo' })).not.toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'lab/worker · External tmux (personal) · foo' })).not.toBeChecked();
     const d = { ...a, id: 'd', rig: { ...rig, name: 'new worker', target: 'worker-d' } };
     vi.mocked(api.getSessions).mockResolvedValue([{ ...a, rig: { ...rig, project: 'renamed' } }, b, c, personal, d]);
     fireEvent(window, new CustomEvent('webmux-sessions-changed'));
     await screen.findByTestId('terminal-d');
-    expect(screen.getByRole('checkbox', { name: 'renamed/worker · Rig · foo' })).toBeChecked();
-    expect(screen.getByRole('checkbox', { name: 'lab/new worker · Rig · foo' })).not.toBeChecked();
-    expect(screen.getByRole('checkbox', { name: 'lab/worker · Rig · bar' })).not.toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'renamed/worker · External tmux · foo' })).toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'lab/new worker · External tmux · foo' })).not.toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'lab/worker · External tmux · bar' })).not.toBeChecked();
   });
 
   it('distinguishes same-host canonical projects and leaves legacy identity ungrouped', async () => {
@@ -133,84 +127,21 @@ describe('Workspace', () => {
     const legacy = { ...a, id: 'legacy', rig: { ...rig, target: 'legacy', project_id: undefined, host: '' } };
     vi.mocked(api.getSessions).mockResolvedValue([a, b, legacy]);
     function Enable() { const context = useInputBroadcast(); return <button onClick={() => context.setBroadcastMode(true)}>Enable broadcast for test</button>; }
-    render(<><Enable /><Workspace {...defaultProps} canManageRig={false} /></>, { wrapper });
+    render(<><Enable /><Workspace {...defaultProps} /></>, { wrapper });
     await screen.findByTestId('terminal-a');
     fireEvent.click(screen.getByRole('button', { name: 'Enable broadcast for test' }));
-    const one = screen.getByRole('button', { name: 'Project: lab · Rig · foo · project-one' });
-    expect(screen.getByRole('button', { name: 'Project: lab · Rig · foo · project-two' })).toBeInTheDocument();
+    const one = screen.getByRole('button', { name: 'Project: lab · External tmux · foo · project-one' });
+    expect(screen.getByRole('button', { name: 'Project: lab · External tmux · foo · project-two' })).toBeInTheDocument();
     fireEvent.click(one);
-    expect(screen.getByRole('checkbox', { name: 'lab/worker · Rig · foo · viewer a' })).toBeChecked();
-    expect(screen.getByRole('checkbox', { name: 'lab/worker · Rig · foo · viewer b' })).not.toBeChecked();
-    expect(screen.getByRole('checkbox', { name: 'lab/worker · Rig · Unknown execution host' })).not.toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'lab/worker · External tmux · foo · viewer a' })).toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'lab/worker · External tmux · foo · viewer b' })).not.toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'lab/worker · External tmux · Unknown execution host' })).not.toBeChecked();
     expect(screen.getByText(/Project identity or destination unavailable/)).toBeInTheDocument();
   });
 
-  it('opens a canonical seat from the grid navigator at the chosen empty cell', async () => {
+  it('does not query removed coordinators from the terminal grid', async () => {
     const { api } = await import('@frontend/utils/api');
-    vi.mocked(api.getCoordination).mockResolvedValue({ contract: 'webmux-coordination/v1', defaultLaunchProvider: 'rig', defaultView: 'all', enabledProviders: ['rig'], providers: [], messages: [], errors: {},
-      projects: [{ provider: 'rig', id: 'project', name: 'research', host: 'localhost', state: 'running', historical: false, seatCount: 1, runningCount: 1, contexts: [] }],
-      seats: [{ provider: 'rig', id: 'stable-seat', projectId: 'project', projectName: 'research', name: 'worker', host: 'localhost', runtime: 'codex', state: 'running', openable: true, managed: true }],
-    });
-    const opened = { ...mockSessions[0], row: 1, col: 1 };
-    vi.mocked(api.attachCoordinatedAgent).mockImplementation(async () => {
-      vi.mocked(api.getSessions).mockResolvedValue([opened]);
-      return opened;
-    });
     render(<Workspace {...defaultProps} />, { wrapper });
-    fireEvent.click(await screen.findByText('Coordinated sessions'));
-    fireEvent.click(await screen.findByRole('button', { name: 'worker · localhost · running · Rig' }));
-    expect(api.attachCoordinatedAgent).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByTestId('add-cell-1-1'));
-    await screen.findByTestId('terminal-s1');
-    expect(api.attachCoordinatedAgent).toHaveBeenCalledExactlyOnceWith('rig', 'stable-seat', { row: 1, col: 1 });
-    expect(api.createSession).not.toHaveBeenCalled();
-    expect(api.moveSession).not.toHaveBeenCalled();
-  });
-
-  it('offers existing seats from a clicked cell and retains that requested position', async () => {
-    const { api } = await import('@frontend/utils/api');
-    vi.mocked(api.getCoordination).mockResolvedValue({ contract: 'webmux-coordination/v1', defaultLaunchProvider: 'rig', defaultView: 'all', enabledProviders: ['rig'], providers: [], messages: [], errors: {},
-      projects: [{ provider: 'rig', id: 'project', name: 'research', host: 'localhost', state: 'running', historical: false, seatCount: 1, runningCount: 1, contexts: [] }],
-      seats: [{ provider: 'rig', id: 'stable-seat', projectId: 'project', projectName: 'research', name: 'worker', host: 'localhost', runtime: 'codex', state: 'running', openable: true, managed: true }],
-    });
-    const opened = { ...mockSessions[0], row: 1, col: 0 };
-    vi.mocked(api.attachCoordinatedAgent).mockImplementation(async () => { vi.mocked(api.getSessions).mockResolvedValue([opened]); return opened; });
-    render(<Workspace {...defaultProps} />, { wrapper });
-    fireEvent.click(await screen.findByTestId('add-cell-1-0'));
-    expect(api.getCoordination).not.toHaveBeenCalled();
-    fireEvent.click(await screen.findByRole('button', { name: 'Open existing agent seat' }));
-    await screen.findByText('Choose a coordinated seat for row 2, column 1.');
-    fireEvent.click(await screen.findByRole('button', { name: 'worker · localhost · running · Rig' }));
-    await screen.findByTestId('terminal-s1');
-    expect(api.attachCoordinatedAgent).toHaveBeenCalledExactlyOnceWith('rig', 'stable-seat', { row: 1, col: 0 });
-    expect(api.createSession).not.toHaveBeenCalled();
-    expect(api.moveSession).not.toHaveBeenCalled();
-  });
-
-  it('reveals an existing seat without moving or remounting its terminal', async () => {
-    const { api } = await import('@frontend/utils/api');
-    const existing = { ...mockSessions[0], row: 3, col: 4, rig: { seat_id: 'stable-seat', target: 'native-target', project: 'research', name: 'worker', host: 'localhost', runtime: 'codex' } };
-    vi.mocked(api.getSessions).mockResolvedValue([existing]);
-    vi.mocked(api.getCoordination).mockResolvedValue({ contract: 'webmux-coordination/v1', defaultLaunchProvider: 'rig', defaultView: 'all', enabledProviders: ['rig'], providers: [], messages: [], errors: {},
-      projects: [{ provider: 'rig', id: 'project', name: 'research', host: 'localhost', state: 'running', historical: false, seatCount: 1, runningCount: 1, contexts: [] }],
-      seats: [{ provider: 'rig', id: 'stable-seat', projectId: 'project', projectName: 'research', name: 'worker', host: 'localhost', runtime: 'codex', state: 'running', openable: true, managed: true }],
-    });
-    vi.mocked(api.attachCoordinatedAgent).mockResolvedValue(existing);
-    render(<Workspace {...defaultProps} />, { wrapper });
-    const terminal = await screen.findByTestId('terminal-s1');
-    fireEvent.click(screen.getByTestId('add-cell-3-5'));
-    fireEvent.click(await screen.findByRole('button', { name: 'Open existing agent seat' }));
-    fireEvent.click(await screen.findByRole('button', { name: 'worker · localhost · running · Rig' }));
-    await waitFor(() => expect(api.attachCoordinatedAgent).toHaveBeenCalledExactlyOnceWith('rig', 'stable-seat', undefined));
-    expect(screen.getByTestId('terminal-s1')).toBe(terminal);
-    expect(api.moveSession).not.toHaveBeenCalled();
-    expect(api.createSession).not.toHaveBeenCalled();
-    expect(screen.queryByText('Choose an empty grid cell to open worker.')).not.toBeInTheDocument();
-  });
-
-  it('does not expose or query the navigator without coordination permission', async () => {
-    const { api } = await import('@frontend/utils/api');
-    render(<Workspace {...defaultProps} canManageRig={false} />, { wrapper });
     await screen.findByTestId('add-cell-0-0');
     expect(screen.queryByText('Coordinated sessions')).not.toBeInTheDocument();
     expect(api.getCoordination).not.toHaveBeenCalled();
@@ -238,33 +169,6 @@ describe('Workspace', () => {
     await waitFor(() => expect(api.setMinimized).toHaveBeenLastCalledWith('s1', false));
     expect(screen.getByTestId('tile-cell-s1')).not.toHaveStyle({ visibility: 'hidden' });
     expect(screen.getByTestId('terminal-s1')).toBe(terminal);
-  });
-
-  it('cancels hidden-grid Rig observation and resumes it without remounting the terminal', async () => {
-    const { api } = await import('@frontend/utils/api');
-    vi.mocked(api.getSessions).mockResolvedValue([{ ...mockSessions[0], rig: {
-      provider: 'rig', target: 'native', project: 'demo', name: 'seat', host: 'localhost', runtime: 'terminal', seat_id: 'local-rig/native',
-    } }]);
-    vi.mocked(api.getRigChanges).mockImplementationOnce(() => new Promise(() => {}));
-    function SwitchPane() {
-      const { setActivePane } = useWorkspacePane();
-      return <><button onClick={() => setActivePane('agents')}>Hide grid for test</button><button onClick={() => setActivePane('terminals')}>Show grid for test</button></>;
-    }
-    render(<WorkspacePaneProvider availablePanes={['terminals', 'agents']}><SwitchPane /><Workspace {...defaultProps} /></WorkspacePaneProvider>, { wrapper });
-    await waitFor(() => expect(api.getRigChanges).toHaveBeenCalledTimes(1));
-    const terminal = screen.getByTestId('terminal-s1');
-    const signal = vi.mocked(api.getRigChanges).mock.calls[0][0];
-    expect(signal?.aborted).toBe(false);
-    fireEvent.click(screen.getByRole('button', { name: 'Hide grid for test' }));
-    await waitFor(() => expect(signal?.aborted).toBe(true));
-    expect(screen.getByTestId('terminal-s1')).toBe(terminal);
-    expect(api.getRigChanges).toHaveBeenCalledTimes(1);
-    expect(api.getRigObservations).toHaveBeenCalledTimes(1);
-    fireEvent.click(screen.getByRole('button', { name: 'Show grid for test' }));
-    await waitFor(() => expect(api.getRigChanges).toHaveBeenCalledTimes(2));
-    expect(api.getRigObservations).toHaveBeenCalledTimes(2);
-    expect(screen.getByTestId('terminal-s1')).toBe(terminal);
-    expect(api.deleteSession).not.toHaveBeenCalled();
   });
 
   it('starts with a 2 by 2 grid and does not fetch coordinator inventories', async () => {
@@ -428,14 +332,6 @@ describe('Workspace', () => {
     await waitFor(() => {
       expect(screen.getByText('Connect to Host')).toBeDefined();
     });
-  });
-
-  it('keeps Rig controls out of non-admin workspaces', async () => {
-    render(<Workspace {...defaultProps} canManageRig={false} />, { wrapper });
-    const add = await screen.findByTestId('add-cell-0-0');
-    expect(screen.queryByText(/Rig seats \(/)).toBeNull();
-    fireEvent.click(add);
-    expect(screen.getByRole('dialog', { name: 'Connect to Host' })).toBeDefined();
   });
 
   it('scrolls the focused terminal tile fully into view', async () => {

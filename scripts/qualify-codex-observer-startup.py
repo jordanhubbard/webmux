@@ -1,15 +1,11 @@
 #!/usr/bin/env python3
 """Native Codex 0.169 startup controls in disposable homes; never submits a turn."""
-import argparse
 import hashlib
 import json
 import os
-from pathlib import Path
 import selectors
-import shutil
 import signal
 import subprocess
-import tempfile
 import time
 
 
@@ -182,101 +178,10 @@ for line in sys.stdin:
 '''
 
 
+
 def main():
-    if os.name != "posix":
-        raise RuntimeError("native_observer_platform_unqualified")
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--codex", required=True)
-    parser.add_argument("--node", required=True)
-    parser.add_argument("--output", type=Path, required=True)
-    args = parser.parse_args()
-    codex, node = [Path(shutil.which(p) or p).resolve() for p in [args.codex, args.node]]
-    version = subprocess.check_output([str(codex), "--version"], timeout=5, text=True).strip()
-    if version != "codex-cli 0.169.0":
-        raise RuntimeError("unqualified_native_version")
-    module = Path(__file__).resolve().parents[1] / "webmux/server/internal/openrigcoord/codex-owner-plan.mts"
-    report = {"scope": "Disposable native homes, no auth or coding turn; configured MCP startup suppression and policy equivalence only",
-              "version": version, "moduleSHA256": sha(module), "probeSHA256": sha(Path(__file__).resolve()),
-              "cliSHA256": sha(codex), "cases": [], "passed": False}
-    root = Path(tempfile.mkdtemp(prefix="wm-observer-startup-")).resolve()
-    (root / "mcp.py").write_text(MCP)
-    try:
-        for mode in ["full", "read", "workspace"]:
-            policies = []
-            for isolated in [False, True]:
-                home = root / (mode + ("-isolated" if isolated else "-control"))
-                home.mkdir(mode=0o700)
-                cwd, extra = home / "project", home / "extra root"
-                cwd.mkdir()
-                extra.mkdir()
-                marker, hook = home / "mcp.marker", home / "hook.marker"
-                command = "/usr/bin/touch " + str(hook)
-                identity = {"event_name": "session_start", "hooks": [
-                    {"type": "command", "command": command, "timeout": 5, "async": False}]}
-                trust = "sha256:" + hashlib.sha256(json.dumps(identity, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
-                config_path = home / "config.toml"
-                key = str(config_path) + ":session_start:0:0"
-                sandbox = {"full": "danger-full-access", "read": "read-only", "workspace": "workspace-write"}[mode]
-                config_path.write_text(
-                    'cli_auth_credentials_store = "file"\napproval_policy = "never"\nsandbox_mode = ' + json.dumps(sandbox) + '\n'
-                    '[sandbox_workspace_write]\nnetwork_access = false\nexclude_slash_tmp = true\nexclude_tmpdir_env_var = true\nwritable_roots = ' + json.dumps([str(extra)]) + '\n'
-                    '[features]\nhooks = true\n[projects.' + json.dumps(str(cwd)) + ']\ntrust_level = "trusted"\n'
-                    '[[hooks.SessionStart]]\n[[hooks.SessionStart.hooks]]\ntype = "command"\ncommand = ' + json.dumps(command) + '\ntimeout = 5\n'
-                    '[hooks.state.' + json.dumps(key) + ']\ntrusted_hash = ' + json.dumps(trust) + '\n'
-                    '[mcp_servers."webmux.marker"]\ncommand = ' + json.dumps(os.sys.executable) + '\nargs = ' + json.dumps([str(root / "mcp.py"), str(marker)]) + '\nstartup_timeout_sec = 5\n')
-                before = config_path.read_bytes()
-                case = {"mode": mode, "isolated": isolated, "nativeProcess": {}}
-                report["cases"].append(case)
-                native = Native(codex, cwd, home, diagnostics=case["nativeProcess"])
-                try:
-                    native.rpc("initialize", {"clientInfo": {"name": "webmux-startup-control", "version": "1"},
-                                              "capabilities": {"experimentalApi": True}})
-                    native.process.stdin.write(b'{"method":"initialized"}\n')
-                    native.process.stdin.flush()
-                    config = native.rpc("config/read", {"cwd": str(cwd), "includeLayers": False})["config"]
-                    assert not marker.exists(), "MCP started before thread"
-                    params = {"cwd": str(cwd), "ephemeral": True}
-                    if isolated:
-                        code = 'import fs from "node:fs";import {codexObservationConfig} from ' + json.dumps(module.as_uri()) + ';console.log(JSON.stringify(codexObservationConfig(JSON.parse(fs.readFileSync(0,"utf8")))));'
-                        params["config"] = json.loads(subprocess.check_output(
-                            [str(node), "--input-type=module", "-e", code], input=json.dumps(config), text=True, timeout=5))
-                    thread = native.rpc("thread/start", params)
-                    hooks = native.rpc("hooks/list", {"threadId": thread["thread"]["id"], "cwds": []})
-                    time.sleep(1)
-                    assert thread["thread"]["ephemeral"] is True
-                    events = [json.loads(line)["event"] for line in marker.read_text().splitlines()] if marker.exists() else []
-                    if isolated:
-                        assert not events, "MCP started during observation"
-                        assert all(not row["hooks"] and not row["errors"] for row in hooks["data"])
-                    else:
-                        assert "initialize" in events and "tools/list" in events, "MCP positive control not active"
-                        assert any(h["enabled"] and h["trustStatus"] == "trusted" for row in hooks["data"] for h in row["hooks"])
-                    policy = {k: thread.get(k) for k in ["cwd", "runtimeWorkspaceRoots", "sandbox", "approvalPolicy", "approvalsReviewer", "model", "modelProvider", "reasoningEffort", "serviceTier", "activePermissionProfile"]}
-                    policy = json.loads(json.dumps(policy).replace(str(home), "<fixture>"))
-                    policies.append(policy)
-                    assert before == config_path.read_bytes(), "owner config changed"
-                    case.update({"mcpEvents": events, "hookMarker": hook.exists(), "policy": policy,
-                                 "configUnchanged": True, "noCodingTurn": "turn/start" not in native.methods})
-                finally:
-                    native.close()
-                    case["ownedAppServerStopped"] = native.process.poll() is not None
-                    if marker.exists():
-                        for pid in {json.loads(line)["pid"] for line in marker.read_text().splitlines()}:
-                            try:
-                                os.kill(pid, 0)
-                            except ProcessLookupError:
-                                continue
-                            raise RuntimeError("owned_mcp_cleanup_unconfirmed")
-            assert policies[0] == policies[1], "observation changed owner policy"
-        validate_native_diagnostics([case["nativeProcess"] for case in report["cases"]])
-        report["passed"] = True
-    finally:
-        args.output.write_text(json.dumps(report, indent=2) + "\n")
-        # Retain fixture evidence on failure; remove only this script's own homes on success.
-        if report["passed"]:
-            shutil.rmtree(root)
-    print(json.dumps({"passed": report["passed"], "cases": len(report["cases"])}))
+    raise SystemExit('The OpenRig owner-plan comparison was removed. Native process diagnostics remain in this module for scripts/test_codex_observer_process.py.')
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

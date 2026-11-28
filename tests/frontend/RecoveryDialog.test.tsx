@@ -107,39 +107,18 @@ describe('native conversation evidence', () => {
 });
 
 describe('continuation approval', () => {
-  it('clears managed approval when the selected terminal changes', async () => {
-    const value: SessionRecovery = { ...evidence(), waiting: false, host_revision: 0, instance: 'managed-identity',
-      lifecycle_owner: 'agent-deck', can_resume_managed: true, manager_native_session: 'recorded-conversation' };
-    vi.spyOn(api, 'getSessionRecovery').mockResolvedValue(value);
-    const recover = vi.spyOn(api, 'recoverSession');
-    const dialog = render(<RecoveryDialog sessionId="one" onClose={vi.fn()} />);
-    const approve = await screen.findByLabelText(/I approve asking Agent Deck to resume/);
-    fireEvent.click(approve);
-    expect(screen.getByRole('button', { name: 'Resume through Agent Deck' })).toBeEnabled();
-    dialog.rerender(<RecoveryDialog sessionId="two" onClose={vi.fn()} />);
-    expect(await screen.findByRole('button', { name: 'Resume through Agent Deck' })).toBeDisabled();
-    expect(screen.getByLabelText(/I approve asking Agent Deck to resume/)).not.toBeChecked();
-    expect(recover).not.toHaveBeenCalled();
-  });
-
-  it('requires explicit managed approval and sends no transcript or arbitrary command', async () => {
+  it('does not resume a removed Agent Deck or Rig manager', async () => {
     const value: SessionRecovery = { ...evidence(), waiting: false, host_revision: 0, instance: 'managed-identity',
       lifecycle_owner: 'agent-deck', can_resume_managed: true, manager_native_session: 'recorded-conversation',
       manager_directory: '/project', manager_target: 'agent-deck:local:seat' };
     value.state!.activity = undefined;
     vi.spyOn(api, 'getSessionRecovery').mockResolvedValue(value);
-    const recover = vi.spyOn(api, 'recoverSession').mockResolvedValue({ outcome: 'consumed' });
+    const recover = vi.spyOn(api, 'recoverSession');
     render(<RecoveryDialog sessionId="one" onClose={vi.fn()} />);
-    const resume = await screen.findByRole('button', { name: 'Resume through Agent Deck' });
-    expect(resume).toBeDisabled();
+    expect(await screen.findByText(/left running/)).toBeDefined();
+    expect(screen.queryByRole('button', { name: /Resume through/ })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Start a shell' })).toBeNull();
-    fireEvent.click(screen.getByLabelText(/I approve asking Agent Deck to resume/));
-    fireEvent.click(resume);
-    await waitFor(() => expect(recover).toHaveBeenCalledOnce());
-    expect(recover).toHaveBeenCalledWith('one', expect.objectContaining({ kind: 'managed', confirm: true,
-      revision: 4, host_revision: 0, instance: 'managed-identity' }));
-    expect(recover.mock.calls[0][1]).not.toHaveProperty('context');
-    expect(recover.mock.calls[0][1]).not.toHaveProperty('command');
+    expect(recover).not.toHaveBeenCalled();
   });
 
   it('resumes the selected native conversation without transmitting history by default', async () => {
@@ -202,22 +181,20 @@ it('shows a Rig checkpoint and manual destination without offering an unqualifie
   render(<RecoveryDialog sessionId="one" onClose={vi.fn()} />);
   expect(await screen.findByText('rig-checkpoint')).toBeVisible();
   expect(screen.getByText('native-conversation')).toBeVisible();
-  expect(screen.getByText(/Resume this recorded conversation through its session manager/)).toBeVisible();
+  expect(screen.getByText(/left running/)).toBeVisible();
   expect(screen.queryByRole('button', { name: /Resume through/ })).toBeNull();
   expect(recover).not.toHaveBeenCalled();
 });
 
-it('asks Rig for an approved checkpoint continuation without sharing terminal history', async () => {
+it('does not ask Rig to resume a recorded checkpoint', async () => {
  const value: SessionRecovery = { ...evidence(), lifecycle_owner: 'rig', can_resume_managed: true, instance: 'rig-proof', host_revision: 0, manager_native_session: 'rig-native', manager_snapshot_id: 'rig-checkpoint', manager_directory: '/project' };
+ value.state!.activity = undefined;
  vi.spyOn(api,'getSessionRecovery').mockResolvedValue(value);
- const recover=vi.spyOn(api,'recoverSession').mockResolvedValue({outcome:'consumed'});
+ const recover=vi.spyOn(api,'recoverSession');
  render(<RecoveryDialog sessionId="one" onClose={vi.fn()} />);
- const button=await screen.findByRole('button',{name:'Resume through Rig'});
- expect(button).toBeDisabled();
- fireEvent.click(screen.getByLabelText(/I approve asking Rig to resume/));
- fireEvent.click(button);
- await waitFor(()=>expect(recover).toHaveBeenCalledWith('one',expect.objectContaining({kind:'managed',confirm:true,instance:'rig-proof'})));
- expect(recover.mock.calls[0][1]).not.toHaveProperty('context');
+ expect(await screen.findByText('rig-checkpoint')).toBeVisible();
+ expect(screen.queryByRole('button',{name:/Resume through/})).toBeNull();
+ expect(recover).not.toHaveBeenCalled();
 });
 
 it('shows unknown execution host without substituting the local viewer transport', async () => {
@@ -228,28 +205,15 @@ it('shows unknown execution host without substituting the local viewer transport
  expect(screen.queryByText(/I approve asking/)).toBeNull();
 });
 
-it('keeps an uncertain original Rig request open and checks its exact saved identity after refresh', async () => {
- const value: SessionRecovery={...evidence(),hostname:'localhost',lifecycle_owner:'rig',host_revision:0,instance:'original-native-reference',can_resume_managed:true,managed_original_contract:true,manager_native_session:'original-cid'};
- let banked: import('@frontend/types').RecoveryRequest | undefined;
- vi.spyOn(api,'getSessionRecovery').mockImplementation(async()=>banked?{...value,can_resume_managed:false,message:'Refreshed pending original',state:{...value.state!,revision:6},managed_original_request:{...banked,inspect:true}}:value);
- const recover=vi.spyOn(api,'recoverSession').mockImplementationOnce(async(_id,input)=>{banked={...input};return{outcome:'uncertain',code:'native_resume_response_unavailable'};}).mockResolvedValueOnce({outcome:'consumed'});
- const close=vi.fn();render(<RecoveryDialog sessionId="one" onClose={close}/>);
- fireEvent.click(await screen.findByLabelText(/I approve asking Rig/));fireEvent.click(screen.getByRole('button',{name:'Resume through Rig'}));
- await screen.findByText('Refreshed pending original');expect(screen.getByRole('status',{name:'Rig recovery pending'})).toBeInTheDocument();expect(close).not.toHaveBeenCalled();
- expect(screen.queryByRole('button',{name:'Resume through Rig'})).toBeNull();
- const check=screen.getByRole('button',{name:'Check and complete original Rig recovery'});expect(check).toBeDisabled();
- fireEvent.click(screen.getByLabelText('I approve checking and completing the original Rig recovery request'));fireEvent.click(check);
- await waitFor(()=>expect(close).toHaveBeenCalledOnce());expect(recover).toHaveBeenCalledTimes(2);
- expect(recover.mock.calls[1][1]).toEqual({...banked,inspect:true});expect(recover.mock.calls[1][1].revision).toBe(4);
-});
-
-it('restores only the original Rig completion action when the dialog is reconstructed', async()=>{
+it('leaves a saved Rig recovery request unsent', async () => {
  const original={id:'9aa1753a-1d61-4420-af42-e6b6fa591c47',kind:'managed' as const,revision:4,host_revision:0,instance:'original-native-reference',confirm:true,inspect:true};
- const value:SessionRecovery={...evidence(),hostname:'localhost',lifecycle_owner:'rig',instance:original.instance,host_revision:0,can_resume_managed:false,managed_original_contract:true,managed_original_request:original};
- vi.spyOn(api,'getSessionRecovery').mockResolvedValue(value);const recover=vi.spyOn(api,'recoverSession').mockResolvedValue({outcome:'uncertain'});
- render(<RecoveryDialog sessionId="one" onClose={vi.fn()}/>);await screen.findByRole('status',{name:'Rig recovery pending'});
- expect(screen.queryByRole('button',{name:'Resume through Rig'})).toBeNull();fireEvent.click(screen.getByLabelText('I approve checking and completing the original Rig recovery request'));
- fireEvent.click(screen.getByRole('button',{name:'Check and complete original Rig recovery'}));await waitFor(()=>expect(recover).toHaveBeenCalledWith('one',original));
+ const value:SessionRecovery={...evidence(),hostname:'localhost',lifecycle_owner:'rig',instance:original.instance,host_revision:0,can_resume_managed:false,managed_original_contract:true,managed_original_request:original,manager_target:'coder@project'};
+ value.state!.activity = undefined;
+ vi.spyOn(api,'getSessionRecovery').mockResolvedValue(value);const recover=vi.spyOn(api,'recoverSession');
+ render(<RecoveryDialog sessionId="one" onClose={vi.fn()}/>);
+ expect(await screen.findByText(/left running/)).toBeVisible();
+ expect(screen.queryByRole('button',{name:/Resume through|complete original/i})).toBeNull();
+ expect(recover).not.toHaveBeenCalled();
 });
 
 it('requires explicit confirmation to replace a live terminal and refreshes before offering resume', async () => {

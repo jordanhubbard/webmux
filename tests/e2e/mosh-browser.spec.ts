@@ -92,6 +92,9 @@ test('real Mosh carries an automatic browser request without logging and acknowl
     const session = await created.json() as { id: string; title: string }; id = session.id;
     await page.goto('/');
     const tile = page.getByTestId(`tile-cell-${id}`), terminal = tile.locator('.xterm-helper-textarea');
+    // The coordination probe can print into the PTY before the shell is ready.
+    // Wait for the prompt so that line cannot consume the feature command.
+    await expect(tile.locator('.xterm-rows')).toContainText(`${userInfo().username}@`, { timeout: 20_000 });
     await terminal.focus(); await page.keyboard.type("printf '\\nMOSH_%s\\n' FEATURE_READY"); await page.keyboard.press('Enter');
     await expect(tile.locator('.xterm-rows')).toContainText('MOSH_FEATURE_READY', { timeout: 20_000 });
     expect(spawnSync(tmux, ['-S', tmuxSocket, 'has-session', '-t', `=webmux-${id}`], { timeout: 5000, stdio: 'ignore' }).status,

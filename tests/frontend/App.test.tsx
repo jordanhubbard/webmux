@@ -152,13 +152,13 @@ describe('App', () => {
     mockAuth.isLoading = false;
     mockAuth.isAuthenticated = true;
     mockAuth.authStatus = { mode: 'none', bootstrap_required: false };
-    vi.mocked(api.getCoordination).mockResolvedValue({ contract: 'webmux-coordination/v1', defaultLaunchProvider: 'agent-deck', defaultView: 'agent-deck', enabledProviders: ['agent-deck'], providers: [{ id: 'agent-deck', label: 'Agent Deck', available: true, enabled: true, contract: 'agent-deck-cli/v1', capabilities: [] }], projects: [], seats: [], messages: [], errors: {} });
+    vi.mocked(api.getCoordination).mockResolvedValue({ enabledProviders: [], defaultLaunchProvider: 'webmux', defaultView: 'all', projects: [], message: 'Agent Deck and OpenRig are no longer launched by WebMux.' });
     render(<App />);
     await screen.findAllByText('Click to add a session');
     expect(api.getCoordination).not.toHaveBeenCalled();
     expect(screen.queryByRole('button', { name: 'Mac permissions' })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Coordination' }));
-    expect(await screen.findByRole('heading', { name: 'Start a coding agent' })).toBeVisible();
+    expect(await screen.findByRole('heading', { name: 'Coordination' })).toBeVisible();
     expect(screen.getByRole('region', { name: 'Coordination' })).toBeVisible();
     expect(screen.queryByRole('dialog')).toBeNull();
     const mounts = vi.mocked(api.getSessions).mock.calls.length;

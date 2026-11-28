@@ -4,20 +4,20 @@ on:
   pull_request:
     paths:
       - 'webmux/server/internal/nativeobserve/**'
-      - 'webmux/server/internal/openrigcoord/**'
       - 'webmux/server/cmd/webmux/main.go'
       - 'webmux/server/go.*'
-      - 'scripts/qualify-codex-observ*.py'
       - 'scripts/test_codex_observer_process.py'
+      - 'scripts/qualify-codex-observer-startup.py'
+      - 'scripts/qualify-codex-observation-isolation.py'
       - '.github/workflows/codex-observation-native.yml'
   push:
     branches: [main]
     paths:
       - 'webmux/server/internal/nativeobserve/**'
-      - 'webmux/server/internal/openrigcoord/**'
       - 'webmux/server/cmd/webmux/main.go'
-      - 'scripts/qualify-codex-observ*.py'
       - 'scripts/test_codex_observer_process.py'
+      - 'scripts/qualify-codex-observer-startup.py'
+      - 'scripts/qualify-codex-observation-isolation.py'
       - '.github/workflows/codex-observation-native.yml'
   workflow_dispatch:
 
@@ -112,12 +112,6 @@ jobs:
           fs.writeFileSync(path.join(root,'provenance.json'),JSON.stringify(receipt,null,2)+'\n');
           fs.appendFileSync(process.env.GITHUB_ENV,'WM_NATIVE_CODEX='+native+'\n');
           JS
-      - name: Qualify real native startup and permission snapshots
-        run: |
-          python3 scripts/qualify-codex-observation-isolation.py \
-            --codex "$WM_NATIVE_CODEX" --node "$(command -v node)" \
-            --helper "$WM_OBSERVER_RECEIPTS/webmux" \
-            --output "$WM_OBSERVER_RECEIPTS/native-controls.json"
       - name: Preserve every outcome
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7

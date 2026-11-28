@@ -9,6 +9,6 @@ export function sessionIdentity(session: Session) {
   const originalTitle = session.rig ? `${session.rig.name} · ${host} · ${session.rig.project}` : '';
   const name = session.rig && session.title === originalTitle ? session.rig.name : session.title;
   const label = project ? `${project} / ${name}` : name;
-  const source = session.rig ? (session.rig.provider === 'agent-deck' ? 'Agent Deck' : 'Rig') : session.project_label ? 'Saved project label' : 'Project not set';
+  const source = session.rig ? 'External tmux' : session.project_label ? 'Saved project label' : 'Project not set';
   return { project, host, name, label, source, workspace: session.rig?.workspace || '' };
 }

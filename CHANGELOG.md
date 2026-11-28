@@ -5,6 +5,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Removed
+- Agent Deck and OpenRig are no longer launched. Saved configuration that names them still loads, and those providers are ignored. Existing tmux sessions are left running. A saved local `tmux attach-session` viewer is reattached; Agent Deck and SSH Rig viewers stay disconnected. `make install-agent-deck`, the v1.16.39 pin, `/api/openrig/*`, and the Agent Deck and Rig coordination routes are gone. CI no longer installs `@openrig/cli` or compiles tmux 3.4 for Rig.
+
 ## [1.4.7] - 2026-11-27
 
 ### Fixed

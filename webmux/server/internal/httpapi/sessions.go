@@ -3,9 +3,7 @@ package httpapi
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/jordanhubbard/webmux/server/internal/agent"
@@ -64,11 +62,6 @@ func (s *Server) getSession(w http.ResponseWriter, r *http.Request, owner string
 }
 
 func (s *Server) getSessionRecovery(w http.ResponseWriter, r *http.Request, owner string) {
-	// Opening this owner-scoped preview may refresh native identity while its
-	// original process is live. No account observer or provider is started.
-	if saved, err := s.sessions.Get(owner, r.PathValue("id")); err == nil && saved.Rig != nil && saved.Rig.Host == "localhost" && saved.Rig.Runtime == "codex" && saved.Rig.TmuxServerFlag != "" {
-		_ = s.captureRigRecovery(r.Context(), owner, saved.ID)
-	}
 	value, err := s.sessions.Recovery(owner, r.PathValue("id"))
 	if err != nil {
 		s.sessionError(w, err, "Failed to read session recovery")
@@ -87,25 +80,11 @@ func (s *Server) recoverSession(w http.ResponseWriter, r *http.Request, owner st
 	if !decodeJSON(w, r, &input) {
 		return
 	}
-	var value session.RecoveryResult
-	var err error
-	if input.Kind == "managed" {
-		if !s.openRigAccess(w, owner) {
-			return
-		}
-		ctx, cancel := context.WithTimeout(r.Context(), 45*time.Second)
-		defer cancel()
-		saved, getErr := s.sessions.Get(owner, r.PathValue("id"))
-		if getErr != nil {
-			err = getErr
-		} else if saved.Rig != nil && saved.Rig.NativeRigRecovery != "" {
-			value, err = s.sessions.BeginRigNativeRecovery(ctx, owner, saved.ID, input, s.nativeRigRecoveryOperation)
-		} else {
-			value, err = s.sessions.RecoverManaged(ctx, owner, r.PathValue("id"), input, s.planManagedRecovery)
-		}
-	} else {
-		value, err = s.sessions.Recover(owner, r.PathValue("id"), input)
+	if input.Kind == "managed" || input.Kind == "native-rig" {
+		writeError(w, http.StatusConflict, "Agent Deck and OpenRig are no longer launched by WebMux. The external tmux session was left running. Attach it from a WebMux terminal with tmux attach. Nothing was stopped.")
+		return
 	}
+	value, err := s.sessions.Recover(owner, r.PathValue("id"), input)
 	if err != nil {
 		s.sessionError(w, err, "Failed to recover session")
 		return
@@ -197,29 +176,18 @@ func (s *Server) reconnectSession(w http.ResponseWriter, r *http.Request, owner 
 		s.sessionError(w, err, "Failed to reconnect session")
 		return
 	}
-	if (value.Companion == "openrig" || value.OpenRigView != "" || value.Rig != nil) && !s.openRigAccess(w, owner) {
-		return
-	}
 	var input struct {
 		Password string `json:"password"`
 	}
 	if !decodeJSON(w, r, &input) {
 		return
 	}
-	if value.Rig != nil {
-		ctx, cancel := context.WithTimeout(r.Context(), 20*time.Second)
-		defer cancel()
-		launch, resolveErr := s.resolveManagedReattachment(ctx, owner, *value.Rig)
-		if resolveErr != nil {
-			writeError(w, 409, resolveErr.Error())
-			return
-		}
-		s.handoffs.End(owner, value.ID)
-		value, err = s.sessions.ReconnectManaged(owner, value.ID, *value.Rig, launch.Argv)
-	} else {
-		s.handoffs.End(owner, value.ID)
-		value, err = s.sessions.Reconnect(owner, value.ID, input.Password)
+	if value.Rig != nil && !session.ExternalTmuxAttach(value.ExecArgv) {
+		writeError(w, http.StatusConflict, "This viewer was attached through Agent Deck or OpenRig, which WebMux no longer launches. The external tmux session was left running. Attach it from a WebMux terminal with tmux attach. Nothing was stopped.")
+		return
 	}
+	s.handoffs.End(owner, value.ID)
+	value, err = s.sessions.Reconnect(owner, value.ID, input.Password)
 	if err != nil {
 		s.sessionError(w, err, "Failed to reconnect session")
 		return
@@ -227,90 +195,6 @@ func (s *Server) reconnectSession(w http.ResponseWriter, r *http.Request, owner 
 	writeJSON(w, 200, value)
 }
 
-// managedRemoteKey identifies the remote lifecycle manager that owns a managed
-// viewer, or "" for a local manager.
-func managedRemoteKey(owner string, saved session.RigIdentity) string {
-	if (saved.Provider == "" || saved.Provider == "rig") && isRemoteRigTarget(saved.Target) {
-		parts := strings.SplitN(saved.Target, "/", 3)
-		if len(parts) == 3 && parts[1] != "" {
-			return owner + "\x00rig\x00" + parts[1]
-		}
-	}
-	if saved.Provider != "agent-deck" {
-		return ""
-	}
-	remote, _, err := splitAgentDeckTarget(strings.TrimPrefix(saved.Target, "agent-deck:"))
-	if err != nil || remote == "" {
-		return ""
-	}
-	return owner + "\x00agent-deck\x00" + remote
-}
-
-func (s *Server) resolveManagedReattachment(ctx context.Context, owner string, saved session.RigIdentity) (coordinationLaunch, error) {
-	id := saved.Provider
-	if id == "" {
-		id = "rig"
-	}
-	provider := s.coordinationProvider(owner, id)
-	if provider == nil {
-		return coordinationLaunch{}, fmt.Errorf("The %s lifecycle manager is unavailable or disabled. Retained logs are preserved; reconnect through that manager.", id)
-	}
-	target := saved.Target
-	if id == "rig" && saved.SeatID != "" {
-		target = saved.SeatID
-	}
-	if id != "rig" {
-		prefix := id + ":"
-		if !strings.HasPrefix(target, prefix) {
-			return coordinationLaunch{}, fmt.Errorf("The saved managed-session destination is invalid. Retained logs are preserved.")
-		}
-		target = strings.TrimPrefix(target, prefix)
-	}
-	survival, ok := provider.(coordinationSurvival)
-	if !ok {
-		return coordinationLaunch{}, fmt.Errorf("The lifecycle manager cannot verify a surviving process. Retained logs are preserved.")
-	}
-	live, err := survival.Survives(ctx, target)
-	if err != nil {
-		return coordinationLaunch{}, fmt.Errorf("The lifecycle manager could not verify the surviving session: %w. Retained logs are preserved.", err)
-	}
-	if !live {
-		if id == "rig" && saved.Host != "" && saved.Host != "localhost" {
-			// The local seat only carries SSH to the execution host, so losing it
-			// says nothing about the coding CLI's remote tmux session.
-			return coordinationLaunch{}, fmt.Errorf("The local SSH connection for this Rig seat on %s has ended, so WebMux cannot confirm whether its coding CLI is still running there and does not restart it. To reattach, start the agent again from Coordination with the same name, host, code folder and coding agent: a CLI still running on that host is reattached; otherwise a new conversation starts. Retained logs are preserved.", saved.Host)
-		}
-		return coordinationLaunch{}, fmt.Errorf("The original managed process is not confirmed running. Resume it through its lifecycle manager; retained logs are preserved.")
-	}
-	launch, err := provider.Attach(ctx, target)
-	if err != nil {
-		return coordinationLaunch{}, fmt.Errorf("The lifecycle manager could not reattach the original session: %w. Retained logs are preserved; recover it through that manager.", err)
-	}
-	expectedTarget := target
-	if id == "rig" {
-		expectedTarget = saved.Target
-	}
-	if launch.TmuxServerFlag != saved.TmuxServerFlag || launch.TmuxServerValue != saved.TmuxServerValue || launch.Provider != id || launch.Target != expectedTarget || saved.SeatID != "" && launch.SeatID != saved.SeatID || saved.AttachmentTarget != "" && launch.AttachmentTarget != saved.AttachmentTarget || saved.Host != "" && saved.Host != launch.Host || saved.Workspace != "" && saved.Workspace != launch.Workspace || saved.Runtime != "" && saved.Runtime != launch.Runtime {
-		return coordinationLaunch{}, fmt.Errorf("The lifecycle manager's session destination changed. Review its host, project and coding CLI before opening a new viewer; retained logs are preserved.")
-	}
-	profile := func(value string) string {
-		if value == "" {
-			return "default"
-		}
-		return value
-	}
-	if profile(saved.ManagerProfile) != profile(launch.Profile) {
-		return coordinationLaunch{}, fmt.Errorf("The lifecycle manager's recorded profile changed. Review it through that manager; retained logs are preserved.")
-	}
-	if saved.NativeRigRecovery != "" {
-		argv, err := s.nativeRigOriginalAttachment(ctx, owner, saved)
-		if err != nil {
-			return coordinationLaunch{}, fmt.Errorf("Rig could not verify the original native conversation: %w", err)
-		}
-		launch.Argv = argv
-	}
-	return launch, nil
-}
 func (s *Server) deleteSession(w http.ResponseWriter, r *http.Request, owner string) {
 	if err := s.sessions.Delete(owner, r.PathValue("id")); err != nil {
 		s.sessionError(w, err, "Failed to delete session")

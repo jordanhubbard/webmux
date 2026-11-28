@@ -130,8 +130,6 @@ type Broker struct {
 	policyStarted      bool
 	activity           map[agentActivityKey]pendingAgentActivity
 	activityWake       chan struct{}
-
-	nativeRecoveryJobs map[string]*nativeRecoveryJob
 }
 
 func New(store *storage.Store, logger *slog.Logger) (*Broker, error) {
@@ -225,7 +223,7 @@ func (b *Broker) Restore() error {
 		if e.run != nil {
 			continue
 		}
-		if e.value.Persistent && e.value.Hostname != "" && !e.value.Agent() && e.value.Rig == nil {
+		if e.value.Persistent && e.value.Hostname != "" && !e.value.Agent() && (e.value.Rig == nil || ExternalTmuxAttach(e.value.ExecArgv)) {
 			_ = b.startLocked(e, "", "")
 		}
 	}
@@ -623,19 +621,6 @@ func (b *Broker) fallbackLocked(e *entry, password, initial string) (bool, error
 }
 
 func (b *Broker) Reconnect(owner, id, password string) (Session, error) {
-	return b.reconnect(owner, id, password, nil, nil)
-}
-
-// ReconnectManaged accepts attach arguments freshly resolved by the lifecycle
-// owner. The saved identity binds that resolution to this existing viewer.
-func (b *Broker) ReconnectManaged(owner, id string, expected RigIdentity, argv []string) (Session, error) {
-	if len(argv) == 0 {
-		return Session{}, invalid("The coordinator did not return an attachment command")
-	}
-	return b.reconnect(owner, id, "", &expected, argv)
-}
-
-func (b *Broker) reconnect(owner, id, password string, expected *RigIdentity, argv []string) (Session, error) {
 	b.agentMu.Lock()
 	defer b.agentMu.Unlock()
 	b.mu.Lock()
@@ -648,17 +633,17 @@ func (b *Broker) reconnect(owner, id, password string, expected *RigIdentity, ar
 		b.mu.Unlock()
 		return Session{}, err
 	}
-	if expected != nil && (e.value.Rig == nil || *e.value.Rig != *expected) {
-		b.mu.Unlock()
-		return Session{}, ErrRecoveryConflict
-	}
 	if e.value.LocalStop != nil {
 		b.mu.Unlock()
 		return Session{}, ErrLocalStopRequired
 	}
-	if e.value.Rig != nil && expected == nil {
+	// Saved Agent Deck and OpenRig viewers are not relaunched. A local tmux
+	// attach is the only external command WebMux runs again, and attach does
+	// not kill the session it joins. The previous viewer process is closed
+	// only after that check, so a rejected reconnect leaves the session alone.
+	if e.value.Rig != nil && !ExternalTmuxAttach(e.value.ExecArgv) {
 		b.mu.Unlock()
-		return Session{}, invalid("The lifecycle manager must revalidate this session before reconnecting")
+		return Session{}, invalid("This viewer was attached through Agent Deck or OpenRig, which WebMux no longer launches. The external tmux session was left running. Attach it from a WebMux terminal with tmux attach. Nothing was stopped.")
 	}
 	if e.value.Agent() {
 		if _, err := b.agents.Access(e.value.AgentID); err != nil {
@@ -690,24 +675,12 @@ func (b *Broker) reconnect(owner, id, password string, expected *RigIdentity, ar
 	if current != e || e.run != nil {
 		return e.value.clone(), nil
 	}
-	if expected != nil {
-		if e.value.Rig == nil || *e.value.Rig != *expected {
-			return Session{}, ErrRecoveryConflict
-		}
-		e.value.ExecArgv = append([]string(nil), argv...)
-	}
 	if e.value.Agent() {
 		if _, err := b.agents.Access(e.value.AgentID); err != nil {
 			return Session{}, err
 		}
 	}
-	var transcript *transcriptLog
-	if expected != nil {
-		if _, native := NativeRigReference(*expected); native {
-			transcript = b.nativeTranscriptLocked(e)
-		}
-	}
-	err = b.startWithTranscriptLocked(e, password, "", transcript)
+	err = b.startLocked(e, password, "")
 	if b.closed {
 		return Session{}, ErrClosed
 	}
@@ -716,15 +689,6 @@ func (b *Broker) reconnect(owner, id, password string, expected *RigIdentity, ar
 	}
 	if err == nil {
 		b.markAttachReadyLocked(e)
-		if expected != nil {
-			if e.value.Recovery == nil {
-				e.value.Recovery = &recovery.State{Version: 1}
-			}
-			e.value.Recovery.Pending = false
-			e.value.Recovery.Disposition = "reattached"
-			e.value.Recovery.ManagerMessage = ""
-			e.value.Recovery.Revision++
-		}
 	}
 	if persistErr := b.persistLocked(); persistErr != nil {
 		return Session{}, persistErr
@@ -1230,9 +1194,6 @@ func (b *Broker) Close() error {
 		return nil
 	}
 	b.closed = true
-	for _, job := range b.nativeRecoveryJobs {
-		job.cancel()
-	}
 	close(b.policyStop)
 	var processes []process
 	for _, e := range b.entries {

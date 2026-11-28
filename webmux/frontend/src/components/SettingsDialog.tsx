@@ -17,10 +17,6 @@ interface SettingsDialogProps {
 
 interface SettingsForm {
   name: string;
-  coordinationProvider: 'webmux' | 'agent-deck' | 'rig';
-  coordinationView: 'all' | 'webmux' | 'agent-deck' | 'rig';
-  agentDeckEnabled: boolean;
-  rigEnabled: boolean;
   cols: string;
   rows: string;
   fontSize: string;
@@ -51,10 +47,6 @@ interface SettingsForm {
 function formFromConfig(config: AppConfig): SettingsForm {
   return {
     name: config.app.name,
-    coordinationProvider: config.app.coordination?.default_launch_provider ?? 'webmux',
-    coordinationView: config.app.coordination?.default_view ?? 'all',
-    agentDeckEnabled: config.app.coordination?.enabled_providers?.includes('agent-deck') ?? false,
-    rigEnabled: config.app.coordination?.enabled_providers?.includes('rig') ?? false,
     cols: String(config.app.default_term.cols),
     rows: String(config.app.default_term.rows),
     fontSize: String(config.app.default_term.font_size),
@@ -191,13 +183,6 @@ export function SettingsDialog({ workspaceOptions, onClose, onSaved }: SettingsD
         || JSON.stringify(form.hostSwitcherHosts) !== JSON.stringify(originalForm.hostSwitcherHosts);
       const fontFacesChanged = JSON.stringify(form.fontFaces) !== JSON.stringify(originalForm.fontFaces);
 
-      const coordinationPatch = {
-        ...(form.agentDeckEnabled !== originalForm.agentDeckEnabled || form.rigEnabled !== originalForm.rigEnabled
-          ? { enabled_providers: [...(form.agentDeckEnabled ? ['agent-deck' as const] : []), ...(form.rigEnabled ? ['rig' as const] : [])] } : {}),
-        ...(form.coordinationProvider !== originalForm.coordinationProvider ? { default_launch_provider: form.coordinationProvider } : {}),
-        ...(form.coordinationView !== originalForm.coordinationView ? { default_view: form.coordinationView } : {}),
-      };
-
       const appUpdate = {
         ...(form.name !== originalForm.name ? { name } : {}),
         ...(terminalChanged ? {
@@ -212,7 +197,6 @@ export function SettingsDialog({ workspaceOptions, onClose, onSaved }: SettingsD
         ...(form.sessionLogging !== originalForm.sessionLogging
           ? { session_logging: { enabled: form.sessionLogging } }
           : {}),
-        ...(Object.keys(coordinationPatch).length ? { coordination: coordinationPatch } : {}),
         ...(transportChanged ? {
           transport: {
             prefer_mosh: form.preferMosh,
@@ -294,19 +278,7 @@ export function SettingsDialog({ workspaceOptions, onClose, onSaved }: SettingsD
             </Section>
 
             <Section title="Coordination">
-              <label><input type="checkbox" checked={form.agentDeckEnabled} onChange={event => { update('agentDeckEnabled', event.target.checked); if (!event.target.checked && form.coordinationProvider === 'agent-deck') update('coordinationProvider', 'webmux'); }} /> Enable Agent Deck</label>
-              <label><input type="checkbox" checked={form.rigEnabled} onChange={event => { update('rigEnabled', event.target.checked); if (!event.target.checked && form.coordinationProvider === 'rig') update('coordinationProvider', 'webmux'); }} /> Enable Rig</label>
-              <Field label="Default launch owner" hint="Owns newly launched agents; changing this does not affect existing agents or enabled integrations.">
-                <select aria-label="Default launch owner" style={styles.input} value={form.coordinationProvider} onChange={event => update('coordinationProvider', event.target.value as SettingsForm['coordinationProvider'])}>
-                  <option value="webmux">WebMux (built-in)</option><option value="agent-deck" disabled={!form.agentDeckEnabled}>Agent Deck</option><option value="rig" disabled={!form.rigEnabled}>Rig</option>
-                </select>
-              </Field>
-              <Field label="Default session view" hint="Filters the inventory without enabling, disabling, or stopping integrations.">
-                <select aria-label="Default session view" style={styles.input} value={form.coordinationView} onChange={event => update('coordinationView', event.target.value as SettingsForm['coordinationView'])}>
-                  <option value="all">All sessions</option><option value="webmux">WebMux</option><option value="agent-deck">Agent Deck</option><option value="rig">Rig</option>
-                </select>
-              </Field>
-              <span style={styles.hint}>WebMux is always available. Agent Deck and Rig can both be enabled; each agent retains one lifecycle owner.</span>
+              <span style={styles.hint}>Agent Deck and OpenRig are no longer launched by WebMux. Existing tmux sessions were left running. Attach one from a WebMux terminal with tmux attach. WebMux does not stop them.</span>
             </Section>
 
             <Section title="Terminal defaults">

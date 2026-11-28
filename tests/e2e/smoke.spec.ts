@@ -38,7 +38,7 @@ test.describe('UI loads', () => {
     await expect(page.locator('text=Type to All')).toBeVisible();
   });
 
-  test('add cell defaults to local tmux with optional coordination', async ({ page }) => {
+  test('add cell defaults to local tmux', async ({ page }) => {
     await page.goto('/');
     // Both panes render add-cell-0-0; .first() targets the terminals pane.
     const addCell = page.getByTestId('add-cell-0-0').first();
@@ -48,7 +48,7 @@ test.describe('UI loads', () => {
     const dialog = page.getByRole('dialog', { name: 'Connect to Host' });
     await expect(dialog).toBeVisible();
     await expect(dialog.getByRole('button', { name: 'Localhost', exact: true })).toBeFocused();
-    await expect(dialog.getByRole('combobox', { name: 'Coordinator', exact: true })).toHaveValue('none');
+    await expect(dialog.getByRole('combobox', { name: 'Coordinator' })).toHaveCount(0);
     await expect(dialog.getByText('New or one-time remote connection', { exact: true })).toBeVisible();
   });
 

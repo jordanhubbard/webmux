@@ -317,19 +317,16 @@ it('shows local quick-connect failures and allows retry', async () => {
   expect(screen.getByRole('button', { name: 'Localhost' })).not.toBeDisabled();
 });
 
-it('puts local tmux and saved remote tuples before new connections, with coordination opt-in', async () => {
+it('puts local tmux and saved remote tuples before new connections', async () => {
   mockApi.getHosts.mockResolvedValue([{ id: 'saved', hostname: 'puck.local', username: 'jkh', port: 2222, transport: 'ssh', tags: [], mosh_allowed: false }]);
   const connect = vi.fn().mockResolvedValue(undefined);
-  const coordinate = vi.fn();
-  render(<ConnectionDialog onConnect={connect} onClose={vi.fn()} localFirst onChooseCoordinator={coordinate} suggestedRow={2} suggestedCol={1} />);
-  expect(screen.getByLabelText('Coordinator')).toHaveValue('none');
+  render(<ConnectionDialog onConnect={connect} onClose={vi.fn()} localFirst suggestedRow={2} suggestedCol={1} />);
+  expect(screen.queryByLabelText('Coordinator')).toBeNull();
   expect(screen.getByRole('button', { name: 'Localhost' })).toHaveAttribute('data-dialog-autofocus');
   expect(screen.getByPlaceholderText('hostname or IP').closest('details')).not.toHaveAttribute('open');
   fireEvent.click(await screen.findByTitle('Connect to jkh@puck.local:2222'));
   await waitFor(() => expect(connect).toHaveBeenCalledWith(expect.objectContaining({ host_id: 'saved', hostname: 'puck.local', username: 'jkh', port: 2222, transport: 'ssh', row: 2, col: 1 })));
   expect(mockApi.createHost).not.toHaveBeenCalled();
-  fireEvent.change(screen.getByLabelText('Coordinator'), { target: { value: 'agent-deck' } });
-  expect(coordinate).toHaveBeenCalledWith('agent-deck', 'localhost');
 });
 
 it('opens legacy saved hosts at the missing username and can save the completed tuple', async () => {

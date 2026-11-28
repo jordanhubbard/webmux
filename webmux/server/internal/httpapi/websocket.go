@@ -140,7 +140,6 @@ func (s *Server) terminalSocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	id := r.PathValue("id")
-	value, _ := s.sessions.Get(owner, id)
 	authorized := func() bool {
 		if expected, exists := r.Context().Value(federationContextKey{}).(serverGrant); exists {
 			current, valid := s.federationGrant(r)
@@ -148,7 +147,7 @@ func (s *Server) terminalSocket(w http.ResponseWriter, r *http.Request) {
 				return false
 			}
 		}
-		return s.socketAuthorized(owner, mode) && ((value.Companion != "openrig" && value.OpenRigView == "") || s.openRigPermission(owner) == nil)
+		return s.socketAuthorized(owner, mode)
 	}
 	if !authorized() {
 		rejectSocket(connection, "Unauthorized")

@@ -37,8 +37,10 @@ def main():
     spec = spec_from_file_location('startup_controls', Path(__file__).with_name('qualify-codex-observer-startup.py'))
     controls = module_from_spec(spec)
     spec.loader.exec_module(controls)
+    # The OpenRig owner-plan module was removed. Disposable process tests still
+    # exercise this script with a fake Codex and never import that module.
     module = Path(__file__).resolve().parents[1] / 'webmux/server/internal/openrigcoord/codex-owner-plan.mts'
-    source_sha = controls.sha(module)
+    source_sha = controls.sha(module) if module.is_file() else '0' * 64
     helper = None
     if sys.platform == 'linux':
         if args.helper is None:

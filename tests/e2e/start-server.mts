@@ -2,7 +2,6 @@ import fs from 'node:fs';
 import { randomBytes } from 'node:crypto';
 import path from 'node:path';
 import { spawn, spawnSync } from 'node:child_process';
-import { startOpenRigFixture } from './openrig-fixture.mts';
 import { prepareBrowserTestHome } from '../../webmux/scripts/browser-test-home.mts';
 import { selectBrowserCompanion } from '../../webmux/scripts/browser-companion-preflight.mts';
 import { prebuiltBrowserFixture } from '../../webmux/scripts/prebuilt-browser-fixture.mts';
@@ -34,7 +33,6 @@ for (const entry of fs.readdirSync(defaultsDir, { withFileTypes: true })) {
     if (!content.includes('  listen_host: 0.0.0.0')) throw new Error('Expected the fixture listener default');
     content = content.replace('  listen_host: 0.0.0.0', '  listen_host: 127.0.0.1');
   }
-  if (entry.name === 'app.yaml' && process.env.WEBMUX_REAL_OPENRIG === '1') content = content.replace('enabled_providers: []', 'enabled_providers: [rig]');
   if (entry.name === 'app.yaml' && process.env.WEBMUX_VISUAL_PARITY === '1') {
     if (!content.includes('    port: 4822')) throw new Error('Expected the default guacd port in the visual fixture');
     content = content.replace('    port: 4822', '    port: 14822');
@@ -77,11 +75,9 @@ if (!prebuilt) {
   if (build.error) throw build.error;
   if (build.status !== 0) process.exit(build.status ?? 1);
 }
-const stopOpenRig = process.env.WEBMUX_REAL_OPENRIG === '1' ? await startOpenRigFixture(testHome) : () => {};
-const child = spawn(binary, [], { stdio: 'inherit', env: { ...process.env, WEBMUX_COORDINATION_DISABLED: process.env.WEBMUX_REAL_OPENRIG === '1' ? '0' : '1', WEBMUX_ROOT: '', WEBMUX_DEBUG_TERMINAL: '1' } });
+const child = spawn(binary, [], { stdio: 'inherit', env: { ...process.env, WEBMUX_COORDINATION_DISABLED: '1', WEBMUX_ROOT: '', WEBMUX_DEBUG_TERMINAL: '1' } });
 for (const signal of ['SIGTERM', 'SIGINT'] as const) process.on(signal, () => child.kill(signal));
 child.on('error', error => { console.error(error); process.exitCode = 1; });
 child.on('exit', code => {
-  stopOpenRig();
   process.exitCode = code ?? 0;
 });

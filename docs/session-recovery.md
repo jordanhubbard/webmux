@@ -13,6 +13,11 @@ until full qualification. #318 remains open. See the current
 below retain their original scope and must not be read as completing the remaining
 native managed-reboot or remote acceptance work.
 
+WebMux no longer resumes work through Agent Deck or OpenRig. A saved local
+`tmux attach-session` viewer is reattached. Other saved Agent Deck and OpenRig
+viewers stay disconnected, and the external tmux session is left running.
+Sections below that describe Resume through Agent Deck or Rig are historical.
+
 ## SSH helper discovery (#703)
 
 SSH windows need WebMux and tmux installed on the execution host to preserve

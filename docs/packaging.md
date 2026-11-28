@@ -10,10 +10,8 @@ brew services start jordanhubbard/webmux/webmux
 ```
 
 The stable formula builds the [published release selected in the formula](../Formula/webmux.rb)
-with built-in WebMux coordination by default.
-Agent Deck and Rig are optional integrations and can be enabled together.
-Neither is a formula dependency. See the [coordination setup](openrig.md) to
-install and enable an integration.
+with built-in WebMux coordination. Agent Deck and OpenRig are not formula
+dependencies and are no longer launched. See [what was removed](openrig.md).
 
 Open http://localhost:8080 and create the first administrator account. To run in the
 foreground instead, use `webmux`. Linux background services require systemd and an
@@ -116,22 +114,11 @@ server or browser assets. The server executable needs no adjacent `web/` or
 runtime. OpenSSH, tmux for local terminals, and optional mosh/guacd tools remain
 external dependencies for their respective features.
 
-Agent Deck is not embedded in native archives. On macOS or Linux, install the
-qualified release only if you select the optional Agent Deck coordinator:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/asheshgoplani/agent-deck/v1.16.39/install.sh | bash -s -- --version v1.16.39 --non-interactive
-```
-
-Current source requires Agent Deck 1.16.39 or newer for terminal attachments.
-Structured native recovery is qualified only for 1.16.39. Upgrade the optional
-coordinator on the controller and execution hosts before using this WebMux update;
-see the [version and migration boundary](openrig.md#agent-deck-minimum-version)
-and [native qualification](validation/agent-deck-2026-11-17/README.md).
-
-For Agent Deck, ensure `~/.local/bin` is on the server service PATH. Native
-Windows supports built-in WebMux coordination; the optional external coordinator
-hosts are unavailable there (Agent Deck requires WSL).
+Native archives do not include Agent Deck or OpenRig, and this release does not
+install either program. Existing tmux sessions stay running. Attach one from a
+WebMux terminal with `tmux attach`. Windows continues to use built-in WebMux
+coordination. Historical Agent Deck qualification remains in
+[validation/agent-deck-2026-11-17](validation/agent-deck-2026-11-17/README.md).
 
 Native filenames end in `-native.tar.gz`, `-native.zip` or `-native.msi`, with a
 `.sha256` file for each artifact. `bundle.json` records the build platform and

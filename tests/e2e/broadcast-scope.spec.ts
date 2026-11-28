@@ -98,7 +98,7 @@ test('project selection separates same-named destinations and stays frozen acros
   test.setTimeout(60_000);
   const ids: string[] = [];
   const files = new Map<string, string>();
-  const metadata = new Map<string, { project_id: string; project: string; name: string; host: string; target: string; runtime: string; provider?: string }>();
+  const metadata = new Map<string, { project_id: string; project: string; name: string; host: string; target: string; runtime: string; provider?: string; manager_profile?: string }>();
   const create = async (label: string, row: number, col: number, host: string, provider = 'rig') => {
     const file = path.resolve(__dirname, '.test-home', `broadcast-project-${randomUUID()}.bin`);
     writeFileSync(file, Buffer.alloc(0), { flag: 'wx', mode: 0o600 });
@@ -108,7 +108,7 @@ test('project selection separates same-named destinations and stays frozen acros
     expect(response.ok()).toBe(true);
     const { id } = await response.json() as { id: string };
     ids.push(id); files.set(id, file);
-    metadata.set(id, { project_id: provider === 'rig' ? `rig-${host}` : 'local:lab', project: 'lab', name: label === 'D' ? 'new worker' : 'worker', host, target: label, runtime: 'terminal', provider });
+    metadata.set(id, { project_id: provider === 'rig' ? `rig-${host}` : 'local:lab', project: 'lab', name: label === 'D' ? 'new worker' : 'worker', host, target: label, runtime: 'terminal', provider, ...(provider === 'agent-deck' ? { manager_profile: 'deck' } : {}) });
     return id;
   };
   const bytes = (id: string) => readFileSync(files.get(id)!).toString('utf8');
@@ -128,18 +128,18 @@ test('project selection separates same-named destinations and stays frozen acros
     for (const id of ids) await expect(tile(id).locator('.xterm-rows')).toContainText('BROADCAST READY');
     await page.getByRole('button', { name: 'Type to All', exact: true }).click();
     const recipients = page.getByRole('group', { name: 'Type to All recipients', exact: true });
-    await recipients.getByRole('button', { name: 'Project: lab · Rig · foo', exact: true }).click();
-    await expect(recipients.getByRole('checkbox', { name: 'lab/worker · Rig · foo', exact: true })).toBeChecked();
-    await expect(recipients.getByRole('checkbox', { name: 'lab/worker · Rig · bar', exact: true })).not.toBeChecked();
-    await expect(recipients.getByRole('checkbox', { name: 'lab/worker · Agent Deck · foo', exact: true })).not.toBeChecked();
+    await recipients.getByRole('button', { name: 'Project: lab · External tmux · foo', exact: true }).click();
+    await expect(recipients.getByRole('checkbox', { name: 'lab/worker · External tmux · foo', exact: true })).toBeChecked();
+    await expect(recipients.getByRole('checkbox', { name: 'lab/worker · External tmux · bar', exact: true })).not.toBeChecked();
+    await expect(recipients.getByRole('checkbox', { name: 'lab/worker · External tmux (deck) · foo', exact: true })).not.toBeChecked();
     await tile(a).locator('.xterm-helper-textarea').focus(); await page.keyboard.type('x');
     await expect.poll(() => bytes(a)).toBe('x');
     metadata.set(a, { ...metadata.get(a)!, project: 'renamed' });
     const d = await create('D', 1, 1, 'foo');
     await page.evaluate(() => window.dispatchEvent(new CustomEvent('webmux-sessions-changed')));
     await expect(tile(d).locator('.xterm-rows')).toContainText('BROADCAST READY');
-    await expect(recipients.getByRole('checkbox', { name: 'renamed/worker · Rig · foo', exact: true })).toBeChecked();
-    await expect(recipients.getByRole('checkbox', { name: 'lab/new worker · Rig · foo', exact: true })).not.toBeChecked();
+    await expect(recipients.getByRole('checkbox', { name: 'renamed/worker · External tmux · foo', exact: true })).toBeChecked();
+    await expect(recipients.getByRole('checkbox', { name: 'lab/new worker · External tmux · foo', exact: true })).not.toBeChecked();
     await tile(a).locator('.xterm-helper-textarea').focus(); await page.keyboard.type('y');
     await expect.poll(() => bytes(a)).toBe('xy');
     await page.getByRole('button', { name: 'Type to All: ON', exact: true }).click();
