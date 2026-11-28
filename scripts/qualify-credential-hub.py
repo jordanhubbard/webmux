@@ -30,6 +30,15 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, headers, newurl):
         return None
 
+def enrolled_hub_pin(directory):
+    peers = [peer for peer in directory.get("servers", []) if peer.get("id") == "hub"]
+    if len(peers) != 1:
+        raise AssertionError("exactly one enrolled hub entry is required for the pin fault")
+    pin = peers[0].get("identity", {}).get("tls_key_sha256", "")
+    if not isinstance(pin, str) or not re.fullmatch(r"[0-9a-f]{64}", pin):
+        raise AssertionError("the enrolled hub must have a complete TLS key pin")
+    return pin
+
 def digest(path):
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
@@ -344,8 +353,8 @@ def main():
             with node.changed_private_config("node-discovery.yaml", node.config["node_id"], uuid.uuid4().hex):
                 consume(node, 403)
             # A changed enrolled destination pin must fail even when the token is valid.
-            directory = call(node,"GET","/api/servers",None,200,node.name+":current-pin")
-            pin = directory["servers"][0]["identity"]["tls_key_sha256"]
+            directory = call(node,"GET","/api/server-directory",None,200,node.name+":current-pin")
+            pin = enrolled_hub_pin(directory)
             with node.changed_private_config("servers.yaml",pin,"0"*64):
                 consume(node,403)
             consume(node,200,"CREDENTIAL_CANARY_PROVIDER_1")
