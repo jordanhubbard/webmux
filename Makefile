@@ -95,7 +95,7 @@ SECURE_MODE  ?=
 .PHONY: all build build-server build-client deps toolchain-node toolchain-go check-tmux check-guacd start stop restart status test test-unit test-e2e lint clean configure help \
        install install-client install-agent-deck install-optional-agent-deck install-server install-all uninstall uninstall-client uninstall-server uninstall-all \
        release release-minor release-major release-publish changelog-init \
-       package package-server package-client package-assets _start_manual _stop_manual
+       package package-server package-client package-assets check-macos-signature _start_manual _stop_manual
 
 all: build
 
@@ -112,12 +112,18 @@ package-server: package-assets toolchain-go
 package-client: toolchain-node toolchain-go
 	@WEBMUX_NATIVE_COMPONENT=client $(NODE) scripts/package-native.mts
 
+# Read-only. Fails when WebMux.app is missing, unsigned, or ad-hoc.
+# APP is an optional path; the default is ~/Applications/WebMux.app.
+check-macos-signature:
+	@$(NODE) scripts/check-macos-signature.mts $(APP)
+
 help:
 	@printf "$(C_BLD)$(C_MAG)▦ WebMux$(C_RST)$(C_DIM) — web-native terminal multiplexer$(C_RST)\n\n"
 	@printf "$(C_BLD)Targets:$(C_RST)\n"
 	@printf "  $(C_CYN)make package$(C_RST)        Package server and client together\n"
 	@printf "  $(C_CYN)make package-server$(C_RST) Package the server only\n"
 	@printf "  $(C_CYN)make package-client$(C_RST) Package the client only\n"
+	@printf "  $(C_CYN)make check-macos-signature$(C_RST) Fail unless WebMux.app has a stable signature\n"
 	@printf "  $(C_CYN)make$(C_RST)               Build server and client\n"
 	@printf "  $(C_CYN)make build-server$(C_RST)  Build the server and browser UI\n"
 	@printf "  $(C_CYN)make build-client$(C_RST)  Build the standalone client\n"

@@ -5,6 +5,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Fixed
+- On macOS, Homebrew's service starts `WebMux.app` directly so a GUI LaunchAgent can hold TCC grants for local PTYs and tmux servers it starts. Terminal, SSH, and ad-hoc rebuilds do not keep those grants. `make check-macos-signature` fails when the app is unsigned or ad-hoc and does not re-sign it (#152).
+
 ## [1.4.7] - 2026-11-27
 
 ### Fixed

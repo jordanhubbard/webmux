@@ -59,7 +59,12 @@ switch (process.argv[2]) {
   }
   case 'service': {
     const value = record(first(readJSON(path.join(environment('RUNNER_TEMP'), 'webmux-service.json'))));
-    assert(typeof value.command === 'string' && value.command.endsWith('/opt/webmux/bin/webmux'));
+    assert(typeof value.command === 'string');
+    // brew services info prints env assignments in front of the program.
+    const program = process.platform === 'darwin'
+      ? /\/opt\/webmux\/libexec\/WebMux\.app\/Contents\/MacOS\/webmux"?$/
+      : /\/opt\/webmux\/bin\/webmux"?$/;
+    assert.match(value.command, program);
     assert(typeof value.working_dir === 'string' && value.working_dir.length > 0);
     assert(typeof value.log_path === 'string' && value.log_path.endsWith('/var/log/webmux.log'));
     break;

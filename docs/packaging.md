@@ -78,7 +78,9 @@ WEBMUX_HOME="$HOME/my-webmux" webmux
 
 A service does not inherit environment variables exported in your interactive
 shell. For a custom service environment, use Homebrew's supported service
-configuration or maintain a custom launchd/systemd unit pointing to
+configuration or maintain a custom launchd/systemd unit. On macOS point that
+unit at `$(brew --prefix)/opt/webmux/libexec/WebMux.app/Contents/MacOS/webmux`
+and set `WEBMUX_ROOT` to the libexec directory. On Linux, point it at
 `$(brew --prefix)/opt/webmux/bin/webmux`. Preserve any existing `WEBMUX_HOME`
 override when migrating.
 
@@ -275,11 +277,16 @@ tmux terminals and SSH use separate macOS privacy grants. The wizard provides
 the installed app path, local System Settings actions, bounded service-context
 checks, and restart/retest guidance. See [macOS setup and signing](../README-macOS.md#mac-permissions-setup).
 
-macOS archives include `WebMux.app`; Homebrew runs that app's executable.
-Development builds use ad-hoc signing unless Developer ID signing and
-notarization are explicitly configured. Store the app at a stable location and
-verify permissions after upgrades. A service starting successfully does not
-prove access to protected folders.
+macOS archives include `WebMux.app`. Homebrew's launchd job runs that app's
+executable directly. The `webmux` command on `PATH` remains a foreground
+wrapper; starting it from Terminal or SSH does not give the session WebMux's
+TCC grants. Development builds use ad-hoc signing unless
+`WEBMUX_MACOS_SIGN_IDENTITY` is set to a Developer ID Application certificate.
+`make check-macos-signature` fails when the app is missing, unsigned, or
+ad-hoc, and it only displays the signature. CI does not have the Developer ID
+private key (team `ULQA4V44V5`) or the `webmux` notarytool profile. Store the
+app at a stable location and verify permissions after a signature change.
+A service starting successfully does not prove access to protected folders.
 
 ### Windows MSI smoke deadlines and diagnostics
 

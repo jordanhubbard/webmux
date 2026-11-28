@@ -31,6 +31,8 @@ class Webmux < Formula
     runtime_path = "#{HOMEBREW_PREFIX}/bin:#{HOMEBREW_PREFIX}/sbin"
     (bin/"webmux").write <<~SH
       #!/bin/sh
+      # Foreground CLI. macOS launchd must run WebMux.app directly; this
+      # wrapper is not the TCC responsible bundle.
       export WEBMUX_ROOT="#{opt_libexec}"
       export PATH="#{runtime_path}:$PATH"
       #{launch}
@@ -38,7 +40,12 @@ class Webmux < Formula
   end
 
   service do
-    run opt_bin/"webmux"
+    # macOS: the bundle executable, not the shell wrapper. Linux keeps the wrapper.
+    run macos: [opt_libexec/"WebMux.app/Contents/MacOS/webmux"],
+        linux: [opt_bin/"webmux"]
+    environment_variables WEBMUX_ROOT: opt_libexec,
+                          PATH: std_service_path_env
+    process_type :interactive
     keep_alive true
     working_dir Dir.home
     log_path var/"log/webmux.log"
@@ -53,7 +60,10 @@ class Webmux < Formula
       Before migrating from a source installation, run make uninstall-server
       there (or make uninstall with older source versions).
       On macOS, complete Mac permissions in the WebMux browser interface.
-      Grant access to WebMux.app for local terminals; Remote Login is separate.
+      brew services runs WebMux.app directly. Grant Full Disk Access to that
+      app once it has a stable signature. A Terminal or SSH session does not
+      inherit the grant, and the login keychain stays locked in SSH.
+      Remote Login is separate.
       Built-in WebMux coordination is the default; tmux supports local terminals.
       Agent Deck and Rig are optional integrations.
       For integration setup, see https://github.com/jordanhubbard/webmux/blob/main/docs/openrig.md
@@ -82,6 +92,7 @@ class Webmux < Formula
         assert_kind_of String, JSON.parse(response.body)["token"]
       end
       assert_path_exists libexec/"bin/webmux"
+      assert_path_exists libexec/"WebMux.app/Contents/MacOS/webmux" if OS.mac?
       refute_path_exists libexec/"node_modules"
     ensure
       Process.kill "TERM", pid
